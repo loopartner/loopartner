@@ -4,6 +4,7 @@ namespace App\Modules\Accounts\Actions;
 
 use App\Models\User;
 use App\Support\Media\MediaLibrary;
+use App\Support\UserSessions;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -25,12 +26,7 @@ class DeleteAccount
     public function handle(User $user): void
     {
         DB::transaction(function () use ($user): void {
-            if (config('session.driver') === 'database') {
-                DB::connection(config('session.connection'))
-                    ->table((string) config('session.table', 'sessions'))
-                    ->where('user_id', $user->getKey())
-                    ->delete();
-            }
+            UserSessions::delete($user);
 
             $this->library->deleteOwnedBy($user);
 
