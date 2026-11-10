@@ -22,6 +22,12 @@ return Application::configure(basePath: dirname(__DIR__))
     // Commandes Artisan des modules (app/Modules/<Module>/Console/Commands), en plus de
     // app/Console/Commands déjà chargé par défaut.
     ->withCommands(glob(__DIR__.'/../app/Modules/*/Console/Commands', GLOB_ONLYDIR) ?: [])
+    // Écouteurs découverts automatiquement : app/Listeners et ceux des modules
+    // (app/Modules/<Module>/Listeners), par exemple Directory sur AccountDeleting d'Accounts.
+    ->withEvents(discover: [
+        __DIR__.'/../app/Listeners',
+        ...(glob(__DIR__.'/../app/Modules/*/Listeners', GLOB_ONLYDIR) ?: []),
+    ])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi();
 
