@@ -28,6 +28,7 @@ class MeResource extends JsonResource
             'locale' => $this->locale,
             'timezone' => $this->timezone,
             'country' => $this->country,
+            'avatar_url' => $this->avatar?->url(),
             'email_verified' => $this->hasVerifiedEmail(),
             'two_factor_enabled' => $this->two_factor_confirmed_at !== null,
         ];

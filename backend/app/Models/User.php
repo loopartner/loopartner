@@ -7,6 +7,7 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
@@ -14,6 +15,8 @@ use Spatie\Permission\Traits\HasRoles;
 
 /**
  * Modèle utilisateur partagé : tous les modules ont le droit de l'utiliser.
+ *
+ * @property int|null $avatar_media_id
  */
 #[Fillable(['name', 'email', 'password', 'locale', 'timezone', 'country'])]
 #[Hidden(['password', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes'])]
@@ -44,5 +47,15 @@ class User extends Authenticatable implements MustVerifyEmail
             'two_factor_confirmed_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Avatar (média du noyau, rattaché via MediaLibrary). Colonne non assignable en masse.
+     *
+     * @return BelongsTo<Media, $this>
+     */
+    public function avatar(): BelongsTo
+    {
+        return $this->belongsTo(Media::class, 'avatar_media_id');
     }
 }

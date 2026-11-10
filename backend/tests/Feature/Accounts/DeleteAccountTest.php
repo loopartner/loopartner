@@ -1,7 +1,12 @@
 <?php
 
+use App\Models\Media;
 use App\Models\User;
+use App\Modules\Accounts\Models\ProviderProfile;
+use App\Support\Media\MediaPurpose;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 it('refuse la suppression avec un mauvais mot de passe', function (): void {
     $user = User::factory()->create();
@@ -73,4 +78,44 @@ it('limite les tentatives de suppression à 6 par minute', function (): void {
         ->assertTooManyRequests();
 
     $this->assertModelExists($user);
+});
+
+it('supprime tous les médias du compte et leurs fichiers', function (): void {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+    $user->assignRole('prestataire');
+
+    $avatar = Media::factory()->for($user)->attached()->withFile()->create();
+    $user->forceFill(['avatar_media_id' => $avatar->id])->save();
+
+    $logo = Media::factory()->for($user)->purpose(MediaPurpose::ProviderLogo)->attached()->withFile()->create();
+    $profile = ProviderProfile::factory()->for($user)->create();
+    $profile->forceFill(['logo_media_id' => $logo->id])->save();
+
+    $pending = Media::factory()->for($user)->withFile()->create();
+    $otherUsersMedia = Media::factory()->withFile()->create();
+
+    $this->actingAs($user)
+        ->withHeader('Referer', config('app.frontend_url'))
+        ->deleteJson('/api/v1/me', ['password' => 'password'])
+        ->assertNoContent();
+
+    $this->assertModelMissing($user);
+    $this->assertModelMissing($profile);
+
+    foreach ([$avatar, $logo, $pending] as $media) {
+        $this->assertModelMissing($media);
+        Storage::disk('public')->assertMissing($media->path);
+    }
+
+    $this->assertModelExists($otherUsersMedia);
+    Storage::disk('public')->assertExists($otherUsersMedia->path);
+});
+
+it('empêche en base la suppression d\'un utilisateur qui possède encore des médias', function (): void {
+    $user = User::factory()->create();
+    Media::factory()->for($user)->create();
+
+    expect(fn () => $user->delete())->toThrow(QueryException::class);
 });

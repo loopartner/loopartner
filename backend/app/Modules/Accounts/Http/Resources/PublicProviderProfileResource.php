@@ -29,6 +29,7 @@ class PublicProviderProfileResource extends JsonResource
             'city' => $this->city,
             'country' => $this->country,
             'website' => $this->website,
+            'logo_url' => $this->logo?->url(),
             'published_at' => $this->published_at?->toIso8601ZuluString(),
         ];
     }

@@ -27,6 +27,7 @@ class ProviderProfileResource extends JsonResource
             'city' => $this->city,
             'country' => $this->country,
             'website' => $this->website,
+            'logo_url' => $this->logo?->url(),
             'status' => $this->status->value,
             'published_at' => $this->published_at?->toIso8601ZuluString(),
             'created_at' => $this->created_at?->toIso8601ZuluString(),

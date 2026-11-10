@@ -13,7 +13,7 @@ class PublicProviderController extends Controller
 {
     public function show(string $slug): PublicProviderProfileResource
     {
-        $profile = ProviderProfile::query()->published()->where('slug', $slug)->first();
+        $profile = ProviderProfile::query()->published()->with('logo')->where('slug', $slug)->first();
 
         // abort() plutôt que firstOrFail() : le message 404 ne révèle pas le nom du modèle.
         abort_if($profile === null, 404, 'Prestataire introuvable.');

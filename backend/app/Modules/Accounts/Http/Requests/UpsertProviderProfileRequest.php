@@ -2,11 +2,14 @@
 
 namespace App\Modules\Accounts\Http\Requests;
 
+use App\Models\User;
 use App\Modules\Accounts\Enums\ProviderProfileStatus;
 use App\Modules\Accounts\Models\ProviderProfile;
 use App\Modules\Accounts\Rules\CountryCode;
 use App\Modules\Accounts\Rules\NoHtml;
 use App\Modules\Accounts\Support\PreferenceRules;
+use App\Support\Media\MediaPurpose;
+use App\Support\Media\Rules\AttachableMedia;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -15,6 +18,9 @@ use Illuminate\Validation\Rule;
  *
  * Un champ facultatif absent est remis à null. Le statut est facultatif : absent, il reste
  * inchangé (brouillon à la création). Le HTML est refusé dans tous les champs texte.
+ *
+ * logo suit la même exception que le statut : absent, il reste inchangé ; null le retire
+ * (fichier compris) ; sinon c'est l'uuid d'un média "provider_logo" de l'utilisateur.
  */
 class UpsertProviderProfileRequest extends FormRequest
 {
@@ -33,6 +39,11 @@ class UpsertProviderProfileRequest extends FormRequest
      */
     public function rules(): array
     {
+        /** @var User $user */
+        $user = $this->user();
+
+        $currentLogoId = ProviderProfile::query()->where('user_id', $user->id)->value('logo_media_id');
+
         return [
             'display_name' => ['required', 'string', 'min:2', 'max:100', new NoHtml],
             'headline' => ['nullable', 'string', 'max:160', new NoHtml],
@@ -41,6 +52,12 @@ class UpsertProviderProfileRequest extends FormRequest
             'country' => ['nullable', 'string', 'size:2', new CountryCode],
             'website' => ['nullable', 'string', 'max:255', 'url:http,https'],
             'status' => ['sometimes', 'required', 'string', Rule::enum(ProviderProfileStatus::class)],
+            'logo' => [
+                'sometimes',
+                'nullable',
+                'string',
+                new AttachableMedia($user, MediaPurpose::ProviderLogo, $currentLogoId),
+            ],
         ];
     }
 }

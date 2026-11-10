@@ -5,6 +5,8 @@ namespace App\Modules\Accounts\Actions;
 use App\Models\User;
 use App\Modules\Accounts\Enums\ProviderProfileStatus;
 use App\Modules\Accounts\Models\ProviderProfile;
+use App\Support\Media\MediaLibrary;
+use App\Support\Media\MediaPurpose;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -24,8 +26,10 @@ class UpsertProviderProfile
 
     private const MAX_ATTEMPTS = 3;
 
+    public function __construct(private MediaLibrary $library) {}
+
     /**
-     * @param  array{display_name: string, headline?: string|null, bio?: string|null, city?: string|null, country?: string|null, website?: string|null, status?: string}  $data
+     * @param  array{display_name: string, headline?: string|null, bio?: string|null, city?: string|null, country?: string|null, website?: string|null, status?: string, logo?: string|null}  $data
      *
      * @throws ValidationException
      */
@@ -42,7 +46,7 @@ class UpsertProviderProfile
     }
 
     /**
-     * @param  array{display_name: string, headline?: string|null, bio?: string|null, city?: string|null, country?: string|null, website?: string|null, status?: string}  $data
+     * @param  array{display_name: string, headline?: string|null, bio?: string|null, city?: string|null, country?: string|null, website?: string|null, status?: string, logo?: string|null}  $data
      */
     private function save(User $user, array $data): ProviderProfile
     {
@@ -83,9 +87,21 @@ class UpsertProviderProfile
             $profile->fill($attributes);
         }
 
+        if (array_key_exists('logo', $data)) {
+            $profile->forceFill([
+                'logo_media_id' => $this->library->replace(
+                    $user,
+                    MediaPurpose::ProviderLogo,
+                    $data['logo'],
+                    $profile->logo_media_id,
+                    'logo',
+                ),
+            ]);
+        }
+
         $profile->save();
 
-        return $profile;
+        return $profile->load('logo');
     }
 
     private function uniqueSlug(string $displayName): string

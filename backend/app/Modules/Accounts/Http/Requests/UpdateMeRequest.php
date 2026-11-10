@@ -2,11 +2,16 @@
 
 namespace App\Modules\Accounts\Http\Requests;
 
+use App\Models\User;
 use App\Modules\Accounts\Support\PreferenceRules;
+use App\Support\Media\MediaPurpose;
+use App\Support\Media\Rules\AttachableMedia;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * PATCH /me : nom et préférences uniquement.
+ * PATCH /me : nom, préférences et avatar.
+ *
+ * avatar : uuid d'un média "avatar" envoyé par l'utilisateur (POST /media), ou null pour le retirer.
  *
  * L'email, les rôles et le mot de passe ne se modifient pas ici : les envoyer renvoie une
  * erreur 422 explicite plutôt que d'être ignorés en silence.
@@ -28,9 +33,18 @@ class UpdateMeRequest extends FormRequest
      */
     public function rules(): array
     {
+        /** @var User $user */
+        $user = $this->user();
+
         return [
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             ...PreferenceRules::rules(),
+            'avatar' => [
+                'sometimes',
+                'nullable',
+                'string',
+                new AttachableMedia($user, MediaPurpose::Avatar, $user->avatar_media_id),
+            ],
             'email' => ['prohibited'],
             'password' => ['prohibited'],
             'roles' => ['prohibited'],

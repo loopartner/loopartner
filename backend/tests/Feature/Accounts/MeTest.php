@@ -25,6 +25,7 @@ describe('GET /me', function (): void {
                     'locale' => 'en',
                     'timezone' => 'Europe/Paris',
                     'country' => 'FR',
+                    'avatar_url' => null,
                     'email_verified' => true,
                     'two_factor_enabled' => false,
                 ],
