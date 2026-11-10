@@ -93,6 +93,12 @@ class AppServiceProvider extends ServiceProvider
         // Upload de médias (POST /media) : par utilisateur.
         RateLimiter::for('media-uploads', fn (Request $request): Limit => Limit::perMinute(self::limit('media_uploads.per_minute'))->by($this->userOrIp($request)));
 
+        // Consultation des projets publiés (liste et détail comptés ensemble) : par utilisateur.
+        RateLimiter::for('projects-browse', fn (Request $request): array => [
+            Limit::perMinute(self::limit('projects_browse.per_minute'))->by('minute:'.$this->userOrIp($request)),
+            Limit::perDay(self::limit('projects_browse.per_day'))->by('day:'.$this->userOrIp($request)),
+        ]);
+
         // Suppression de compte (DELETE /me) : par utilisateur.
         RateLimiter::for('account-deletion', fn (Request $request): Limit => Limit::perMinute(self::limit('account_deletion.per_minute'))->by($this->userOrIp($request)));
     }

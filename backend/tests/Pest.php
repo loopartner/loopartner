@@ -2,11 +2,16 @@
 
 use App\Models\ServiceCategory;
 use App\Models\User;
+use App\Modules\Accounts\Models\ProviderProfile;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Factory;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Monolog\Handler\TestHandler;
+use Monolog\Logger;
+use Monolog\LogRecord;
 use Tests\TestCase;
 
 /*
@@ -32,8 +37,35 @@ pest()->extend(TestCase::class)
 
         // Les rôles de la plateforme existent dans toutes les bases de test.
         $this->seed(RoleSeeder::class);
+
+        // Le journal de sécurité est gardé en mémoire (voir securityLog()) : aucun fichier écrit.
+        config(['logging.channels.security' => ['driver' => 'monolog', 'handler' => TestHandler::class, 'level' => 'debug']]);
     })
     ->in('Feature');
+
+/*
+|--------------------------------------------------------------------------
+| Journal de sécurité
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * Entrées du journal de sécurité (canal "security"), éventuellement filtrées par événement.
+ *
+ * @return list<LogRecord>
+ */
+function securityLog(?string $event = null): array
+{
+    /** @var Logger $logger */
+    $logger = Log::channel('security')->getLogger();
+    /** @var TestHandler $handler */
+    $handler = $logger->getHandlers()[0];
+
+    return array_values(array_filter(
+        $handler->getRecords(),
+        fn (LogRecord $record): bool => $event === null || $record->message === $event,
+    ));
+}
 
 /**
  * Simule l'API Have I Been Pwned en signalant le mot de passe donné comme compromis.
@@ -232,6 +264,19 @@ function projectOwner(string $role, bool $verified = true): User
     $factory = User::factory();
     $user = ($verified ? $factory : $factory->unverified())->create();
     $user->assignRole($role);
+
+    return $user;
+}
+
+/**
+ * Prestataire autorisé à consulter les projets : email vérifié et profil publié avec une catégorie.
+ */
+function browsingProvider(): User
+{
+    $user = projectOwner('prestataire');
+
+    $profile = ProviderProfile::factory()->published()->create(['user_id' => $user->id]);
+    $profile->categories()->attach(ServiceCategory::factory()->create());
 
     return $user;
 }

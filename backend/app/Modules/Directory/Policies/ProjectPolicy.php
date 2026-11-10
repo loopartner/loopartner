@@ -3,6 +3,7 @@
 namespace App\Modules\Directory\Policies;
 
 use App\Models\User;
+use App\Modules\Accounts\Actions\HasPublishedProviderProfile;
 use App\Modules\Accounts\Enums\AccountType;
 use App\Modules\Directory\Models\Project;
 use Illuminate\Auth\Access\Response;
@@ -17,6 +18,8 @@ use Illuminate\Auth\Access\Response;
 class ProjectPolicy
 {
     private const NOT_FOUND = 'Projet introuvable.';
+
+    public function __construct(private HasPublishedProviderProfile $hasPublishedProviderProfile) {}
 
     /**
      * Lister ses propres projets (GET /me/projects).
@@ -75,11 +78,18 @@ class ProjectPolicy
 
     /**
      * Consulter les projets publiés (GET /projects). L'email vérifié est exigé par le
-     * middleware "verified" de la route.
+     * middleware "verified" de la route. Il faut en plus un profil prestataire publié avec au
+     * moins une catégorie : s'inscrire comme prestataire ne suffit pas pour collecter les projets.
      */
-    public function browse(User $user): bool
+    public function browse(User $user): Response
     {
-        return $user->hasRole(AccountType::Prestataire->value);
+        if (! $user->hasRole(AccountType::Prestataire->value)) {
+            return Response::deny();
+        }
+
+        return $this->hasPublishedProviderProfile->handle($user)
+            ? Response::allow()
+            : Response::deny('Publiez votre profil prestataire, avec au moins une catégorie, pour consulter les projets.');
     }
 
     private function canOwnProjects(User $user): bool

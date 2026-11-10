@@ -10,8 +10,9 @@ use App\Modules\Directory\Http\Controllers\OwnProjectController;
 use App\Modules\Directory\Http\Controllers\ProjectBrowseController;
 use Illuminate\Support\Facades\Route;
 
-// Projets publiés : prestataires connectés avec un email vérifié (voir ProjectPolicy::browse).
-Route::middleware(['auth:sanctum', 'verified'])->group(function (): void {
+// Projets publiés : prestataires connectés avec un email vérifié et un profil publié (voir
+// ProjectPolicy::browse). Limite dédiée, plus stricte, et consultations journalisées.
+Route::middleware(['auth:sanctum', 'verified', 'throttle:projects-browse'])->group(function (): void {
     Route::get('projects', [ProjectBrowseController::class, 'index'])->name('directory.projects.index');
     Route::get('projects/{uuid}', [ProjectBrowseController::class, 'show'])
         ->whereUuid('uuid')

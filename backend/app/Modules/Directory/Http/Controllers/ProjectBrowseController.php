@@ -4,11 +4,15 @@ namespace App\Modules\Directory\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\ServiceCategory;
+use App\Models\User;
+use App\Modules\Directory\Actions\RecordProjectConsultation;
 use App\Modules\Directory\Http\Requests\BrowseProjectsRequest;
 use App\Modules\Directory\Http\Resources\PublishedProjectResource;
 use App\Modules\Directory\Models\Project;
 use App\Support\Pagination;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Gate;
 
 /**
@@ -17,7 +21,7 @@ use Illuminate\Support\Facades\Gate;
  */
 class ProjectBrowseController extends Controller
 {
-    public function index(BrowseProjectsRequest $request): AnonymousResourceCollection
+    public function index(BrowseProjectsRequest $request, RecordProjectConsultation $recordConsultation): AnonymousResourceCollection
     {
         $query = Project::query()->live()->with(['category', 'user.roles']);
 
@@ -56,10 +60,19 @@ class ProjectBrowseController extends Controller
             ->paginate(Pagination::perPage($request))
             ->withQueryString();
 
+        $recordConsultation->handle($request, $this->user($request), 'projects.browse', [
+            'page' => $projects->currentPage(),
+            'per_page' => $projects->perPage(),
+            'filters' => array_filter(
+                Arr::except($request->validated(), ['page', 'per_page']),
+                fn (mixed $value): bool => $value !== null,
+            ),
+        ]);
+
         return PublishedProjectResource::collection($projects);
     }
 
-    public function show(string $uuid): PublishedProjectResource
+    public function show(Request $request, string $uuid, RecordProjectConsultation $recordConsultation): PublishedProjectResource
     {
         Gate::authorize('browse', Project::class);
 
@@ -68,6 +81,14 @@ class ProjectBrowseController extends Controller
         // Brouillon, clos, expiré ou inconnu : même réponse, sans révéler le nom du modèle.
         abort_if($project === null, 404, 'Projet introuvable.');
 
+        $recordConsultation->handle($request, $this->user($request), 'projects.view', ['project' => $project->uuid]);
+
         return new PublishedProjectResource($project);
+    }
+
+    private function user(Request $request): User
+    {
+        /** @var User */
+        return $request->user();
     }
 }

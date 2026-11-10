@@ -76,6 +76,21 @@ return [
             'per_minute' => 6,
         ],
 
+        // Consultation des projets publiés (GET /projects et GET /projects/{uuid}, comptés
+        // ensemble), par prestataire : freine la collecte massive.
+        'projects_browse' => [
+            'per_minute' => 30,
+            'per_day' => 500,
+        ],
+
+    ],
+
+    'scraping' => [
+
+        // Au-delà de ce nombre de consultations de projets dans la journée (UTC), un
+        // avertissement "projects.scraping_suspected" est écrit une fois dans le journal security.
+        'projects_daily_threshold' => 300,
+
     ],
 
 ];

@@ -237,8 +237,14 @@ prestataires pourront aussi écrire des articles.
   Clôture (`CloseProject`) : uniquement un projet publié, sinon 409.
 - Un projet est visible des prestataires s'il est publié **et** non expiré (scope `live()`), même avant la
   clôture quotidienne `projects:close-expired`.
-- `GET /projects` et `GET /projects/{uuid}` : prestataires connectés avec un email vérifié
-  (`auth:sanctum`, `verified`, `ProjectPolicy::browse`). Filtres : `category` (sous-catégories incluses),
+- `GET /projects` et `GET /projects/{uuid}` : prestataires connectés avec un email vérifié **et un
+  profil prestataire publié avec au moins une catégorie** (`auth:sanctum`, `verified`,
+  `ProjectPolicy::browse`, qui appelle l'Action publique `Accounts\Actions\HasPublishedProviderProfile` ;
+  403 avec un message explicite sinon). Limiteur dédié `projects-browse` (30/min et 500/jour par
+  prestataire, liste et détail confondus). Chaque consultation est journalisée dans le canal
+  `security` (`RecordProjectConsultation` : utilisateur, IP, route, page, filtres ou uuid) et un
+  avertissement `projects.scraping_suspected` est écrit une fois par jour au-delà de
+  `security.scraping.projects_daily_threshold` (300). Filtres : `category` (sous-catégories incluses),
   `country`, `remote_ok` (`true`/`false`/`1`/`0`), `budget_min`, `budget_max` (fourchettes qui se
   recouvrent ; projets sans budget exclus) et `currency` (EUR par défaut dès qu'un filtre de budget est
   présent). Tri par `published_at` décroissant. Brouillon, clos, expiré ou inconnu : 404.

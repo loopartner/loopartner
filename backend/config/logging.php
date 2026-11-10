@@ -52,6 +52,18 @@ return [
 
     'channels' => [
 
+        // Journal de sécurité (App\Support\SecurityLog) : événements d'authentification, refus
+        // d'autorisation, limites de débit, consultations de projets. Un fichier par jour, gardé
+        // 30 jours. Contient l'IP et l'identifiant utilisateur, jamais d'email, de nom, de mot de
+        // passe, de jeton ni de code 2FA.
+        'security' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/security.log'),
+            'level' => 'info',
+            'max_files' => (int) env('SECURITY_LOG_DAYS', 30),
+            'replace_placeholders' => false,
+        ],
+
         'stack' => [
             'driver' => 'stack',
             'channels' => explode(',', (string) env('LOG_STACK', 'single')),

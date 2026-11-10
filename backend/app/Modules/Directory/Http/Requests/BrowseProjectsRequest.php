@@ -8,7 +8,9 @@ use App\Rules\ActiveServiceCategory;
 use App\Rules\CountryCode;
 use App\Rules\CurrencyCode;
 use App\Support\Pagination;
+use Illuminate\Auth\Access\Response;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * GET /projects : filtres de la liste des projets publiés, réservée aux prestataires.
@@ -20,9 +22,12 @@ use Illuminate\Foundation\Http\FormRequest;
  */
 class BrowseProjectsRequest extends FormRequest
 {
-    public function authorize(): bool
+    /**
+     * La réponse de la Policy est renvoyée telle quelle, avec son message (profil à publier).
+     */
+    public function authorize(): Response
     {
-        return $this->user()?->can('browse', Project::class) ?? false;
+        return Gate::inspect('browse', Project::class);
     }
 
     protected function prepareForValidation(): void

@@ -69,13 +69,13 @@ describe('GET /projects', function (): void {
         Project::factory()->closed()->create(['title' => 'Clos']);
         Project::factory()->expired()->create(['title' => 'Expiré non clôturé']);
 
-        expect(projectTitles($this->actingAs(projectOwner('prestataire'))->getJson('/api/v1/projects')))
+        expect(projectTitles($this->actingAs(browsingProvider())->getJson('/api/v1/projects')))
             ->toBe(['Récent', 'Ancien', 'Expire bientôt']);
     });
 
     it('masque un projet dès son expiration, avant la clôture quotidienne', function (): void {
         liveProject(['title' => 'Bientôt expiré']);
-        $provider = projectOwner('prestataire');
+        $provider = browsingProvider();
 
         expect(projectTitles($this->actingAs($provider)->getJson('/api/v1/projects')))->toBe(['Bientôt expiré']);
 
@@ -91,7 +91,7 @@ describe('GET /projects', function (): void {
         liveProject(['title' => 'Parent'], $web);
         liveProject(['title' => 'Enfant'], $showcase);
         liveProject(['title' => 'Autre'], $design);
-        $provider = projectOwner('prestataire');
+        $provider = browsingProvider();
 
         expect(projectTitles($this->actingAs($provider)->getJson('/api/v1/projects?category=developpement-web')))
             ->toEqualCanonicalizing(['Parent', 'Enfant'])
@@ -102,14 +102,14 @@ describe('GET /projects', function (): void {
         liveProject(['title' => 'France', 'country' => 'FR']);
         liveProject(['title' => 'Suisse', 'country' => 'CH']);
 
-        expect(projectTitles($this->actingAs(projectOwner('prestataire'))->getJson('/api/v1/projects?country=ch')))->toBe(['Suisse']);
+        expect(projectTitles($this->actingAs(browsingProvider())->getJson('/api/v1/projects?country=ch')))->toBe(['Suisse']);
     });
 
     it('filtre sur le télétravail', function (string $value, array $expected): void {
         liveProject(['title' => 'À distance', 'remote_ok' => true]);
         liveProject(['title' => 'Sur place', 'remote_ok' => false]);
 
-        expect(projectTitles($this->actingAs(projectOwner('prestataire'))->getJson('/api/v1/projects?remote_ok='.$value)))
+        expect(projectTitles($this->actingAs(browsingProvider())->getJson('/api/v1/projects?remote_ok='.$value)))
             ->toBe($expected);
     })->with([
         'true' => ['true', ['À distance']],
@@ -125,7 +125,7 @@ describe('GET /projects', function (): void {
         liveProject(['title' => 'Max 800', 'budget_min' => null, 'budget_max' => 800]);
         liveProject(['title' => 'Sans budget']);
         liveProject(['title' => 'CHF 2000-5000', 'budget_min' => 2000, 'budget_max' => 5000, 'currency' => 'CHF']);
-        $provider = projectOwner('prestataire');
+        $provider = browsingProvider();
 
         $titles = fn (string $query): array => projectTitles($this->actingAs($provider)->getJson('/api/v1/projects?'.$query));
 
@@ -142,13 +142,13 @@ describe('GET /projects', function (): void {
         liveProject(['title' => 'Pas à distance', 'country' => 'FR', 'remote_ok' => false, 'budget_min' => 1000, 'budget_max' => 2000], $design);
         liveProject(['title' => 'Autre pays', 'country' => 'BE', 'remote_ok' => true, 'budget_min' => 1000, 'budget_max' => 2000], $design);
 
-        expect(projectTitles($this->actingAs(projectOwner('prestataire'))
+        expect(projectTitles($this->actingAs(browsingProvider())
             ->getJson('/api/v1/projects?category=design&country=FR&remote_ok=true&budget_min=1500')))->toBe(['OK']);
     });
 
     it('pagine par 20 et refuse plus de 50 résultats par page', function (): void {
         Project::factory()->published()->count(21)->create();
-        $provider = projectOwner('prestataire');
+        $provider = browsingProvider();
 
         $this->actingAs($provider)->getJson('/api/v1/projects')
             ->assertOk()
@@ -160,7 +160,7 @@ describe('GET /projects', function (): void {
     });
 
     it('refuse les filtres invalides', function (string $query, string $errorKey): void {
-        $this->actingAs(projectOwner('prestataire'))
+        $this->actingAs(browsingProvider())
             ->getJson('/api/v1/projects?'.$query)
             ->assertUnprocessable()
             ->assertJsonValidationErrors([$errorKey]);
@@ -179,7 +179,7 @@ describe('GET /projects', function (): void {
         $owner->assignRole('entrepreneur');
         $project = Project::factory()->for($owner)->published()->create(['country' => 'FR']);
 
-        $response = $this->actingAs(projectOwner('prestataire'))->getJson('/api/v1/projects')->assertOk();
+        $response = $this->actingAs(browsingProvider())->getJson('/api/v1/projects')->assertOk();
 
         expect(array_keys($response->json('data.0')))->toEqualCanonicalizing([
             'uuid', 'title', 'description', 'category', 'budget_min', 'budget_max', 'currency', 'country',
@@ -206,7 +206,7 @@ describe('GET /projects/{uuid}', function (): void {
             'service_category_id' => serviceCategory('identite-visuelle', 'Identité visuelle', 'Brand identity')->id,
         ]);
 
-        $this->actingAs(projectOwner('prestataire'))
+        $this->actingAs(browsingProvider())
             ->getJson("/api/v1/projects/{$project->uuid}?locale=en")
             ->assertOk()
             ->assertJsonPath('data.uuid', $project->uuid)
@@ -222,7 +222,7 @@ describe('GET /projects/{uuid}', function (): void {
             ? '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d'
             : Project::factory()->{$state}()->create()->uuid;
 
-        $this->actingAs(projectOwner('prestataire'))
+        $this->actingAs(browsingProvider())
             ->getJson("/api/v1/projects/{$uuid}")
             ->assertNotFound()
             ->assertJsonPath('message', 'Projet introuvable.');
