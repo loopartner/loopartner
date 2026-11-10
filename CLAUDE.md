@@ -120,7 +120,10 @@ utilitaires du module) et `Console/Commands/` (commandes Artisan du module).
   avec `ESCAPE '!'`, compatible SQLite et MariaDB 10.4). Une recherche plein texte (index FULLTEXT ou
   moteur dédié) pourra la remplacer plus tard si le volume l'exige.
 - Comptes locaux créés par `DatabaseSeeder` (environnement `local` uniquement) : `<rôle>@example.com`
-  pour chaque rôle, mot de passe `password`, email vérifié.
+  pour chaque rôle, mot de passe `password`, email vérifié. Le prestataire a un profil publié avec
+  trois catégories ; le particulier et l'entrepreneur ont chacun un projet publié et un brouillon
+  (`DatabaseSeeder::DEMO_PROJECTS`, repérés par leur titre). Relancer le seeder republie un projet de
+  démonstration expiré.
 
 ## Brique média (images)
 
