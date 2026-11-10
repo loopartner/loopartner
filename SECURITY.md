@@ -4,9 +4,7 @@
 
 Merci de nous aider à protéger les utilisateurs de Loopartner.
 
-- **Canal privé** : utilisez le signalement privé de GitHub (onglet *Security* du dépôt, bouton
-  *Report a vulnerability*), ou écrivez à `securite@loopartner.fr` *(adresse à confirmer)*.
-  Ne publiez jamais une vulnérabilité dans une issue, une pull request ou sur un réseau social.
+- **Canal privé** : écrivez à `securite@loopartner.com`.
 - **Contenu utile** : l'endpoint ou la fonctionnalité concernée, les étapes pour reproduire, l'impact
   estimé et, si possible, une preuve de concept minimale.
 - **Nos engagements** : accusé de réception sous 3 jours ouvrés, première évaluation sous 10 jours
