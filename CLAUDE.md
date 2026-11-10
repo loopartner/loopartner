@@ -67,7 +67,10 @@ utilitaires du module) et `Console/Commands/` (commandes Artisan du module).
   vérifie cette règle (`tests/Arch/ModulesTest.php`).
 - **Exception** : `App\Models\User` est le modèle partagé du projet, tous les modules peuvent l'utiliser.
   Il en va de même pour la brique média du noyau (`App\Models\Media` et `App\Support\Media`, voir la
-  section « Brique média »). Le noyau, lui, ne dépend jamais d'un module.
+  section « Brique média ») et pour les catégories de services (`App\Models\ServiceCategory`, voir la
+  section « Catégories de services »). Le noyau, lui, ne dépend jamais d'un module.
+- Un module peut lire les enums publics d'un autre module (par exemple `AccountType` pour les rôles),
+  jamais ses modèles.
 - Règles de validation partagées du noyau, dans `app/Rules` (namespace `App\Rules`), utilisables par
   tous les modules : `NoHtml` (refuse le HTML), `CountryCode` (ISO 3166-1 alpha-2) et `CurrencyCode`
   (ISO 4217). Les listes de codes sont statiques (ni package ni extension intl).
@@ -210,6 +213,36 @@ prestataires pourront aussi écrire des articles.
   Les extensions `exif` (orientation des photos) et `fileinfo` sont aussi nécessaires.
 - Bucket R2 rendu public (domaine personnalisé ou `r2.dev`), avec `R2_PUBLIC_URL` pointant dessus.
 
+## Module Directory (projets)
+
+- `Project` (table `projects`) : projet d'un particulier ou d'un entrepreneur. Identifiant public :
+  `uuid`. Statut `App\Modules\Directory\Enums\ProjectStatus` (`draft`, `published`, `closed`).
+  Budget facultatif en unités entières (`budget_min` ≤ `budget_max`, égalité acceptée), devise ISO 4217
+  (`EUR` par défaut), pays obligatoire, texte brut (`NoHtml`).
+- Gestion par le propriétaire, sous `/me/projects` (`OwnProjectController`) : liste, création (toujours
+  en brouillon, email vérifié non requis), détail, modification partielle (PATCH, tout statut), suppression,
+  `POST …/publish` et `POST …/close`.
+- `ProjectPolicy` : seuls les rôles `particulier` et `entrepreneur` gèrent des projets (403 sinon). Le
+  projet d'un autre utilisateur donne **404** (`denyAsNotFound`), même publié. Pour un PATCH,
+  l'autorisation passe avant la validation (`UpdateProjectRequest::authorize()`).
+- Publication (`PublishProject`) : email vérifié (403), depuis un brouillon, un projet clos ou expiré.
+  Elle fixe `published_at`, `expires_at` (+60 jours, `Project::PUBLICATION_DAYS`) et remet `closed_at` à
+  null. Erreurs d'état en **409** : projet déjà publié et non expiré, ou plafond de 10 projets publiés et
+  non expirés atteint (`Project::MAX_PUBLISHED_PER_USER`, compté sous verrou de la ligne `users`).
+  Clôture (`CloseProject`) : uniquement un projet publié, sinon 409.
+- Un projet est visible des prestataires s'il est publié **et** non expiré (scope `live()`), même avant la
+  clôture quotidienne `projects:close-expired`.
+- `GET /projects` et `GET /projects/{uuid}` : prestataires connectés avec un email vérifié
+  (`auth:sanctum`, `verified`, `ProjectPolicy::browse`). Filtres : `category` (sous-catégories incluses),
+  `country`, `remote_ok` (`true`/`false`/`1`/`0`), `budget_min`, `budget_max` (fourchettes qui se
+  recouvrent ; projets sans budget exclus) et `currency` (EUR par défaut dès qu'un filtre de budget est
+  présent). Tri par `published_at` décroissant. Brouillon, clos, expiré ou inconnu : 404.
+- **Confidentialité** : `PublishedProjectResource` n'expose ni l'email, ni le nom, ni l'identifiant du
+  porteur de projet, seulement `owner.account_type` (particulier ou entrepreneur) et `owner.country`
+  (`users.country`). Le contact passera par la mise en relation (à venir).
+- La suppression d'un compte supprime ses projets (clé étrangère en cascade, aucun fichier rattaché).
+  `DeleteProject` reste le point d'entrée unique pour supprimer un projet.
+
 ## Catégories de services (noyau)
 
 Modèle partagé `App\Models\ServiceCategory` (table `service_categories`), utilisable par tous les
@@ -262,8 +295,14 @@ modules comme `User` et `Media`.
 ```sh
 php artisan test             # Pest, SQLite en mémoire
 vendor/bin/pint              # style (preset laravel)
-vendor/bin/phpstan analyse   # Larastan niveau 6
+vendor/bin/phpstan analyse --memory-limit=1G   # Larastan niveau 6
 ```
+
+- La limite mémoire par défaut de PHP (128 Mo) ne suffit plus : `phpunit.xml` fixe 512 Mo pour les
+  tests, et PHPStan se lance avec `--memory-limit=1G`.
+- Les helpers de test partagés (`serviceCategory()`, `projectOwner()`, `projectPayload()`, images…)
+  sont dans `tests/Pest.php`. Les requêtes de test envoient `Accept-Language: fr-FR` par défaut
+  (`tests/TestCase.php`).
 
 - Les tests simulent l'API Have I Been Pwned avec `Http::fake` (voir `tests/Pest.php`).
 - Fais des commits séparés et lisibles. Ne travaille pas directement sur `main` et ne pousse rien sans
