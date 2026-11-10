@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Support\LocalHost;
 use RuntimeException;
 
 /**
@@ -19,12 +20,6 @@ use RuntimeException;
  */
 final class DemoDataGuard
 {
-    /** @var list<string> */
-    private const LOCAL_HOSTS = ['localhost', '127.0.0.1', '::1', '[::1]'];
-
-    /** @var list<string> */
-    private const LOCAL_SUFFIXES = ['.localhost', '.test'];
-
     /**
      * @throws RuntimeException si SEED_DEMO_DATA est demandé hors d'un environnement local sûr
      */
@@ -71,22 +66,6 @@ final class DemoDataGuard
 
     public static function isLocalUrl(string $url): bool
     {
-        $host = strtolower((string) parse_url($url, PHP_URL_HOST));
-
-        if ($host === '') {
-            return false;
-        }
-
-        if (in_array($host, self::LOCAL_HOSTS, true)) {
-            return true;
-        }
-
-        foreach (self::LOCAL_SUFFIXES as $suffix) {
-            if (str_ends_with($host, $suffix)) {
-                return true;
-            }
-        }
-
-        return false;
+        return LocalHost::isLocalUrl($url);
     }
 }

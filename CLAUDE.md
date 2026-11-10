@@ -340,6 +340,12 @@ Aucune réponse ne révèle si une adresse email correspond à un compte.
   Les événements Laravel et Fortify sont journalisés par `App\Listeners\LogSecurityEvents`
   (listeners découverts automatiquement dans `app/Listeners`). Les tests gardent ce journal en
   mémoire (`securityLog()` dans `tests/Pest.php`).
+- **`php artisan security:check-config`** (à lancer à chaque déploiement, après `config:cache`) :
+  vérifie la configuration de production (`App\Support\Security\ConfigAudit`) et échoue (code 1)
+  sur toute valeur dangereuse (`APP_DEBUG`, cookies de session, Sanctum, CORS, `LOG_LEVEL`,
+  `MAIL_MAILER`, dépendances de développement installées…). Les avertissements (`TRUSTED_PROXIES`
+  vide, réglages php.ini) ne bloquent pas. Toute nouvelle variable de sécurité doit y être ajoutée,
+  avec son test dans `tests/Feature/Security/CheckConfigCommandTest.php`.
 - URL générées : `AppServiceProvider` force la racine et le schéma de `APP_URL` (jamais l'en-tête
   `Host`). Hors local, `trustHosts` n'accepte que l'hôte de `APP_URL` et ses sous-domaines.
   Proxys de confiance : `TRUSTED_PROXIES` (`config/security.php`, `TrustConfiguredProxies`), vide
