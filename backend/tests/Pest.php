@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\ServiceCategory;
+use App\Models\User;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Factory;
@@ -169,4 +170,40 @@ function serviceCategory(string $slug, ?string $fr = null, ?string $en = null, ?
         'position' => $position,
         'is_active' => $active,
     ]);
+}
+
+/*
+|--------------------------------------------------------------------------
+| Projets (module Directory)
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * Utilisateur pouvant (ou non, selon le rôle) gérer des projets.
+ */
+function projectOwner(string $role, bool $verified = true): User
+{
+    $factory = User::factory();
+    $user = ($verified ? $factory : $factory->unverified())->create();
+    $user->assignRole($role);
+
+    return $user;
+}
+
+/**
+ * @return array<string, mixed>
+ */
+function projectPayload(array $overrides = []): array
+{
+    return array_merge([
+        'title' => 'Création de mon site vitrine',
+        'description' => "Je lance mon activité de céramiste et j'ai besoin d'un site pour présenter mes créations.",
+        'category' => 'site-vitrine',
+        'budget_min' => 1500,
+        'budget_max' => 3000,
+        'country' => 'FR',
+        'city' => 'Lyon',
+        'remote_ok' => true,
+        'desired_start_date' => '2026-12-01',
+    ], $overrides);
 }
