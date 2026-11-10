@@ -1,12 +1,12 @@
 <?php
 
 use App\Models\User;
-use Illuminate\Auth\Notifications\VerifyEmail;
+use App\Notifications\VerifyEmailNotification;
 use Illuminate\Support\Facades\Notification;
 
 const VALID_PASSWORD = 'correct-horse-battery-staple';
 
-it('inscrit un utilisateur puis le connecte', function (): void {
+it('inscrit un utilisateur sans le connecter, puis il se connecte', function (): void {
     Notification::fake();
 
     $this->postJson('/api/v1/auth/register', [
@@ -15,14 +15,11 @@ it('inscrit un utilisateur puis le connecte', function (): void {
         'email' => 'camille@example.com',
         'password' => VALID_PASSWORD,
         'password_confirmation' => VALID_PASSWORD,
-    ])->assertCreated();
+    ])->assertStatus(202);
 
     $user = User::query()->where('email', 'camille@example.com')->firstOrFail();
-    $this->assertAuthenticatedAs($user);
-    Notification::assertSentTo($user, VerifyEmail::class);
-
-    $this->postJson('/api/v1/auth/logout')->assertNoContent();
     $this->assertGuest();
+    Notification::assertSentTo($user, VerifyEmailNotification::class);
 
     $this->postJson('/api/v1/auth/login', [
         'email' => 'camille@example.com',
@@ -30,6 +27,9 @@ it('inscrit un utilisateur puis le connecte', function (): void {
     ])->assertOk();
 
     $this->assertAuthenticatedAs($user);
+
+    $this->postJson('/api/v1/auth/logout')->assertNoContent();
+    $this->assertGuest();
 });
 
 it('refuse un mot de passe de moins de 12 caractères', function (): void {

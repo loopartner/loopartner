@@ -120,7 +120,6 @@ return [
     'limiters' => [
         'login' => 'login',
         'two-factor' => 'two-factor',
-        'verification' => 'verification',
     ],
 
     /*
@@ -148,9 +147,9 @@ return [
     */
 
     'features' => [
-        Features::registration(),
+        // Inscription et vérification de l'email : remplacées par le module Accounts
+        // (RegisterController, EmailVerificationController), sans énumération des comptes.
         Features::resetPasswords(),
-        Features::emailVerification(),
         Features::updatePasswords(),
         Features::twoFactorAuthentication([
             'confirm' => true,

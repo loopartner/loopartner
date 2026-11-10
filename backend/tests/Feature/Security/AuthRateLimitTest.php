@@ -38,7 +38,7 @@ it('applique les limites validées par défaut', function (): void {
     expect(config('security.rate_limits'))->toMatchArray([
         'login' => ['per_minute' => 5, 'per_hour_per_email' => 30],
         'two_factor' => ['per_minute' => 5, 'per_hour' => 20],
-        'register' => ['per_hour_per_ip' => 30],
+        'register' => ['per_hour_per_ip' => 30, 'per_hour_per_email' => 5],
         'forgot_password' => ['per_hour_per_email' => 5, 'per_hour_per_ip' => 20],
         'reset_password' => ['per_hour_per_ip' => 10],
         'password_update' => ['per_minute' => 5],
@@ -62,6 +62,20 @@ it('limite les inscriptions par IP et par heure', function (): void {
     // Une autre IP n'est pas concernée.
     $this->withServerVariables(['REMOTE_ADDR' => '10.0.0.2'])
         ->postJson('/api/v1/auth/register', [])->assertUnprocessable();
+});
+
+it('limite les inscriptions par email, toutes IP confondues', function (): void {
+    $limit = rateLimit('register.per_hour_per_email');
+
+    for ($i = 0; $i < $limit; $i++) {
+        $this->withServerVariables(['REMOTE_ADDR' => "10.0.5.{$i}"])
+            ->postJson('/api/v1/auth/register', registrationPayload())
+            ->assertStatus(202);
+    }
+
+    $this->withServerVariables(['REMOTE_ADDR' => '10.0.5.250'])
+        ->postJson('/api/v1/auth/register', registrationPayload(['email' => 'CAMILLE@example.com']))
+        ->assertTooManyRequests();
 });
 
 it('limite les demandes de réinitialisation par email', function (): void {

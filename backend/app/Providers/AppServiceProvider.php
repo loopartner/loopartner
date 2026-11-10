@@ -62,12 +62,15 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
-        // Inscription : par IP.
-        RateLimiter::for('register', fn (Request $request): Limit => Limit::perHour(self::limit('register.per_hour_per_ip'))->by((string) $request->ip()));
+        // Inscription : par IP, et par email (une adresse existante reçoit un email à chaque tentative).
+        RateLimiter::for('register', fn (Request $request): array => [
+            Limit::perHour(self::limit('register.per_hour_per_ip'))->by('ip:'.$request->ip()),
+            $this->perEmail($request, Limit::perHour(self::limit('register.per_hour_per_email'))),
+        ]);
 
         // Demande de lien de réinitialisation : par email et par IP.
         RateLimiter::for('forgot-password', fn (Request $request): array => [
-            Limit::perHour(self::limit('forgot_password.per_hour_per_email'))->by('email:'.$this->normalizedEmail($request)),
+            $this->perEmail($request, Limit::perHour(self::limit('forgot_password.per_hour_per_email'))),
             Limit::perHour(self::limit('forgot_password.per_hour_per_ip'))->by('ip:'.$request->ip()),
         ]);
 
@@ -105,6 +108,17 @@ class AppServiceProvider extends ServiceProvider
     private function normalizedEmail(Request $request): string
     {
         return Str::lower(trim($request->string(Fortify::email())->toString()));
+    }
+
+    /**
+     * Limite par adresse email ; sans email, la requête échouera à la validation et seule la
+     * limite par IP s'applique.
+     */
+    private function perEmail(Request $request, Limit $limit): Limit
+    {
+        $email = $this->normalizedEmail($request);
+
+        return $email === '' ? Limit::none() : $limit->by('email:'.$email);
     }
 
     private function userOrIp(Request $request): string

@@ -9,7 +9,7 @@ beforeEach(function (): void {
 
 it('inscrit un utilisateur avec le rôle de son type de compte', function (string $accountType): void {
     $this->postJson('/api/v1/auth/register', registrationPayload(['account_type' => $accountType]))
-        ->assertCreated();
+        ->assertStatus(202);
 
     $user = User::query()->where('email', 'camille@example.com')->firstOrFail();
 

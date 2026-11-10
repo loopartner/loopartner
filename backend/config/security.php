@@ -29,8 +29,10 @@ return [
         ],
 
         // Inscription, par IP : assez large pour un événement de networking sur un même Wi-Fi.
+        // Par email aussi : une adresse existante reçoit un email à chaque tentative.
         'register' => [
             'per_hour_per_ip' => 30,
+            'per_hour_per_email' => 5,
         ],
 
         // Demande de lien de réinitialisation : par email (bombardement d'une victime) et par IP.

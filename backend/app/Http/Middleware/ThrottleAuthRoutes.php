@@ -10,8 +10,7 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * Applique un limiteur nommé aux routes d'authentification de Fortify qui n'en ont pas.
  *
- * Fortify ne permet de configurer que les limiteurs de la connexion, du défi 2FA et de la
- * vérification d'email. Ce middleware est ajouté au groupe des routes Fortify
+ * Fortify ne permet de configurer que les limiteurs de la connexion et du défi 2FA. Ce middleware est ajouté au groupe des routes Fortify
  * (config/fortify.php, clé "middleware") et choisit le limiteur d'après le nom de la route.
  * Les limiteurs sont déclarés dans AppServiceProvider, leurs valeurs dans config/security.php.
  */
@@ -23,7 +22,6 @@ class ThrottleAuthRoutes
      * @var array<string, string>
      */
     public const LIMITERS = [
-        'register.store' => 'register',
         'password.email' => 'forgot-password',
         'password.update' => 'reset-password',
         'user-password.update' => 'password-update',

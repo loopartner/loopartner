@@ -98,7 +98,8 @@ utilitaires du module) et `Console/Commands/` (commandes Artisan du module).
   les endpoints `/me`, le profil prestataire et la suppression de compte.
 - L'inscription exige `account_type` (`App\Modules\Accounts\Enums\AccountType`) : `particulier`,
   `prestataire` ou `entrepreneur`. Les rôles `redacteur` et `admin` ne s'obtiennent jamais par
-  l'inscription. Le rôle est attribué par l'Action `CreateAccount`, dans la même transaction.
+  l'inscription. Le rôle est attribué par l'Action `CreateAccount`, dans la même transaction,
+  appelée par `RegisterAccount` (voir « Parcours d'inscription et d'authentification »).
 - **`ProviderProfile` est privé au module Accounts** : aucun autre module ne l'importe, ni ses
   Resources, ni sa factory. Un module qui a besoin d'informations sur un prestataire passe par une
   Action publique du module Accounts (à créer au besoin), qui renvoie des données simples (tableau ou
@@ -273,8 +274,38 @@ modules comme `User` et `Media`.
 - Sanctum fonctionne en **mode SPA** : authentification par cookie de session, sans jeton dans le
   navigateur. Le frontend appelle d'abord `GET /sanctum/csrf-cookie`, puis envoie le header `X-XSRF-TOKEN`.
 - Fortify fonctionne en mode headless (`views => false`). Ses routes sont sous `/api/v1/auth` (login,
-  logout, register, forgot-password, reset-password, email/verify, user/password, two-factor…).
-  - Les liens envoyés par email (réinitialisation du mot de passe) pointent vers `FRONTEND_URL`.
+  logout, forgot-password, reset-password, user/password, user/confirm-password, two-factor…).
+  Les fonctionnalités `registration` et `emailVerification` de Fortify sont **désactivées** :
+  l'inscription et la vérification de l'email sont gérées par le module Accounts, sous le même préfixe.
+  - Le lien de réinitialisation envoyé par email pointe vers `FRONTEND_URL/reset-password`.
+
+### Parcours d'inscription et d'authentification (pour le frontend)
+
+Aucune réponse ne révèle si une adresse email correspond à un compte.
+
+1. **Inscription** : `POST /api/v1/auth/register` (`name`, `email`, `password`, `password_confirmation`,
+   `account_type`, et facultatifs `locale`, `timezone`, `country`). Réponse **toujours 202**
+   `{"message": "Vérifiez votre boîte mail pour terminer votre inscription."}`, que l'adresse soit libre
+   ou déjà utilisée. **L'utilisateur n'est pas connecté.** Seules les erreurs de validation (422)
+   indépendantes de l'existence du compte sont renvoyées (mot de passe trop court ou compromis…).
+   - Adresse libre : le compte est créé (`RegisterAccount`) et le lien de vérification part par la file
+     d'attente (`VerifyEmailNotification`).
+   - Adresse déjà utilisée : rien n'est créé ni modifié ; le titulaire reçoit par la file d'attente
+     `RegistrationAttemptNotification` (« quelqu'un a essayé de s'inscrire avec votre adresse »), avec des
+     liens vers `FRONTEND_URL/login` et `FRONTEND_URL/forgot-password`.
+   - Les emails passent par le planificateur : ils arrivent en moins d'une à deux minutes.
+2. **Vérification** : le lien `GET /api/v1/auth/email/verify/{id}/{hash}?expires=…&signature=…` est
+   signé, expire après 60 minutes et fonctionne **sans être connecté**. Il redirige toujours vers le
+   frontend : `FRONTEND_URL/login?verified=1` (succès ou déjà vérifié), `?verification=expired` ou
+   `?verification=invalid`. La page de connexion affiche le message correspondant.
+3. **Connexion** : `GET /sanctum/csrf-cookie`, puis `POST /api/v1/auth/login`. Un compte non vérifié
+   peut se connecter, mais les routes protégées par `verified` répondent 403.
+   Si la 2FA est active : `{"two_factor": true}`, puis `POST /api/v1/auth/two-factor-challenge`.
+4. **Renvoi du lien** : `POST /api/v1/auth/email/verification-notification`, connecté uniquement
+   (202 si envoyé, 204 si l'adresse est déjà vérifiée).
+5. **Mot de passe oublié** : `POST /api/v1/auth/forgot-password` répond **toujours 200** avec le même
+   message, que l'adresse existe ou non. Le lien part par la file d'attente vers
+   `FRONTEND_URL/reset-password?token=…&email=…`, qui appelle `POST /api/v1/auth/reset-password`.
 - Le CORS n'autorise que `FRONTEND_URL`, avec les cookies (`supports_credentials`).
 - Variables d'environnement : `FRONTEND_URL`, `SANCTUM_STATEFUL_DOMAINS`, `SESSION_DOMAIN`.
 - Mots de passe : 12 caractères minimum, et refus des mots de passe présents dans des fuites connues

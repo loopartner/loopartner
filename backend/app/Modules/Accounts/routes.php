@@ -6,10 +6,28 @@
 | avec les middlewares "api" et "throttle:api".
 */
 
+use App\Modules\Accounts\Http\Controllers\EmailVerificationController;
 use App\Modules\Accounts\Http\Controllers\MeController;
 use App\Modules\Accounts\Http\Controllers\ProviderProfileController;
 use App\Modules\Accounts\Http\Controllers\PublicProviderController;
+use App\Modules\Accounts\Http\Controllers\RegisterController;
 use Illuminate\Support\Facades\Route;
+
+// Inscription et vérification de l'email, qui remplacent celles de Fortify : réponse identique que
+// l'adresse soit libre ou non, sans connexion automatique (voir CLAUDE.md, « Parcours d'inscription »).
+Route::prefix('auth')->group(function (): void {
+    Route::post('register', RegisterController::class)
+        ->middleware('throttle:register')
+        ->name('accounts.register');
+    Route::get('email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
+        ->whereNumber('id')
+        ->where('hash', '[0-9a-f]{40}')
+        ->middleware('throttle:verification')
+        ->name('verification.verify');
+    Route::post('email/verification-notification', [EmailVerificationController::class, 'resend'])
+        ->middleware(['auth:sanctum', 'throttle:verification'])
+        ->name('verification.send');
+});
 
 Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('me', [MeController::class, 'show'])->name('accounts.me.show');

@@ -168,7 +168,7 @@ it('enregistre les préférences facultatives à l\'inscription', function (): v
         'locale' => 'en',
         'timezone' => 'Europe/Brussels',
         'country' => 'be',
-    ]))->assertCreated();
+    ]))->assertStatus(202);
 
     expect(User::query()->where('email', 'camille@example.com')->firstOrFail())
         ->locale->toBe('en')
@@ -179,7 +179,7 @@ it('enregistre les préférences facultatives à l\'inscription', function (): v
 it('applique les préférences par défaut à l\'inscription', function (): void {
     Notification::fake();
 
-    $this->postJson('/api/v1/auth/register', registrationPayload())->assertCreated();
+    $this->postJson('/api/v1/auth/register', registrationPayload())->assertStatus(202);
 
     expect(User::query()->where('email', 'camille@example.com')->firstOrFail())
         ->locale->toBe('fr')
