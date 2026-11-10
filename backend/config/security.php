@@ -13,6 +13,11 @@
 
 return [
 
+    // Proxys de confiance (App\Http\Middleware\TrustConfiguredProxies) : adresses IP ou plages
+    // CIDR séparées par des virgules. Vide : X-Forwarded-* est ignoré. À régler au déploiement
+    // (plages de Cloudflare si l'API passe par Cloudflare) ; security:check-config avertit s'il est vide.
+    'trusted_proxies' => env('TRUSTED_PROXIES', ''),
+
     'rate_limits' => [
 
         // Connexion : par couple email + IP, et par email toutes IP confondues (bourrage

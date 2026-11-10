@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
@@ -30,9 +31,22 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $this->configureUrls();
         $this->configurePasswords();
         $this->configureRateLimiting();
         $this->logAuthorizationDenials();
+    }
+
+    /**
+     * Les URL générées (liens signés envoyés par email…) partent toujours de APP_URL, jamais de
+     * l'en-tête Host de la requête : un Host forgé ne peut pas détourner un lien vers un autre domaine.
+     */
+    private function configureUrls(): void
+    {
+        $root = rtrim((string) config('app.url'), '/');
+
+        URL::forceRootUrl($root);
+        URL::forceScheme(parse_url($root, PHP_URL_SCHEME) === 'http' ? 'http' : 'https');
     }
 
     /**

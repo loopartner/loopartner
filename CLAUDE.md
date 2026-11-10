@@ -340,6 +340,10 @@ Aucune réponse ne révèle si une adresse email correspond à un compte.
   Les événements Laravel et Fortify sont journalisés par `App\Listeners\LogSecurityEvents`
   (listeners découverts automatiquement dans `app/Listeners`). Les tests gardent ce journal en
   mémoire (`securityLog()` dans `tests/Pest.php`).
+- URL générées : `AppServiceProvider` force la racine et le schéma de `APP_URL` (jamais l'en-tête
+  `Host`). Hors local, `trustHosts` n'accepte que l'hôte de `APP_URL` et ses sous-domaines.
+  Proxys de confiance : `TRUSTED_PROXIES` (`config/security.php`, `TrustConfiguredProxies`), vide
+  par défaut ; à renseigner derrière Cloudflare, sinon l'IP client et le HTTPS sont mal détectés.
 - La réinitialisation du mot de passe supprime toutes les sessions en base de l'utilisateur, et le
   changement de mot de passe toutes sauf la session courante (`App\Support\UserSessions`).
 - Les routes Fortify n'ont pas le groupe `api` : `App\Http\Middleware\ThrottleAuthRoutes` (ajouté

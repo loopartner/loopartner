@@ -1,11 +1,13 @@
 <?php
 
 use App\Http\Middleware\SecurityHeaders;
+use App\Http\Middleware\TrustConfiguredProxies;
 use App\Support\SecurityLog;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
+use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -21,6 +23,12 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withCommands(glob(__DIR__.'/../app/Modules/*/Console/Commands', GLOB_ONLYDIR) ?: [])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi();
+
+        // Proxys de confiance lus dans config/security.php (TRUSTED_PROXIES), à chaque requête.
+        $middleware->replace(TrustProxies::class, TrustConfiguredProxies::class);
+
+        // Hors local et hors tests : seul l'hôte de APP_URL (et ses sous-domaines) est accepté.
+        $middleware->trustHosts();
 
         // Global : couvre aussi les 404 des routes inconnues, qui ne passent par aucun groupe.
         $middleware->append(SecurityHeaders::class);
