@@ -187,6 +187,26 @@ prestataires pourront aussi écrire des articles.
   Les extensions `exif` (orientation des photos) et `fileinfo` sont aussi nécessaires.
 - Bucket R2 rendu public (domaine personnalisé ou `r2.dev`), avec `R2_PUBLIC_URL` pointant dessus.
 
+## Catégories de services (noyau)
+
+Modèle partagé `App\Models\ServiceCategory` (table `service_categories`), utilisable par tous les
+modules comme `User` et `Media`.
+
+- Deux niveaux au maximum : catégories parentes et sous-catégories. Le modèle refuse un troisième
+  niveau (`LogicException` au `saving`).
+- `name` est un JSON traduit `{"fr": "…", "en": "…"}` ; `nameIn($locale)` se replie sur le français.
+- Seul le `slug` est exposé par l'API, jamais l'`id` ni le `parent_id`.
+- On ne supprime pas une catégorie, on la désactive (`is_active`). Les clés étrangères qui la
+  référencent sont en `restrict`. Le scope `active()` exclut aussi les sous-catégories d'un parent inactif.
+- Valider un slug reçu : règle `App\Rules\ActiveServiceCategory`. Filtrer sur une catégorie en
+  incluant ses sous-catégories : `ServiceCategory::idsWithDescendants($slug)`.
+- Exposer une catégorie : `App\Http\Resources\ServiceCategoryResource` (slug et nom traduit selon
+  `Locale::fromRequest()`).
+- `GET /api/v1/categories` (public) : arbre des catégories actives, en-tête `Vary: Accept-Language`.
+- `ServiceCategorySeeder` tourne dans **tous** les environnements (données de référence). Il crée les
+  catégories manquantes avec `firstOrCreate` et ne modifie jamais une catégorie existante.
+- Pas encore d'endpoint d'écriture : la gestion se fera dans le back-office.
+
 ## API et authentification
 
 - Toutes les routes métier sont sous `/api/v1`. Toutes les erreurs sur `api/*` sont rendues en JSON.

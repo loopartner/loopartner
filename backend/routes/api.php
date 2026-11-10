@@ -6,7 +6,13 @@
 */
 
 use App\Http\Controllers\MediaController;
+use App\Http\Controllers\ServiceCategoryController;
 use Illuminate\Support\Facades\Route;
+
+// Public, sans authentification.
+Route::middleware('throttle:api')->group(function (): void {
+    Route::get('categories', [ServiceCategoryController::class, 'index'])->name('categories.index');
+});
 
 Route::middleware(['throttle:api', 'auth:sanctum', 'verified'])->group(function (): void {
     Route::post('media', [MediaController::class, 'store'])
