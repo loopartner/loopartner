@@ -18,6 +18,20 @@ foreach (MODULES as $module) {
         ->not->toUse($otherModulesModels);
 }
 
+/*
+| La brique média appartient au noyau, comme App\Models\User : tous les modules peuvent
+| l'utiliser, mais elle ne dépend d'aucun module.
+*/
+arch('la brique média ne dépend d\'aucun module')
+    ->expect([
+        'App\Support\Media',
+        'App\Models\Media',
+        'App\Http\Controllers\MediaController',
+        'App\Http\Requests\StoreMediaRequest',
+        'App\Http\Resources\MediaResource',
+    ])
+    ->not->toUse('App\Modules');
+
 it('teste la règle d\'isolation pour chaque module présent dans app/Modules', function (): void {
     $directories = array_map('basename', glob(dirname(__DIR__, 2).'/app/Modules/*', GLOB_ONLYDIR) ?: []);
 

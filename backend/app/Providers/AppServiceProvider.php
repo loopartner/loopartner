@@ -58,5 +58,10 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('api', function (Request $request): Limit {
             return Limit::perMinute(60)->by($request->user()?->getAuthIdentifier() ?? $request->ip());
         });
+
+        // Upload de médias (POST /media) : 20 envois par minute par utilisateur.
+        RateLimiter::for('media-uploads', function (Request $request): Limit {
+            return Limit::perMinute(20)->by($request->user()?->getAuthIdentifier() ?? $request->ip());
+        });
     }
 }
