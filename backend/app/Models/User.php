@@ -15,12 +15,22 @@ use Spatie\Permission\Traits\HasRoles;
 /**
  * Modèle utilisateur partagé : tous les modules ont le droit de l'utiliser.
  */
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'password', 'locale', 'timezone', 'country'])]
 #[Hidden(['password', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, HasRoles, Notifiable, TwoFactorAuthenticatable;
+
+    /**
+     * Valeurs par défaut des préférences, identiques à celles de la base.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'locale' => 'fr',
+        'timezone' => 'UTC',
+    ];
 
     /**
      * Get the attributes that should be cast.

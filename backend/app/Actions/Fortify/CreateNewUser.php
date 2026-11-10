@@ -5,6 +5,8 @@ namespace App\Actions\Fortify;
 use App\Models\User;
 use App\Modules\Accounts\Actions\CreateAccount;
 use App\Modules\Accounts\Enums\AccountType;
+use App\Modules\Accounts\Support\PreferenceRules;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -26,8 +28,8 @@ class CreateNewUser implements CreatesNewUsers
      */
     public function create(array $input): User
     {
-        /** @var array{name: string, email: string, password: string, account_type: string} $validated */
-        $validated = Validator::make($input, [
+        /** @var array{name: string, email: string, password: string, account_type: string, locale?: string, timezone?: string, country?: string|null} $validated */
+        $validated = Validator::make(PreferenceRules::normalize($input), [
             'name' => ['required', 'string', 'max:255'],
             'email' => [
                 'required',
@@ -39,12 +41,14 @@ class CreateNewUser implements CreatesNewUsers
             'password' => $this->passwordRules(),
             // Seuls particulier, prestataire et entrepreneur sont acceptés : jamais redacteur ni admin.
             'account_type' => ['required', 'string', Rule::enum(AccountType::class)],
+            ...PreferenceRules::rules(),
         ])->validate();
 
         return $this->createAccount->handle([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
+            ...Arr::only($validated, ['locale', 'timezone', 'country']),
         ], AccountType::from($validated['account_type']));
     }
 }
