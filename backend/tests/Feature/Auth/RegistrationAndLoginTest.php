@@ -11,6 +11,7 @@ it('inscrit un utilisateur puis le connecte', function (): void {
 
     $this->postJson('/api/v1/auth/register', [
         'name' => 'Camille Martin',
+        'account_type' => 'particulier',
         'email' => 'camille@example.com',
         'password' => VALID_PASSWORD,
         'password_confirmation' => VALID_PASSWORD,
@@ -34,6 +35,7 @@ it('inscrit un utilisateur puis le connecte', function (): void {
 it('refuse un mot de passe de moins de 12 caractères', function (): void {
     $this->postJson('/api/v1/auth/register', [
         'name' => 'Camille Martin',
+        'account_type' => 'particulier',
         'email' => 'camille@example.com',
         'password' => 'Court-123',
         'password_confirmation' => 'Court-123',
@@ -47,6 +49,7 @@ it('refuse un mot de passe présent dans une fuite connue', function (): void {
 
     $this->postJson('/api/v1/auth/register', [
         'name' => 'Camille Martin',
+        'account_type' => 'particulier',
         'email' => 'camille@example.com',
         'password' => VALID_PASSWORD,
         'password_confirmation' => VALID_PASSWORD,
