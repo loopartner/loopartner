@@ -14,8 +14,12 @@ entrepreneurs.
 
 ## Environnement local
 
-- Le `php` du PATH Windows peut être un ancien PHP 8.2. Utilise le PHP 8.4 de Herd :
-  `~/.config/herd/bin/php84/php.exe` (et `~/.config/herd/bin/composer.phar` pour Composer).
+- Le `php` du PATH Windows est en PHP 8.4 : utilise directement `php`, `composer` et `vendor/bin/...`.
+- Base de données locale : MariaDB/MySQL via XAMPP (configurée dans `backend/.env` par l'utilisateur).
+  Les tests utilisent SQLite en mémoire (`phpunit.xml`).
+- Les migrations doivent fonctionner sur MySQL, MariaDB et SQLite : jeu de caractères `utf8mb4`,
+  longueur explicite et raisonnable pour les chaînes indexées (191 caractères maximum pour un index
+  sur une seule colonne `string`), pas de type ni de fonction propre à un seul moteur.
 - **Ne lis jamais et ne modifie jamais `backend/.env`**. Cette interdiction est aussi bloquée dans
   `.claude/settings.json`. Seul `backend/.env.example` se modifie.
 - N'installe aucun package Composer ou npm sans l'accord explicite de l'utilisateur.
