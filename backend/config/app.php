@@ -68,6 +68,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Données de démonstration
+    |--------------------------------------------------------------------------
+    |
+    | Comptes et projets de démonstration créés par DatabaseSeeder. Il faut en
+    | plus APP_ENV=local, APP_DEBUG=true et une APP_URL locale (voir
+    | Database\Seeders\DemoDataGuard). Jamais en production.
+    |
+    */
+
+    'seed_demo_data' => (bool) env('SEED_DEMO_DATA', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |

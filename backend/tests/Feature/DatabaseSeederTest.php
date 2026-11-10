@@ -11,7 +11,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 
 it('crée un utilisateur vérifié par rôle en local et peut être relancé', function (): void {
-    $this->app->detectEnvironment(fn (): string => 'local');
+    allowDemoSeeding();
 
     $this->seed(DatabaseSeeder::class);
     $this->seed(DatabaseSeeder::class);
@@ -39,7 +39,7 @@ it('crée un utilisateur vérifié par rôle en local et peut être relancé', f
 });
 
 it('donne un projet publié et un brouillon au particulier et à l\'entrepreneur de démonstration', function (): void {
-    $this->app->detectEnvironment(fn (): string => 'local');
+    allowDemoSeeding();
 
     $this->seed(DatabaseSeeder::class);
     $this->seed(DatabaseSeeder::class);
@@ -59,7 +59,7 @@ it('donne un projet publié et un brouillon au particulier et à l\'entrepreneur
 });
 
 it('republie un projet de démonstration expiré', function (): void {
-    $this->app->detectEnvironment(fn (): string => 'local');
+    allowDemoSeeding();
     $this->seed(DatabaseSeeder::class);
 
     Carbon::setTestNow(now()->addDays(Project::PUBLICATION_DAYS + 1));

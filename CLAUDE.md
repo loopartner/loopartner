@@ -122,7 +122,11 @@ utilitaires du module) et `Console/Commands/` (commandes Artisan du module).
 - La recherche texte est un simple `LIKE` (`App\Support\Database\Like`, qui échappe `%`, `_` et `!`
   avec `ESCAPE '!'`, compatible SQLite et MariaDB 10.4). Une recherche plein texte (index FULLTEXT ou
   moteur dédié) pourra la remplacer plus tard si le volume l'exige.
-- Comptes locaux créés par `DatabaseSeeder` (environnement `local` uniquement) : `<rôle>@example.com`
+- Données de référence (rôles, catégories) : `ReferenceDataSeeder`, seul seeder à lancer en production :
+  `php artisan db:seed --class="Database\Seeders\ReferenceDataSeeder" --force`.
+- Comptes de démonstration créés par `DatabaseSeeder` **uniquement si** `SEED_DEMO_DATA=true`,
+  `APP_ENV=local`, `APP_DEBUG=true` et `APP_URL` locale (`DemoDataGuard`). Si `SEED_DEMO_DATA=true`
+  sans les autres conditions, le seed échoue. Comptes : `<rôle>@example.com`
   pour chaque rôle, mot de passe `password`, email vérifié. Le prestataire a un profil publié avec
   trois catégories ; le particulier et l'entrepreneur ont chacun un projet publié et un brouillon
   (`DatabaseSeeder::DEMO_PROJECTS`, repérés par leur titre). Relancer le seeder republie un projet de

@@ -69,6 +69,26 @@ function registrationPayload(array $overrides = []): array
 
 /*
 |--------------------------------------------------------------------------
+| Données de démonstration
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * Réunit toutes les conditions de DemoDataGuard : environnement local, debug, URL locale et
+ * SEED_DEMO_DATA=true. Chaque test peut ensuite en retirer une.
+ */
+function allowDemoSeeding(): void
+{
+    app()->detectEnvironment(fn (): string => 'local');
+    config([
+        'app.seed_demo_data' => true,
+        'app.debug' => true,
+        'app.url' => 'http://localhost:8000',
+    ]);
+}
+
+/*
+|--------------------------------------------------------------------------
 | Images de test (brique média)
 |--------------------------------------------------------------------------
 |

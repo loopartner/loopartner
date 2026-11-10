@@ -68,13 +68,16 @@ class DatabaseSeeder extends Seeder
     ];
 
     /**
-     * Seed the application's database. Le seeder est idempotent : il peut être relancé.
+     * Données de référence, puis données de démonstration si DemoDataGuard l'autorise
+     * (SEED_DEMO_DATA=true, en local uniquement). Le seeder est idempotent : il peut être relancé.
+     *
+     * En production, lancer uniquement ReferenceDataSeeder.
      */
     public function run(): void
     {
-        $this->call([RoleSeeder::class, ServiceCategorySeeder::class]);
+        $this->call(ReferenceDataSeeder::class);
 
-        if (app()->isLocal()) {
+        if (DemoDataGuard::allowsSeeding()) {
             $this->seedLocalUsers();
         }
     }
