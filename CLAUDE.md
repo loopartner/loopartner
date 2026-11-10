@@ -322,7 +322,10 @@ Aucune réponse ne révèle si une adresse email correspond à un compte.
 ## Sécurité transversale
 
 - Le middleware `App\Http\Middleware\SecurityHeaders` ajoute à chaque réponse : `X-Content-Type-Options`,
-  `Referrer-Policy`, `X-Frame-Options` et `Permissions-Policy`.
+  `Referrer-Policy`, `X-Frame-Options`, `Permissions-Policy`, `Content-Security-Policy`
+  (`default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'`),
+  `Cross-Origin-Opener-Policy: same-origin` et `Cross-Origin-Resource-Policy: same-site`, plus
+  `Strict-Transport-Security` (1 an, sous-domaines, sans preload) en production sur HTTPS uniquement.
 - Limiteurs de débit nommés (`AppServiceProvider`), valeurs dans **`config/security.php`**
   (`rate_limits`) : `login` (5/min par email + IP, 30/h par email), `two-factor` (5/min, 20/h par
   connexion en cours), `register` (30/h par IP), `forgot-password` (5/h par email, 20/h par IP),
