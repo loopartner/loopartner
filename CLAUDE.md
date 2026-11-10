@@ -365,18 +365,21 @@ Aucune réponse ne révèle si une adresse email correspond à un compte.
 
 ## Qualité
 
-À lancer depuis `backend/`, avec le PHP de Herd. Tout doit passer avant chaque commit :
+À lancer depuis `backend/`, avec le `php` du PATH (PHP 8.4, voir « Environnement local »). Tout doit
+passer avant chaque commit :
 
 ```sh
 php artisan test             # Pest, SQLite en mémoire
 vendor/bin/pint              # style (preset laravel)
 vendor/bin/phpstan analyse --memory-limit=1G   # Larastan niveau 6
+composer security            # composer audit : vulnérabilités connues des dépendances
 ```
 
 - La limite mémoire par défaut de PHP (128 Mo) ne suffit plus : `phpunit.xml` fixe 512 Mo pour les
   tests, et PHPStan se lance avec `--memory-limit=1G`.
-- Les helpers de test partagés (`serviceCategory()`, `projectOwner()`, `projectPayload()`, images…)
-  sont dans `tests/Pest.php`. Les requêtes de test envoient `Accept-Language: fr-FR` par défaut
+- Les helpers de test partagés (`serviceCategory()`, `projectOwner()`, `browsingProvider()`,
+  `projectPayload()`, `userWithTwoFactor()`, `verificationUrlFor()`, `securityLog()`,
+  `allowDemoSeeding()`, images…) sont dans `tests/Pest.php`. Les requêtes de test envoient `Accept-Language: fr-FR` par défaut
   (`tests/TestCase.php`).
 
 - Les tests simulent l'API Have I Been Pwned avec `Http::fake` (voir `tests/Pest.php`).
