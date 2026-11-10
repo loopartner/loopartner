@@ -33,7 +33,9 @@ return [
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
-            'serve' => true,
+            // Pas de routes signées /storage/{path} (GET et PUT) : ce disque privé n'est jamais
+            // servi par l'API (les médias publics sont sur "public" ou "r2").
+            'serve' => false,
             'throw' => false,
             'report' => false,
         ],

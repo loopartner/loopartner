@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\ForceJsonOnApi;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\TrustConfiguredProxies;
 use App\Support\SecurityLog;
@@ -32,6 +33,9 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Global : couvre aussi les 404 des routes inconnues, qui ne passent par aucun groupe.
         $middleware->append(SecurityHeaders::class);
+
+        // Réponses JSON sur toute l'API, même sans en-tête Accept (pas de redirection vers une page).
+        $middleware->prepend(ForceJsonOnApi::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

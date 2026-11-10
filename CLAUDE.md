@@ -276,7 +276,11 @@ modules comme `User` et `Media`.
 
 ## API et authentification
 
-- Toutes les routes métier sont sous `/api/v1`. Toutes les erreurs sur `api/*` sont rendues en JSON.
+- Toutes les routes métier sont sous `/api/v1`. Toutes les erreurs sur `api/*` sont rendues en JSON,
+  et `ForceJsonOnApi` traite toute requête `api/*` comme une requête JSON (sinon `auth`, `verified`
+  ou `password.confirm` redirigeraient vers une page inexistante : erreur 500). La racine `/`
+  répond `{"name": "Loopartner API"}` ; aucune vue n'est servie. Le disque privé `local` n'est
+  pas exposé (`serve => false`).
 - Sanctum fonctionne en **mode SPA** : authentification par cookie de session, sans jeton dans le
   navigateur. Le frontend appelle d'abord `GET /sanctum/csrf-cookie`, puis envoie le header `X-XSRF-TOKEN`.
 - Fortify fonctionne en mode headless (`views => false`). Ses routes sont sous `/api/v1/auth` (login,
