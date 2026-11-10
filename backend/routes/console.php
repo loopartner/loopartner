@@ -23,3 +23,12 @@ Artisan::command('inspire', function () {
 Schedule::command('media:prune-orphans')
     ->dailyAt('03:00')
     ->withoutOverlapping();
+
+// File d'attente (driver database) : traitée chaque minute, sans worker permanent.
+// Le worker s'arrête dès que la file est vide, et au plus tard après 50 secondes pour ne pas
+// déborder sur le schedule:run suivant. Le verrou anti-chevauchement expire après 5 minutes
+// (et non 24 heures par défaut) si un processus est tué sans le libérer.
+// Déclarée en dernier : les tâches précédentes passent avant le worker dans chaque schedule:run.
+Schedule::command('queue:work --stop-when-empty --max-time=50')
+    ->everyMinute()
+    ->withoutOverlapping(5);

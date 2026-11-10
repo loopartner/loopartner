@@ -29,7 +29,12 @@ entrepreneurs.
 - Base de données : MySQL. Pas de Redis, pas de processus permanent (ni worker, ni Horizon, ni Reverb).
 - Cache, sessions et files d'attente utilisent le driver `database`.
 - Les jobs sont traités par le planificateur : une tâche cron lance `php artisan schedule:run` chaque
-  minute, et le planificateur exécute `queue:work --stop-when-empty`.
+  minute, et le planificateur exécute `queue:work --stop-when-empty --max-time=50` chaque minute,
+  sans chevauchement (verrou expirant après 5 minutes). Le worker s'arrête dès que la file est vide,
+  et au plus tard après 50 secondes. Tâche cron Hostinger :
+  `* * * * * cd <chemin>/backend && php artisan schedule:run >> /dev/null 2>&1`.
+- Les tâches planifiées sont déclarées dans `routes/console.php`, et le worker de file d'attente
+  reste déclaré en dernier. `tests/Feature/SchedulerTest.php` vérifie la planification du worker.
 - Toutes les dates sont stockées en **UTC** (`app.timezone = UTC`, connexion MySQL en `+00:00`).
   La conversion vers le fuseau de l'utilisateur se fait à l'affichage, côté frontend.
 
