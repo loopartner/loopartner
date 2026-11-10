@@ -29,6 +29,17 @@ Schedule::command('projects:close-expired')
     ->dailyAt('02:00')
     ->withoutOverlapping();
 
+// Demandes de mise en relation (module Directory) en attente depuis 30 jours, ou propositions sur
+// un projet qui n'est plus publié : expirées. Après la clôture des projets expirés.
+Schedule::command('match-requests:expire')
+    ->dailyAt('02:30')
+    ->withoutOverlapping();
+
+// Minimisation des données de la mise en relation (durées dans config/security.php, retention).
+Schedule::command('matching:prune')
+    ->dailyAt('03:30')
+    ->withoutOverlapping();
+
 // File d'attente (driver database) : traitée chaque minute, sans worker permanent.
 // Le worker s'arrête dès que la file est vide, et au plus tard après 50 secondes pour ne pas
 // déborder sur le schedule:run suivant. Le verrou anti-chevauchement expire après 5 minutes

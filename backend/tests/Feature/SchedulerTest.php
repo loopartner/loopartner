@@ -22,6 +22,22 @@ it('clôture les projets expirés chaque jour, sans chevauchement', function ():
         ->and($event->withoutOverlapping)->toBeTrue();
 });
 
+it('fait expirer les demandes de mise en relation chaque jour, après la clôture des projets', function (): void {
+    $event = scheduledEvent('match-requests:expire');
+
+    expect($event)->not->toBeNull()
+        ->and($event->expression)->toBe('30 2 * * *')
+        ->and($event->withoutOverlapping)->toBeTrue();
+});
+
+it('purge les données de mise en relation arrivées au bout de leur conservation, chaque jour', function (): void {
+    $event = scheduledEvent('matching:prune');
+
+    expect($event)->not->toBeNull()
+        ->and($event->expression)->toBe('30 3 * * *')
+        ->and($event->withoutOverlapping)->toBeTrue();
+});
+
 it('déclare le worker de file d\'attente après toutes les autres tâches', function (): void {
     $commands = collect(app(Schedule::class)->events())->map(fn (Event $event): string => (string) $event->command);
 
