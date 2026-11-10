@@ -60,6 +60,10 @@ utilitaires du module).
   passe par des Actions publiques, des événements ou des identifiants. Un test d'architecture Pest
   vérifie cette règle (`tests/Arch/ModulesTest.php`).
 - **Exception** : `App\Models\User` est le modèle partagé du projet, tous les modules peuvent l'utiliser.
+  Il en va de même pour la brique média du noyau (`App\Models\Media` et `App\Support\Media`, voir la
+  section « Brique média »). Le noyau, lui, ne dépend jamais d'un module.
+- Les routes du noyau (hors modules, par exemple `POST /media`) sont dans `routes/api.php`, sous le
+  même préfixe `/api/v1`, avec `api` et `throttle:api`.
 - Les actions Fortify restent dans `app/Actions/Fortify`.
 - Les modèles de module déclarent leur factory avec l'attribut `#[UseFactory(...)]`, car la découverte
   automatique ne cherche que dans `App\Models`. Leurs factories vivent dans
@@ -84,9 +88,97 @@ utilitaires du module).
 - Le slug d'un profil prestataire est calculé à la création puis ne change plus (URL stables).
 - Les champs texte saisis par les utilisateurs refusent le HTML (règle `NoHtml`) plutôt que de le
   nettoyer. Le frontend doit quand même échapper ces textes à l'affichage.
-- Pas d'avatar pour l'instant : il sera ajouté avec le stockage Cloudflare R2.
+- Avatar (`PATCH /me`, champ `avatar`) et logo du profil prestataire (`PUT /me/provider-profile`,
+  champ `logo`) : uuid d'un média envoyé par `POST /media`, ou `null` pour le retirer. Dans le PUT,
+  un `logo` absent laisse le logo inchangé (même exception que `status`). Les réponses exposent
+  `avatar_url` et `logo_url` (null si absent).
 - Comptes locaux créés par `DatabaseSeeder` (environnement `local` uniquement) : `<rôle>@example.com`
   pour chaque rôle, mot de passe `password`, email vérifié.
+
+## Brique média (images)
+
+Service partagé du noyau, utilisable par tous les modules : modèle `App\Models\Media` (table `media`)
+et code dans `backend/app/Support/Media/`.
+
+### Fonctionnement
+
+1. Le frontend envoie l'image à `POST /api/v1/media` (`multipart/form-data` : `file`, `purpose`). Il
+   reçoit en 201 `uuid`, `purpose`, `url`, `width` et `height`. Le média n'est encore rattaché à rien
+   (`attached_at` null).
+2. Il envoie ensuite cet `uuid` à l'endpoint du module concerné (ex. `PATCH /me` avec `avatar`), qui
+   rattache le média.
+3. Un média jamais rattaché est supprimé, avec son fichier, après 24 heures par la commande
+   planifiée `media:prune-orphans` (chaque jour à 03:00).
+
+Usages (`App\Support\Media\MediaPurpose`, limites définies dans l'enum) :
+
+| purpose | Poids max | Min | Max (réduit sans agrandir) | Rôles |
+|---|---|---|---|---|
+| `avatar` | 5 Mo | 128×128 | 512×512 | tous |
+| `provider_logo` | 5 Mo | 128×128 | 1024×1024 | prestataire |
+| `event_cover`, `article_cover` | — | — | — | pas encore disponibles (422) |
+
+Les limites et les rôles de `event_cover` et `article_cover` seront définis avec les modules Events
+et Blog. Les rôles de `article_cover` ne doivent pas être figés sur `redacteur`/`admin` : les
+prestataires pourront aussi écrire des articles.
+
+### Utiliser la brique depuis un module
+
+- Ajouter une colonne `<champ>_media_id` (FK vers `media`, `nullable`, `nullOnDelete`) dans la table
+  du module, et une relation `belongsTo(Media::class, '<champ>_media_id')`.
+- Valider l'uuid reçu avec la règle `new AttachableMedia($user, MediaPurpose::X, $currentMediaId)`
+  (`['sometimes', 'nullable', 'string', new AttachableMedia(...)]`). Elle n'accepte qu'un média de
+  l'utilisateur, du bon usage, libre ou déjà rattaché à ce champ. Sinon : 422.
+- Rattacher dans l'Action, dans une transaction :
+  `$id = $mediaLibrary->replace($user, MediaPurpose::X, $uuid, $currentMediaId, '<champ>')`, puis
+  enregistrer `$id` dans la colonne. `replace()` revérifie le média sous verrou, remplit `attached_at`,
+  et supprime l'ancien média et son fichier (`null` retire le média).
+- Exposer `'<champ>_url' => $this->relation?->url()` dans la Resource. N'exposer **jamais** l'id
+  interne, le disque ni le chemin d'un média : seuls son `uuid` et son URL sont publics.
+- Ne jamais supprimer un média avec `$media->delete()` ni par une cascade SQL : passer par
+  `MediaLibrary::delete()` / `deleteOwnedBy()`, qui suppriment aussi les fichiers (après le commit).
+  `media.user_id` est en `restrict` : la base refuse de supprimer un utilisateur qui a encore des
+  médias. `DeleteAccount` appelle donc `deleteOwnedBy()` en premier.
+- Pour ouvrir un nouvel usage : renvoyer un `PurposeLimits` depuis `MediaPurpose::limits()` (poids,
+  dimensions, rôles sous forme de chaînes, pour que le noyau ne dépende pas des enums des modules).
+
+### Règles de sécurité
+
+- Upload réservé aux utilisateurs connectés avec un email vérifié (403 sinon). Rôle requis selon le
+  purpose (403).
+- Formats acceptés : **JPEG, PNG et WebP uniquement**, vérifiés sur le contenu réel (finfo puis
+  en-tête de l'image), jamais sur l'extension. SVG, GIF et les faux fichiers image sont refusés (422).
+- Garde-fou contre les « bombes de décompression » : au-delà de 8000 px de côté ou de 25 mégapixels,
+  l'image est refusée sur la base de son en-tête, avant tout décodage.
+- Toute image est décodée puis **réencodée en WebP** par Intervention Image (GD), qualité 82 :
+  l'orientation EXIF est appliquée, puis les métadonnées (EXIF, GPS) et tout contenu caché
+  disparaissent. L'image est réduite aux dimensions maximales du purpose, sans agrandissement.
+- Le fichier est nommé `<purpose>/<AAAA>/<MM>/<uuid>.webp`. Le nom d'origine n'est jamais repris.
+- Limiteur `media-uploads` : 20 uploads par minute et par utilisateur (429).
+- Au plus 20 médias non rattachés par utilisateur (`media.max_pending_per_user`). Au-delà, 429 avec
+  un message explicite.
+
+### Configuration
+
+- `config/media.php` : disque, qualité WebP, plafonds de pixels, médias en attente, délai de nettoyage.
+- Variables d'environnement :
+  - `MEDIA_DISK` : `public` en local, `r2` en production. Chaque média enregistre son disque, donc
+    changer cette valeur ne casse pas les médias existants.
+  - Disque `r2` (Cloudflare R2, pilote S3) : `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`,
+    `R2_ENDPOINT` (`https://<account_id>.r2.cloudflarestorage.com`) et `R2_PUBLIC_URL` (domaine
+    public du bucket, sans slash final).
+- En local, avec `MEDIA_DISK=public`, lancer une fois `php artisan storage:link` pour servir
+  `storage/app/public` sous `APP_URL/storage`.
+- Tests : `phpunit.xml` impose `MEDIA_DISK=public`. Les tests utilisent `Storage::fake('public')` et
+  des images générées par GD (`testImage()`, `jpegWithMetadata()` dans `tests/Pest.php`).
+
+### Contraintes de production (à vérifier au déploiement)
+
+- PHP : `upload_max_filesize` et `post_max_size` d'**au moins 8 Mo**. Sinon, l'upload échoue
+  avant même la validation.
+- Extension **GD compilée avec le support WebP** (`php -r "var_dump(gd_info()['WebP Support']);"`).
+  Les extensions `exif` (orientation des photos) et `fileinfo` sont aussi nécessaires.
+- Bucket R2 rendu public (domaine personnalisé ou `r2.dev`), avec `R2_PUBLIC_URL` pointant dessus.
 
 ## API et authentification
 
