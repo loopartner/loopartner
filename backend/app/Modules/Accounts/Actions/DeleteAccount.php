@@ -4,6 +4,7 @@ namespace App\Modules\Accounts\Actions;
 
 use App\Models\User;
 use App\Support\Media\MediaLibrary;
+use App\Support\SecurityLog;
 use App\Support\UserSessions;
 use Illuminate\Support\Facades\DB;
 
@@ -25,6 +26,8 @@ class DeleteAccount
 
     public function handle(User $user): void
     {
+        SecurityLog::record('account.deleted', ['user_id' => $user->id]);
+
         DB::transaction(function () use ($user): void {
             UserSessions::delete($user);
 

@@ -328,6 +328,20 @@ Aucune réponse ne révèle si une adresse email correspond à un compte.
   connexion en cours), `register` (30/h par IP), `forgot-password` (5/h par email, 20/h par IP),
   `reset-password` (10/h par IP), `password-update` et `password-confirm` (5/min par utilisateur),
   `verification` (3/min, 10/h), `api` (60/min), `media-uploads` (20/min), `account-deletion` (6/min).
+- **Journal de sécurité** : canal `security` (`storage/logs/security-AAAA-MM-JJ.log`, 30 jours), écrit
+  par `App\Support\SecurityLog::record()`. Chaque entrée : `event`, `user_id`, `ip`, `route`, `at`
+  (UTC). Jamais d'email (utiliser `SecurityLog::emailHash()`), de nom, de mot de passe, de jeton ni
+  de code 2FA. Événements : `auth.login`, `auth.login_failed`, `auth.logout`, `auth.registered`,
+  `auth.registration_existing_email`, `auth.email_verified`, `auth.email_verification_failed`,
+  `auth.password_reset_requested` (avec `outcome`), `auth.password_reset`, `auth.password_changed`,
+  `auth.two_factor_enabled|confirmed|disabled|failed|recovery_codes_regenerated`, `account.deleted`,
+  `authorization.denied` (`Gate::after`, avec `ability`, `resource`, `resource_ref`, `status`),
+  `rate_limit.exceeded`, `projects.browse`, `projects.view`, `projects.scraping_suspected`.
+  Les événements Laravel et Fortify sont journalisés par `App\Listeners\LogSecurityEvents`
+  (listeners découverts automatiquement dans `app/Listeners`). Les tests gardent ce journal en
+  mémoire (`securityLog()` dans `tests/Pest.php`).
+- La réinitialisation du mot de passe supprime toutes les sessions en base de l'utilisateur, et le
+  changement de mot de passe toutes sauf la session courante (`App\Support\UserSessions`).
 - Les routes Fortify n'ont pas le groupe `api` : `App\Http\Middleware\ThrottleAuthRoutes` (ajouté
   dans `fortify.middleware`) leur applique le limiteur correspondant à leur nom de route.
   `tests/Feature/Security/AuthRateLimitTest.php` vérifie chaque limite.

@@ -2,8 +2,13 @@
 
 namespace App\Providers;
 
+use App\Models\User;
+use App\Support\SecurityLog;
+use Illuminate\Auth\Access\Response;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
@@ -27,6 +32,33 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configurePasswords();
         $this->configureRateLimiting();
+        $this->logAuthorizationDenials();
+    }
+
+    /**
+     * Journalise chaque refus d'une Policy ou d'un Gate (canal security) : accès à la ressource
+     * d'un autre utilisateur (souvent 404, voir denyAsNotFound) ou à une fonction réservée à un
+     * autre rôle (403). Le résultat de l'autorisation n'est pas modifié.
+     */
+    private function logAuthorizationDenials(): void
+    {
+        Gate::after(function (?User $user, string $ability, mixed $result, array $arguments): void {
+            $response = $result instanceof Response ? $result : null;
+
+            if ($result !== false && ($response === null || $response->allowed())) {
+                return;
+            }
+
+            $target = $arguments[0] ?? null;
+
+            SecurityLog::record('authorization.denied', [
+                'user_id' => $user?->id,
+                'ability' => $ability,
+                'resource' => is_object($target) || is_string($target) ? class_basename($target) : null,
+                'resource_ref' => $target instanceof Model ? ($target->getAttribute('uuid') ?? $target->getKey()) : null,
+                'status' => $response?->status() ?? 403,
+            ], 'warning');
+        });
     }
 
     /**

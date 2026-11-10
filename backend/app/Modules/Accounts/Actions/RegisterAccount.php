@@ -5,6 +5,7 @@ namespace App\Modules\Accounts\Actions;
 use App\Models\User;
 use App\Modules\Accounts\Enums\AccountType;
 use App\Modules\Accounts\Notifications\RegistrationAttemptNotification;
+use App\Support\SecurityLog;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Arr;
@@ -35,7 +36,7 @@ class RegisterAccount
         $existing = User::query()->where('email', $data['email'])->first();
 
         if ($existing !== null) {
-            $existing->notify(new RegistrationAttemptNotification);
+            $this->notifyExistingAccount($existing);
 
             return;
         }
@@ -50,11 +51,25 @@ class RegisterAccount
         } catch (UniqueConstraintViolationException) {
             // Deux inscriptions simultanées avec la même adresse : la seconde est traitée comme
             // une tentative sur une adresse déjà utilisée.
-            User::query()->where('email', $data['email'])->first()?->notify(new RegistrationAttemptNotification);
+            $existing = User::query()->where('email', $data['email'])->first();
+
+            if ($existing !== null) {
+                $this->notifyExistingAccount($existing);
+            }
 
             return;
         }
 
         event(new Registered($user));
+    }
+
+    private function notifyExistingAccount(User $existing): void
+    {
+        $existing->notify(new RegistrationAttemptNotification);
+
+        SecurityLog::record('auth.registration_existing_email', [
+            'user_id' => $existing->id,
+            'email_hash' => SecurityLog::emailHash($existing->email),
+        ]);
     }
 }

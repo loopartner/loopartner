@@ -91,22 +91,6 @@ describe('inscription', function (): void {
     });
 });
 
-/**
- * URL du lien de vérification envoyé à l'utilisateur.
- */
-function verificationUrlFor(User $user): string
-{
-    $url = null;
-
-    Notification::assertSentTo($user, VerifyEmailNotification::class, function (VerifyEmailNotification $notification) use ($user, &$url): bool {
-        $url = $notification->toMail($user)->actionUrl;
-
-        return true;
-    });
-
-    return (string) $url;
-}
-
 describe('lien de vérification', function (): void {
     it('vérifie l\'adresse sans être connecté, puis redirige vers la connexion du frontend', function (): void {
         $this->postJson('/api/v1/auth/register', registrationPayload())->assertStatus(202);

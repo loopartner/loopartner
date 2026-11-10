@@ -4,6 +4,7 @@ namespace App\Modules\Accounts\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\SecurityLog;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -23,17 +24,17 @@ class EmailVerificationController extends Controller
     public function verify(Request $request, string $id, string $hash): RedirectResponse
     {
         if (! URL::hasCorrectSignature($request)) {
-            return $this->redirectToLogin('verification=invalid');
+            return $this->rejectLink('invalid');
         }
 
         if (! URL::signatureHasNotExpired($request)) {
-            return $this->redirectToLogin('verification=expired');
+            return $this->rejectLink('expired', (int) $id);
         }
 
         $user = User::query()->find((int) $id);
 
         if ($user === null || ! hash_equals(hash('sha1', $user->getEmailForVerification()), $hash)) {
-            return $this->redirectToLogin('verification=invalid');
+            return $this->rejectLink('invalid', (int) $id);
         }
 
         if (! $user->hasVerifiedEmail() && $user->markEmailAsVerified()) {
@@ -58,6 +59,13 @@ class EmailVerificationController extends Controller
         $user->sendEmailVerificationNotification();
 
         return new JsonResponse(['message' => 'Un nouveau lien de vérification vous a été envoyé.'], 202);
+    }
+
+    private function rejectLink(string $reason, ?int $userId = null): RedirectResponse
+    {
+        SecurityLog::record('auth.email_verification_failed', ['user_id' => $userId, 'reason' => $reason], 'warning');
+
+        return $this->redirectToLogin('verification='.$reason);
     }
 
     private function redirectToLogin(string $query): RedirectResponse

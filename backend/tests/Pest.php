@@ -3,12 +3,14 @@
 use App\Models\ServiceCategory;
 use App\Models\User;
 use App\Modules\Accounts\Models\ProviderProfile;
+use App\Notifications\VerifyEmailNotification;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Factory;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use Monolog\LogRecord;
@@ -97,6 +99,22 @@ function registrationPayload(array $overrides = []): array
         'password_confirmation' => 'correct-horse-battery-staple',
         'account_type' => 'particulier',
     ], $overrides);
+}
+
+/**
+ * URL du lien de vérification envoyé à l'utilisateur (Notification::fake() doit être actif).
+ */
+function verificationUrlFor(User $user): string
+{
+    $url = null;
+
+    Notification::assertSentTo($user, VerifyEmailNotification::class, function (VerifyEmailNotification $notification) use ($user, &$url): bool {
+        $url = $notification->toMail($user)->actionUrl;
+
+        return true;
+    });
+
+    return (string) $url;
 }
 
 /*
