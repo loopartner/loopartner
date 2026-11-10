@@ -414,9 +414,10 @@ Aucune réponse ne révèle si une adresse email correspond à un compte.
   `projects-browse` (30/min, 500/j), `match-requests` (10/h, 20/j, propositions et contacts confondus),
   `messages` (10/min, 300/j), `reports` (10/j), `blocks` (20/j).
 - Règles de validation du texte saisi : `NoHtml` et `NoInvisibleCharacters` (caractères de contrôle
-  sauf tabulation et retours à la ligne, contrôles de direction U+202A–202E et U+2066–2069, largeur
-  nulle U+200B–200F, U+2060–2064, BOM…), sur **tous** les champs texte saisis. Les emojis composés
-  (qui utilisent U+200D) sont donc refusés.
+  sauf tabulation et retours à la ligne, contrôles de direction U+202A–202E et U+2066–2069, espace
+  de largeur nulle U+200B, marques de direction U+200E et U+200F, U+2060–2064, BOM…), sur **tous**
+  les champs texte saisis. Restent autorisés U+200C (antiliant : persan, langues indiennes) et
+  U+200D (liant : emojis composés comme 👨‍👩‍👧 ou 👩‍💻).
 - **Journal de sécurité** : canal `security` (`storage/logs/security-AAAA-MM-JJ.log`, 30 jours), écrit
   par `App\Support\SecurityLog::record()`. Chaque entrée : `event`, `user_id`, `ip`, `route`, `at`
   (UTC). Jamais d'email (utiliser `SecurityLog::emailHash()`), de nom, de mot de passe, de jeton ni

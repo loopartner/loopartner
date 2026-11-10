@@ -29,6 +29,9 @@ describe('NoInvisibleCharacters', function (): void {
     })->with([
         'texte' => "Zoé L'Hermitte",
         'emoji' => "Atelier \u{1F3A8}",
+        'emoji composé avec U+200D (famille)' => "Famille \u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}",
+        'emoji composé avec U+200D (développeuse)' => "Développeuse \u{1F469}\u{200D}\u{1F4BB}",
+        'persan avec U+200C (« می‌خواهم »)' => "\u{0645}\u{06CC}\u{200C}\u{062E}\u{0648}\u{0627}\u{0647}\u{0645}",
         'arabe' => 'مرحبا',
         'tabulation' => "Prix\t500 €",
         'LF' => "Ligne 1\nLigne 2",
@@ -45,8 +48,6 @@ describe('NoInvisibleCharacters', function (): void {
         'C1' => "\u{0085}",
         'marque de lettre arabe' => "\u{061C}",
         'espace de largeur nulle' => "\u{200B}",
-        'antiliant' => "\u{200C}",
-        'liant (ZWJ, emojis composés compris)' => "\u{200D}",
         'marque gauche-droite' => "\u{200E}",
         'marque droite-gauche' => "\u{200F}",
         'enchâssement' => "\u{202A}",
