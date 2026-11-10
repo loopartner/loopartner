@@ -3,6 +3,7 @@
 use App\Rules\CountryCode;
 use App\Rules\CurrencyCode;
 use App\Rules\NoHtml;
+use App\Rules\NoInvisibleCharacters;
 use App\Support\Locale;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -20,6 +21,45 @@ describe('NoHtml', function (): void {
     it('refuse les balises, commentaires et instructions HTML', function (string $value): void {
         expect(passesRule(new NoHtml, $value))->toBeFalse();
     })->with(['<b>gras</b>', '</p>', '<!-- commentaire -->', '<?php echo 1; ?>', '<script>alert(1)</script>']);
+});
+
+describe('NoInvisibleCharacters', function (): void {
+    it('accepte du texte brut, les accents, les emojis, la tabulation et les retours à la ligne', function (string $value): void {
+        expect(passesRule(new NoInvisibleCharacters, $value))->toBeTrue();
+    })->with([
+        'texte' => "Zoé L'Hermitte",
+        'emoji' => "Atelier \u{1F3A8}",
+        'arabe' => 'مرحبا',
+        'tabulation' => "Prix\t500 €",
+        'LF' => "Ligne 1\nLigne 2",
+        'CRLF' => "Ligne 1\r\nLigne 2",
+    ]);
+
+    it('refuse les caractères invisibles et de contrôle', function (string $character): void {
+        expect(passesRule(new NoInvisibleCharacters, "fact{$character}ure"))->toBeFalse();
+    })->with([
+        'NUL' => "\u{0000}",
+        'BEL' => "\u{0007}",
+        'échappement' => "\u{001B}",
+        'DEL' => "\u{007F}",
+        'C1' => "\u{0085}",
+        'marque de lettre arabe' => "\u{061C}",
+        'espace de largeur nulle' => "\u{200B}",
+        'antiliant' => "\u{200C}",
+        'liant (ZWJ, emojis composés compris)' => "\u{200D}",
+        'marque gauche-droite' => "\u{200E}",
+        'marque droite-gauche' => "\u{200F}",
+        'enchâssement' => "\u{202A}",
+        'forçage droite-gauche' => "\u{202E}",
+        'gluon de mots' => "\u{2060}",
+        'isolat' => "\u{2066}",
+        'fin d\'isolat' => "\u{2069}",
+        'BOM' => "\u{FEFF}",
+    ]);
+
+    it('refuse une chaîne UTF-8 invalide', function (): void {
+        expect(passesRule(new NoInvisibleCharacters, "texte \xC3\x28"))->toBeFalse();
+    });
 });
 
 describe('CountryCode', function (): void {

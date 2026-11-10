@@ -9,6 +9,7 @@ use App\Modules\Accounts\Support\PreferenceRules;
 use App\Rules\ActiveServiceCategory;
 use App\Rules\CountryCode;
 use App\Rules\NoHtml;
+use App\Rules\NoInvisibleCharacters;
 use App\Support\Media\MediaPurpose;
 use App\Support\Media\Rules\AttachableMedia;
 use Illuminate\Foundation\Http\FormRequest;
@@ -50,12 +51,12 @@ class UpsertProviderProfileRequest extends FormRequest
         $currentLogoId = ProviderProfile::query()->where('user_id', $user->id)->value('logo_media_id');
 
         return [
-            'display_name' => ['required', 'string', 'min:2', 'max:100', new NoHtml],
-            'headline' => ['nullable', 'string', 'max:160', new NoHtml],
-            'bio' => ['nullable', 'string', 'max:5000', new NoHtml],
-            'city' => ['nullable', 'string', 'max:100', new NoHtml],
+            'display_name' => ['required', 'string', 'min:2', 'max:100', new NoHtml, new NoInvisibleCharacters],
+            'headline' => ['nullable', 'string', 'max:160', new NoHtml, new NoInvisibleCharacters],
+            'bio' => ['nullable', 'string', 'max:5000', new NoHtml, new NoInvisibleCharacters],
+            'city' => ['nullable', 'string', 'max:100', new NoHtml, new NoInvisibleCharacters],
             'country' => ['nullable', 'string', 'size:2', new CountryCode],
-            'website' => ['nullable', 'string', 'max:255', 'url:http,https'],
+            'website' => ['nullable', 'string', 'max:255', 'url:http,https', new NoInvisibleCharacters],
             'status' => ['sometimes', 'required', 'string', Rule::enum(ProviderProfileStatus::class)],
             'categories' => ['sometimes', 'required', 'list', 'min:1', 'max:5'],
             'categories.*' => ['required', 'string', 'distinct', new ActiveServiceCategory],

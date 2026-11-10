@@ -6,6 +6,7 @@ use App\Rules\ActiveServiceCategory;
 use App\Rules\CountryCode;
 use App\Rules\CurrencyCode;
 use App\Rules\NoHtml;
+use App\Rules\NoInvisibleCharacters;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -26,14 +27,14 @@ final class ProjectRules
         $optional = $partial ? ['sometimes', 'nullable'] : ['nullable'];
 
         return [
-            'title' => [...$required, 'string', 'min:5', 'max:150', new NoHtml],
-            'description' => [...$required, 'string', 'min:20', 'max:5000', new NoHtml],
+            'title' => [...$required, 'string', 'min:5', 'max:150', new NoHtml, new NoInvisibleCharacters],
+            'description' => [...$required, 'string', 'min:20', 'max:5000', new NoHtml, new NoInvisibleCharacters],
             'category' => [...$required, 'string', 'max:100', new ActiveServiceCategory],
             'budget_min' => [...$optional, 'integer', 'min:1', 'max:'.self::BUDGET_MAX],
             'budget_max' => [...$optional, 'integer', 'min:1', 'max:'.self::BUDGET_MAX],
             'currency' => ['sometimes', 'required', 'string', 'size:3', new CurrencyCode],
             'country' => [...$required, 'string', 'size:2', new CountryCode],
-            'city' => [...$optional, 'string', 'max:100', new NoHtml],
+            'city' => [...$optional, 'string', 'max:100', new NoHtml, new NoInvisibleCharacters],
             'remote_ok' => ['sometimes', 'required', 'boolean'],
             'desired_start_date' => [...$optional, 'date_format:Y-m-d', 'after_or_equal:today'],
         ];
