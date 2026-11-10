@@ -55,6 +55,25 @@ const API_ROUTES = [
     'POST api/v1/me/projects/{uuid}/close' => 'auth',
     'GET api/v1/projects' => 'auth',
     'GET api/v1/projects/{uuid}' => 'auth',
+    // Mise en relation et messagerie (voir aussi MatchingAuthorizationTest).
+    'POST api/v1/projects/{uuid}/proposals' => 'auth',
+    'POST api/v1/providers/{slug}/contact' => 'auth',
+    'GET api/v1/me/match-requests' => 'auth',
+    'GET api/v1/me/match-requests/{uuid}' => 'auth',
+    'POST api/v1/me/match-requests/{uuid}/accept' => 'auth',
+    'POST api/v1/me/match-requests/{uuid}/decline' => 'auth',
+    'POST api/v1/me/match-requests/{uuid}/withdraw' => 'auth',
+    'POST api/v1/me/match-requests/{uuid}/report' => 'auth',
+    'POST api/v1/me/match-requests/{uuid}/block' => 'auth',
+    'GET api/v1/me/conversations' => 'auth',
+    'GET api/v1/me/conversations/unread' => 'auth',
+    'GET api/v1/me/conversations/{uuid}' => 'auth',
+    'POST api/v1/me/conversations/{uuid}/block' => 'auth',
+    'DELETE api/v1/me/conversations/{uuid}/block' => 'auth',
+    'POST api/v1/me/conversations/{uuid}/read' => 'auth',
+    'GET api/v1/me/conversations/{uuid}/messages' => 'auth',
+    'POST api/v1/me/conversations/{uuid}/messages' => 'auth',
+    'POST api/v1/me/conversations/{uuid}/messages/{messageUuid}/report' => 'auth',
 ];
 
 /**
@@ -64,6 +83,7 @@ function concreteUri(string $uri): string
 {
     return '/'.strtr($uri, [
         '{uuid}' => '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d',
+        '{messageUuid}' => '1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed',
         '{slug}' => 'un-prestataire',
         '{id}' => '1',
         '{hash}' => str_repeat('a', 40),

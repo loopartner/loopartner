@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Modules\Accounts\Actions\HasPublishedProviderProfile;
 use App\Modules\Accounts\Enums\AccountType;
 use App\Modules\Directory\Models\Project;
+use App\Modules\Directory\Models\UserBlock;
 use Illuminate\Auth\Access\Response;
 
 /**
@@ -90,6 +91,24 @@ class ProjectPolicy
         return $this->hasPublishedProviderProfile->handle($user)
             ? Response::allow()
             : Response::deny('Publiez votre profil prestataire, avec au moins une catégorie, pour consulter les projets.');
+    }
+
+    /**
+     * Proposer ses services sur un projet publié (POST /projects/{uuid}/proposals) : les mêmes
+     * conditions que pour consulter les projets, et aucun blocage entre le prestataire et le
+     * porteur du projet. Un projet non visible donne 404 avant cette vérification.
+     */
+    public function propose(User $user, Project $project): Response
+    {
+        $browse = $this->browse($user);
+
+        if ($browse->denied()) {
+            return $browse;
+        }
+
+        return UserBlock::existsBetween($user->id, $project->user_id)
+            ? Response::deny('Vous ne pouvez pas faire de proposition sur ce projet.')
+            : Response::allow();
     }
 
     private function canOwnProjects(User $user): bool

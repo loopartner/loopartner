@@ -3,6 +3,13 @@
 use App\Models\ServiceCategory;
 use App\Models\User;
 use App\Modules\Accounts\Models\ProviderProfile;
+use App\Modules\Directory\Actions\AcceptMatchRequest;
+use App\Modules\Directory\Actions\SendMessage;
+use App\Modules\Directory\Actions\SendProposal;
+use App\Modules\Directory\Models\Conversation;
+use App\Modules\Directory\Models\MatchRequest;
+use App\Modules\Directory\Models\Message;
+use App\Modules\Directory\Models\Project;
 use App\Notifications\VerifyEmailNotification;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -315,4 +322,101 @@ function projectPayload(array $overrides = []): array
         'remote_ok' => true,
         'desired_start_date' => '2026-12-01',
     ], $overrides);
+}
+
+/*
+|--------------------------------------------------------------------------
+| Mise en relation et messagerie (module Directory)
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * Projet publié et non expiré d'un porteur de projet (particulier par défaut).
+ */
+function publishedProjectOf(?User $owner = null): Project
+{
+    return Project::factory()->published()->create(['user_id' => ($owner ?? projectOwner('particulier'))->id]);
+}
+
+/**
+ * Slug public du profil d'un prestataire créé par browsingProvider().
+ */
+function providerSlug(User $provider): string
+{
+    return ProviderProfile::query()->where('user_id', $provider->id)->sole()->slug;
+}
+
+/**
+ * @return array<string, mixed>
+ */
+function proposalPayload(array $overrides = []): array
+{
+    return array_merge([
+        'message' => 'Bonjour, je peux réaliser votre site vitrine en trois semaines, maquettes comprises.',
+        'price_amount' => 2500,
+        'price_currency' => 'EUR',
+    ], $overrides);
+}
+
+/**
+ * Proposition en attente d'un prestataire sur un projet publié (par l'Action, sans HTTP).
+ */
+function pendingProposal(?User $provider = null, ?Project $project = null): MatchRequest
+{
+    return app(SendProposal::class)->handle($provider ?? browsingProvider(), $project ?? publishedProjectOf(), [
+        'message' => 'Bonjour, je peux réaliser votre site vitrine en trois semaines.',
+        'price_amount' => 2500,
+        'price_currency' => 'EUR',
+    ]);
+}
+
+/**
+ * Proposition acceptée et sa conversation : [porteur de projet, prestataire, conversation].
+ *
+ * @return array{0: User, 1: User, 2: Conversation}
+ */
+function acceptedConversation(?User $owner = null, ?User $provider = null): array
+{
+    $owner ??= projectOwner('particulier');
+    $provider ??= browsingProvider();
+
+    $matchRequest = app(AcceptMatchRequest::class)->handle(pendingProposal($provider, publishedProjectOf($owner)));
+
+    /** @var Conversation $conversation */
+    $conversation = $matchRequest->conversation;
+
+    return [$owner, $provider, $conversation];
+}
+
+/**
+ * Vérifie récursivement qu'une réponse ne contient ni identifiant interne ni coordonnées.
+ *
+ * @param  array<mixed>  $data
+ */
+function expectNoPrivateFields(array $data): void
+{
+    $forbidden = ['id', 'user_id', 'author_id', 'recipient_id', 'project_id', 'sender_id', 'conversation_id',
+        'match_request_id', 'reporter_id', 'reported_user_id', 'blocker_id', 'blocked_id', 'email', 'phone',
+        'active_key', 'content_snapshot', 'last_read_message_id'];
+
+    array_walk_recursive($data, function (mixed $value, string|int $key) use ($forbidden): void {
+        expect($forbidden)->not->toContain($key);
+    });
+
+    // array_walk_recursive ne visite que les feuilles : on vérifie aussi les clés des tableaux.
+    foreach ($data as $key => $value) {
+        expect($forbidden)->not->toContain($key);
+
+        if (is_array($value)) {
+            expectNoPrivateFields($value);
+        }
+    }
+}
+
+/**
+ * Message envoyé par l'Action (sans HTTP ni limite de débit).
+ */
+function postMessage(User $sender, Conversation $conversation, string $body = 'Bonjour, voici quelques précisions sur le projet.'): Message
+{
+    return app(SendMessage::class)->handle($sender, $conversation->fresh(['participants.user']), $body);
 }

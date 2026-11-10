@@ -88,6 +88,50 @@ return [
             'per_day' => 500,
         ],
 
+        // Demandes de mise en relation envoyées (propositions et contacts confondus), par
+        // utilisateur. Un dépassement est un signe de spam : "match_requests.limit_exceeded" est
+        // écrit dans le journal security. S'ajoute au plafond de demandes en attente
+        // (MatchRequest::MAX_PENDING_SENT).
+        'match_requests' => [
+            'per_hour' => 10,
+            'per_day' => 20,
+        ],
+
+        // Messages envoyés dans la messagerie, par utilisateur, toutes conversations confondues.
+        'messages' => [
+            'per_minute' => 10,
+            'per_day' => 300,
+        ],
+
+        // Signalements de messages ou de demandes, par utilisateur.
+        'reports' => [
+            'per_day' => 10,
+        ],
+
+        // Blocages et déblocages d'utilisateurs, par utilisateur.
+        'blocks' => [
+            'per_day' => 20,
+        ],
+
+    ],
+
+    /*
+    | Durées de conservation des données de la mise en relation, en mois (purge quotidienne
+    | "matching:prune"). À reprendre dans la politique de confidentialité (voir SECURITY.md).
+    */
+    'retention' => [
+
+        // Conversation dont un participant a supprimé son compte : conservée pour l'autre
+        // participant, puis supprimée avec tous ses messages.
+        'orphaned_conversations_months' => 12,
+
+        // Demandes refusées, retirées ou expirées (sans conversation) : supprimées.
+        'closed_match_requests_months' => 12,
+
+        // Signalements : copie du contenu signalé et commentaire effacés, signalements clos
+        // supprimés.
+        'abuse_reports_months' => 12,
+
     ],
 
     'scraping' => [

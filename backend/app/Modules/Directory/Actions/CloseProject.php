@@ -9,9 +9,12 @@ use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 /**
  * Clôture un projet publié (expiré ou non). Un brouillon ou un projet déjà clos donne 409.
+ * Les propositions en attente sur ce projet expirent dans la même transaction.
  */
 class CloseProject
 {
+    public function __construct(private ExpireProjectProposals $expireProposals) {}
+
     /**
      * @throws ConflictHttpException
      */
@@ -28,6 +31,8 @@ class CloseProject
                 'status' => ProjectStatus::Closed,
                 'closed_at' => now(),
             ])->save();
+
+            $this->expireProposals->handle($project);
 
             return $project->load('category');
         });

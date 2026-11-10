@@ -7,6 +7,7 @@ use App\Support\SecurityLog;
 use Illuminate\Auth\Access\Response;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
@@ -147,6 +148,39 @@ class AppServiceProvider extends ServiceProvider
 
         // Suppression de compte (DELETE /me) : par utilisateur.
         RateLimiter::for('account-deletion', fn (Request $request): Limit => Limit::perMinute(self::limit('account_deletion.per_minute'))->by($this->userOrIp($request)));
+
+        // Demandes de mise en relation envoyées (propositions et contacts confondus) : par
+        // utilisateur. Un dépassement est journalisé comme signe de spam.
+        RateLimiter::for('match-requests', fn (Request $request): array => [
+            $this->loggedLimit(Limit::perHour(self::limit('match_requests.per_hour')), 'match_requests.limit_exceeded', 'hour')
+                ->by('hour:'.$this->userOrIp($request)),
+            $this->loggedLimit(Limit::perDay(self::limit('match_requests.per_day')), 'match_requests.limit_exceeded', 'day')
+                ->by('day:'.$this->userOrIp($request)),
+        ]);
+
+        // Messages envoyés : par utilisateur, toutes conversations confondues.
+        RateLimiter::for('messages', fn (Request $request): array => [
+            Limit::perMinute(self::limit('messages.per_minute'))->by('minute:'.$this->userOrIp($request)),
+            Limit::perDay(self::limit('messages.per_day'))->by('day:'.$this->userOrIp($request)),
+        ]);
+
+        // Signalements, blocages et déblocages : par utilisateur.
+        RateLimiter::for('reports', fn (Request $request): Limit => Limit::perDay(self::limit('reports.per_day'))->by($this->userOrIp($request)));
+        RateLimiter::for('blocks', fn (Request $request): Limit => Limit::perDay(self::limit('blocks.per_day'))->by($this->userOrIp($request)));
+    }
+
+    /**
+     * Limite dont le dépassement écrit en plus un avertissement dédié dans le journal security.
+     * La réponse reste celle de Laravel (ThrottleRequestsException : 429, Retry-After, et
+     * l'événement générique "rate_limit.exceeded").
+     */
+    private function loggedLimit(Limit $limit, string $event, string $window): Limit
+    {
+        return $limit->response(function (Request $request, array $headers) use ($event, $window): never {
+            SecurityLog::record($event, ['window' => $window], 'warning', $request);
+
+            throw new ThrottleRequestsException('Too Many Attempts.', null, $headers);
+        });
     }
 
     /**
