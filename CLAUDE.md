@@ -44,6 +44,9 @@ Chaque module contient :
 Models/  Http/Controllers/  Http/Requests/  Http/Resources/  Policies/  Actions/  Jobs/  routes.php
 ```
 
+Et, au besoin : `Enums/` (enums PHP), `Rules/` (règles de validation) et `Support/` (petites classes
+utilitaires du module).
+
 - `App\Providers\ModuleServiceProvider` charge automatiquement chaque `routes.php` avec le préfixe
   `/api/v1`, le middleware `api` et `throttle:api`. Pour ajouter un module, il suffit de créer son
   dossier et son `routes.php`.
@@ -54,10 +57,31 @@ Models/  Http/Controllers/  Http/Requests/  Http/Resources/  Policies/  Actions/
 - **Exception** : `App\Models\User` est le modèle partagé du projet, tous les modules peuvent l'utiliser.
 - Les actions Fortify restent dans `app/Actions/Fortify`.
 - Les modèles de module déclarent leur factory avec l'attribut `#[UseFactory(...)]`, car la découverte
-  automatique ne cherche que dans `App\Models`.
+  automatique ne cherche que dans `App\Models`. Leurs factories vivent dans
+  `database/factories/Modules/<Module>/` (namespace `Database\Factories\Modules\<Module>`).
+- `App\Models\User` ne déclare aucune relation vers un modèle de module : c'est le module qui
+  interroge ses propres tables par `user_id`.
 - Les Policies sont découvertes automatiquement dans `App\Modules\<Module>\Policies`.
 - Conventions : Form Requests pour la validation, API Resources pour les réponses, Policies pour
   l'autorisation, Actions pour les opérations métier, Jobs pour les tâches différées.
+
+## Module Accounts
+
+- Gère le type de compte à l'inscription, les préférences (`locale`, `timezone`, `country` sur `users`),
+  les endpoints `/me`, le profil prestataire et la suppression de compte.
+- L'inscription exige `account_type` (`App\Modules\Accounts\Enums\AccountType`) : `particulier`,
+  `prestataire` ou `entrepreneur`. Les rôles `redacteur` et `admin` ne s'obtiennent jamais par
+  l'inscription. Le rôle est attribué par l'Action `CreateAccount`, dans la même transaction.
+- **`ProviderProfile` est privé au module Accounts** : aucun autre module ne l'importe, ni ses
+  Resources, ni sa factory. Un module qui a besoin d'informations sur un prestataire passe par une
+  Action publique du module Accounts (à créer au besoin), qui renvoie des données simples (tableau ou
+  DTO), jamais le modèle Eloquent.
+- Le slug d'un profil prestataire est calculé à la création puis ne change plus (URL stables).
+- Les champs texte saisis par les utilisateurs refusent le HTML (règle `NoHtml`) plutôt que de le
+  nettoyer. Le frontend doit quand même échapper ces textes à l'affichage.
+- Pas d'avatar pour l'instant : il sera ajouté avec le stockage Cloudflare R2.
+- Comptes locaux créés par `DatabaseSeeder` (environnement `local` uniquement) : `<rôle>@example.com`
+  pour chaque rôle, mot de passe `password`, email vérifié.
 
 ## API et authentification
 
@@ -65,7 +89,7 @@ Models/  Http/Controllers/  Http/Requests/  Http/Resources/  Policies/  Actions/
 - Sanctum fonctionne en **mode SPA** : authentification par cookie de session, sans jeton dans le
   navigateur. Le frontend appelle d'abord `GET /sanctum/csrf-cookie`, puis envoie le header `X-XSRF-TOKEN`.
 - Fortify fonctionne en mode headless (`views => false`). Ses routes sont sous `/api/v1/auth` (login,
-  logout, register, forgot-password, reset-password, email/verify, two-factor…).
+  logout, register, forgot-password, reset-password, email/verify, user/password, two-factor…).
   - Les liens envoyés par email (réinitialisation du mot de passe) pointent vers `FRONTEND_URL`.
 - Le CORS n'autorise que `FRONTEND_URL`, avec les cookies (`supports_credentials`).
 - Variables d'environnement : `FRONTEND_URL`, `SANCTUM_STATEFUL_DOMAINS`, `SESSION_DOMAIN`.
@@ -82,6 +106,7 @@ Models/  Http/Controllers/  Http/Requests/  Http/Resources/  Policies/  Actions/
   - `login` : 5 tentatives par minute, par email et IP ;
   - `two-factor` : 5 tentatives par minute ;
   - `api` : 60 requêtes par minute, par utilisateur ou par IP.
+- `DELETE /api/v1/me` (suppression de compte) est en plus limité à 6 requêtes par minute (`throttle:6,1`).
 
 ## Qualité
 
