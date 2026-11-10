@@ -20,7 +20,7 @@ class UpdateUserPassword implements UpdatesUserPasswords
      *
      * @throws ValidationException
      */
-    public function update(User $user, array $input): void
+    public function update(User $user, #[\SensitiveParameter] array $input): void
     {
         /** @var array{password: string} $validated */
         $validated = Validator::make($input, [

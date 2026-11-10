@@ -4,6 +4,7 @@ namespace App\Modules\Accounts\Http\Requests;
 
 use App\Modules\Accounts\Enums\AccountType;
 use App\Modules\Accounts\Support\PreferenceRules;
+use App\Rules\NoHtml;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -39,7 +40,7 @@ class RegisterRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'min:2', 'max:255', new NoHtml],
             'email' => ['required', 'string', 'email', 'max:255'],
             'password' => ['required', 'string', Password::default(), 'confirmed'],
             // Seuls particulier, prestataire et entrepreneur sont acceptés : jamais redacteur ni admin.

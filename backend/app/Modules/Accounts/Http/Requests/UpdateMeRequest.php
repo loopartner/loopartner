@@ -4,6 +4,7 @@ namespace App\Modules\Accounts\Http\Requests;
 
 use App\Models\User;
 use App\Modules\Accounts\Support\PreferenceRules;
+use App\Rules\NoHtml;
 use App\Support\Media\MediaPurpose;
 use App\Support\Media\Rules\AttachableMedia;
 use Illuminate\Foundation\Http\FormRequest;
@@ -37,7 +38,7 @@ class UpdateMeRequest extends FormRequest
         $user = $this->user();
 
         return [
-            'name' => ['sometimes', 'required', 'string', 'max:255'],
+            'name' => ['sometimes', 'required', 'string', 'min:2', 'max:255', new NoHtml],
             ...PreferenceRules::rules(),
             'avatar' => [
                 'sometimes',
