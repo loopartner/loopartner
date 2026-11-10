@@ -30,9 +30,11 @@ obligatoire »).
   protection CSRF, mots de passe de 12 caractères minimum et refusés s'ils figurent dans des fuites
   connues, double authentification disponible. Changer ou réinitialiser le mot de passe déconnecte
   les autres appareils.
-- **Limites de débit** sur toutes les routes, plus strictes sur l'authentification et la
-  consultation des projets (`config/security.php`).
-- **Validation stricte des entrées** (FormRequest, texte sans HTML, listes fermées) et requêtes SQL
+- **Limites de débit** sur toutes les routes, plus strictes sur l'authentification, la
+  consultation des projets, l'envoi de demandes de mise en relation et de messages, les signalements
+  et les blocages (`config/security.php`).
+- **Validation stricte des entrées** (FormRequest, texte sans HTML ni caractères invisibles ou de contrôle de direction,
+  listes fermées) et requêtes SQL
   paramétrées. Images vérifiées sur leur contenu réel puis réencodées en WebP sans métadonnées.
 - **Exposition minimale** : les réponses listent chaque champ, sans identifiant interne ni donnée
   personnelle inutile. Les projets publiés n'exposent ni le nom ni l'email de leur porteur.
@@ -62,8 +64,46 @@ adresse).
 - **Conservation** : 30 jours (rotation quotidienne, `SECURITY_LOG_DAYS`), puis suppression.
 - **Accès** : réservé aux administrateurs techniques.
 
+Les événements de la mise en relation y figurent aussi : demande envoyée (type et identifiants),
+dépassement de la limite de demandes (signe de spam), blocage et déblocage d'un utilisateur,
+signalement (motif et identifiants). **Le contenu des messages, des demandes et des commentaires de
+signalement n'y est jamais écrit.**
+
 > **À faire avant l'ouverture au public** : cette journalisation (données collectées, finalité,
 > base légale, durée de conservation) doit figurer dans la **politique de confidentialité**.
+
+## Mise en relation et messagerie : données personnelles et durées de conservation
+
+Les demandes de mise en relation et les messages sont des données personnelles. Ils ne sont visibles
+que des deux participants (tout autre utilisateur, administrateurs compris, reçoit une erreur 404 :
+il n'existe pas encore d'accès de modération). L'API n'expose jamais d'email, de téléphone ni
+d'identifiant interne ; le nom d'un porteur de projet n'est révélé au prestataire qu'après
+l'acceptation de la demande. Les emails de notification ne contiennent ni le contenu des messages, ni
+de nom, ni le titre du projet d'un autre utilisateur.
+
+| Données | Conservation | Ensuite |
+|---|---|---|
+| Demande en attente sans réponse | 30 jours | passe au statut « expirée » |
+| Demande refusée, retirée ou expirée | 12 mois après ce changement de statut | supprimée |
+| Demande acceptée et sa conversation | tant que les deux comptes existent | voir ligne suivante |
+| Conversation dont un participant a supprimé son compte | 12 mois après la suppression du compte, pour l'autre participant (lecture seule, sans lien avec le compte supprimé) | supprimée avec tous ses messages |
+| Copie du contenu signalé et commentaire d'un signalement | 12 mois après le signalement | effacés |
+| Signalement clos par la modération | 12 mois après sa clôture | supprimé |
+
+- **Suppression de compte** : les demandes non acceptées de l'utilisateur sont supprimées tout de
+  suite ; ses conversations restent lisibles par l'autre participant (intérêt légitime : historique
+  des échanges, devis, preuve en cas de litige, RGPD art. 6.1.f et 17.3.e), sans nom ni identifiant du
+  compte supprimé, puis sont purgées après la durée ci-dessus ; ses blocages sont supprimés ; les
+  signalements qui le concernent sont conservés pour la modération, sans lien avec son compte.
+- **Base légale** : exécution du service demandé (art. 6.1.b) pour les demandes et les messages ;
+  intérêt légitime (art. 6.1.f) pour la conservation après suppression d'un compte et pour la
+  modération des signalements.
+- **Réglage** : les durées de 12 mois sont dans `backend/config/security.php` (`retention`), appliquées
+  chaque nuit par la tâche planifiée `matching:prune`. Toute modification doit être reportée dans la
+  politique de confidentialité.
+
+> **À faire avant l'ouverture au public** : reprendre ce tableau dans la **politique de
+> confidentialité**, et prévoir l'outil de modération des signalements (back-office).
 
 ## Vérifications avant chaque mise en production
 
@@ -95,4 +135,8 @@ Depuis `backend/`, sur le serveur de production :
 - Journal d'audit des actions d'administration.
 - Notification « nouvelle connexion » et liste des sessions actives, avec déconnexion à distance.
 - Alerte automatique (email ou outil de supervision) sur les avertissements du journal de sécurité
-  (`projects.scraping_suspected`, rafales de `auth.login_failed`).
+  (`projects.scraping_suspected`, `match_requests.limit_exceeded`, rafales de `auth.login_failed`).
+- Back-office de modération des signalements (avec journal d'audit des consultations de contenus
+  signalés).
+- Détection des coordonnées (email, téléphone, IBAN) partagées dans les messages, pour avertir
+  l'utilisateur avant l'envoi.

@@ -39,7 +39,8 @@ entrepreneurs.
 - Les tâches planifiées sont déclarées dans `routes/console.php`, et le worker de file d'attente
   reste déclaré en dernier. `tests/Feature/SchedulerTest.php` vérifie la planification de chaque
   tâche et la position du worker. Tâches actuelles : `projects:close-expired` (02:00),
-  `media:prune-orphans` (03:00), puis le worker.
+  `match-requests:expire` (02:30), `media:prune-orphans` (03:00), `matching:prune` (03:30), puis
+  le worker.
 - Toutes les dates sont stockées en **UTC** (`app.timezone = UTC`, connexion MySQL en `+00:00`).
   La conversion vers le fuseau de l'utilisateur se fait à l'affichage, côté frontend.
 
@@ -55,7 +56,9 @@ Models/  Http/Controllers/  Http/Requests/  Http/Resources/  Policies/  Actions/
 ```
 
 Et, au besoin : `Enums/` (enums PHP), `Rules/` (règles de validation), `Support/` (petites classes
-utilitaires du module) et `Console/Commands/` (commandes Artisan du module).
+utilitaires du module), `Console/Commands/` (commandes Artisan du module), `Notifications/`
+(emails), `Events/` (événements publics, que d'autres modules peuvent écouter) et `Listeners/`
+(écouteurs, découverts automatiquement par `bootstrap/app.php`, `withEvents`).
 
 - Les commandes des modules sont chargées par `bootstrap/app.php`
   (`withCommands(glob('app/Modules/*/Console/Commands'))`), en plus de `app/Console/Commands`.
@@ -106,7 +109,14 @@ utilitaires du module) et `Console/Commands/` (commandes Artisan du module).
 - **`ProviderProfile` est privé au module Accounts** : aucun autre module ne l'importe, ni ses
   Resources, ni sa factory. Un module qui a besoin d'informations sur un prestataire passe par une
   Action publique du module Accounts (à créer au besoin), qui renvoie des données simples (tableau ou
-  DTO), jamais le modèle Eloquent.
+  DTO), jamais le modèle Eloquent. Actions publiques existantes : `HasPublishedProviderProfile`,
+  `FindPublishedProvider` (slug d'un profil publié → `user_id` et résumé public) et
+  `GetProviderSummaries` (résumés publics de plusieurs prestataires en une requête : `display_name`,
+  `slug` (null si dépublié), `headline`, `city`, `country`, `logo_url`).
+- Événement public `Accounts\Events\AccountDeleting` : envoyé de façon synchrone par `DeleteAccount`,
+  dans sa transaction et avant la suppression de la ligne `users`. Les autres modules y traitent les
+  données de l'utilisateur (Directory : `ForgetUserMatching`). Un écouteur ne doit pas être mis en file
+  d'attente ; une exception annule toute la suppression.
 - Le slug d'un profil prestataire est calculé à la création puis ne change plus (URL stables).
 - Les champs texte saisis par les utilisateurs refusent le HTML (règle `NoHtml`) plutôt que de le
   nettoyer. Le frontend doit quand même échapper ces textes à l'affichage.
@@ -134,7 +144,10 @@ utilitaires du module) et `Console/Commands/` (commandes Artisan du module).
   pour chaque rôle, mot de passe `password`, email vérifié. Le prestataire a un profil publié avec
   trois catégories ; le particulier et l'entrepreneur ont chacun un projet publié et un brouillon
   (`DatabaseSeeder::DEMO_PROJECTS`, repérés par leur titre). Relancer le seeder republie un projet de
-  démonstration expiré.
+  démonstration expiré. Mise en relation de démonstration (sans aucun email) : proposition du
+  prestataire acceptée sur le projet du particulier, avec une conversation
+  (`DatabaseSeeder::DEMO_MESSAGES`) ; proposition en attente sur le projet de l'entrepreneur ; contact
+  de l'entrepreneur vers le prestataire, refusé.
 
 ## Brique média (images)
 
@@ -255,7 +268,67 @@ prestataires pourront aussi écrire des articles.
   porteur de projet, seulement `owner.account_type` (particulier ou entrepreneur) et `owner.country`
   (`users.country`). Le contact passera par la mise en relation (à venir).
 - La suppression d'un compte supprime ses projets (clé étrangère en cascade, aucun fichier rattaché).
-  `DeleteProject` reste le point d'entrée unique pour supprimer un projet.
+  `DeleteProject` reste le point d'entrée unique pour supprimer un projet : il fait d'abord expirer les
+  propositions en attente sur ce projet (comme `CloseProject`).
+
+## Module Directory (mise en relation et messagerie)
+
+Toutes les routes : `auth:sanctum` et `verified` (403 sans email vérifié). Seuls les deux
+participants voient une demande ou une conversation : **tout autre utilisateur reçoit 404**, quel que
+soit son rôle, admin compris (`MatchRequestPolicy`, `ConversationPolicy`, vérifiées avant la
+validation). Un participant qui tente l'action de l'autre reçoit 403 ; un état incompatible, 409.
+
+- **Demandes** (`MatchRequest`, table `match_requests`, uuid public) :
+  - `proposal` : `POST /projects/{uuid}/proposals` (prestataire, mêmes conditions que la consultation
+    des projets, `ProjectPolicy::propose`) : `message`, `price_amount` et `price_currency` facultatifs
+    (devise exigée avec un montant). Projet non visible : 404.
+  - `contact` : `POST /providers/{slug}/contact` (particulier ou entrepreneur) : `message` et `project`
+    facultatif (uuid d'un de SES projets publiés, 422 sinon). Profil non publié : 404.
+  - Message de 20 à 5000 caractères, texte brut (`NoHtml`, `NoInvisibleCharacters`).
+  - Statuts `MatchRequestStatus` : `pending` → `accepted` | `declined` | `withdrawn` | `expired` ; les
+    autres sont définitifs (409, sous verrou : `PendingMatchRequest`). `accept`, `decline`, `report`,
+    `block` : destinataire ; `withdraw` : auteur.
+  - **Au plus une demande active** (`pending` ou `accepted`) par auteur et projet (proposition) ou par
+    auteur et prestataire (contact) : colonne `active_key` avec index unique (409), libérée au refus, au
+    retrait et à l'expiration. Au plus `MatchRequest::MAX_PENDING_SENT` (30) demandes en attente
+    envoyées par utilisateur (409).
+  - Expiration (`match-requests:expire`, 02:30) : en attente depuis 30 jours, ou proposition sur un
+    projet qui n'est plus visible. `CloseProject` et `DeleteProject` font expirer tout de suite les
+    propositions en attente du projet. Les contacts qui citent un projet ne sont pas concernés.
+  - `GET /me/match-requests?box=received|sent` (filtres `status`, `type`) et `GET /me/match-requests/{uuid}`.
+- **Confidentialité** (`ViewerContext`, `MatchRequestResource`, `ConversationResource`) : aucun id
+  interne, aucun email, aucun téléphone. L'interlocuteur (`counterpart`) est un prestataire (résumé
+  public via `GetProviderSummaries`, jamais son nom d'utilisateur) ou un porteur de projet (type de
+  compte et pays ; **son nom n'apparaît qu'une fois la demande acceptée**). Compte supprimé :
+  `{"deleted": true}`. Un message n'indique son expéditeur que par `mine`.
+- **Messagerie** : l'acceptation ouvre une `Conversation` à deux `ConversationParticipant`
+  (`match_request_id` unique). `GET /me/conversations` (avec `unread_count`, `can_send`,
+  `blocked_by_me`), `GET /me/conversations/unread` (compteur global léger pour l'interrogation
+  régulière), `GET /me/conversations/{uuid}/messages` (paginé du plus récent au plus ancien ; avec
+  `after=<uuid>` : seulement les nouveaux, du plus ancien au plus récent, 100 au plus, `meta.has_more`),
+  `POST …/messages` (`body`, 5000 caractères, texte brut), `POST …/read` (`up_to` facultatif ; le
+  marqueur n'avance jamais en arrière). Envoyer un message vaut lecture des messages précédents.
+- **Blocage** (`UserBlock`) : entre deux utilisateurs, dans les deux sens, toutes conversations et
+  toutes nouvelles demandes (403). `POST|DELETE /me/conversations/{uuid}/block` (seul celui qui a
+  bloqué débloque) et `POST /me/match-requests/{uuid}/block` (le destinataire bloque l'auteur ; une
+  demande en attente est refusée sans email). L'historique reste lisible.
+- **Signalements** (`AbuseReport`) : `POST /me/match-requests/{uuid}/report` (destinataire) et
+  `POST /me/conversations/{uuid}/messages/{messageUuid}/report` (message de l'interlocuteur, 422 pour
+  le sien), motif `ReportReason` (`spam`, `harassment`, `scam`, `inappropriate`, `off_platform`,
+  `other`) et `comment` facultatif (1000 caractères). Copie du contenu (`content_snapshot`) pour la
+  modération ; une fois par contenu et par utilisateur (409). Pas encore d'endpoint d'administration.
+- **Emails** (`Notifications/`, file d'attente après commit, langue `users.locale`) : demande reçue,
+  acceptée, refusée ; nouveau message au plus une fois toutes les 15 minutes par conversation et par
+  destinataire (`last_notified_at`, UPDATE conditionnel), abandonné s'il a été lu entre-temps. **Ni
+  contenu de message, ni nom, ni titre d'un projet d'autrui** ; seule exception : la proposition reçue
+  cite au porteur de projet le titre de SON projet. `lang/fr.json` traduit le gabarit de Laravel.
+- **Suppression de compte** (`ForgetUserMatching`, sur `AccountDeleting`) : demandes non acceptées
+  supprimées ; conversations conservées pour l'autre participant (identifiants à null, lecture seule,
+  `orphaned_at`), supprimées tout de suite si les deux comptes sont supprimés ; blocages supprimés ;
+  signalements conservés et anonymisés.
+- **Minimisation** (`matching:prune`, 03:30, durées en mois dans `config/security.php`, `retention`) :
+  conversations orphelines (12), demandes refusées, retirées ou expirées (12), copie du contenu et
+  commentaire des signalements, puis signalements clos (12).
 
 ## Catégories de services (noyau)
 
@@ -337,7 +410,13 @@ Aucune réponse ne révèle si une adresse email correspond à un compte.
   (`rate_limits`) : `login` (5/min par email + IP, 30/h par email), `two-factor` (5/min, 20/h par
   connexion en cours), `register` (30/h par IP), `forgot-password` (5/h par email, 20/h par IP),
   `reset-password` (10/h par IP), `password-update` et `password-confirm` (5/min par utilisateur),
-  `verification` (3/min, 10/h), `api` (60/min), `media-uploads` (20/min), `account-deletion` (6/min).
+  `verification` (3/min, 10/h), `api` (60/min), `media-uploads` (20/min), `account-deletion` (6/min),
+  `projects-browse` (30/min, 500/j), `match-requests` (10/h, 20/j, propositions et contacts confondus),
+  `messages` (10/min, 300/j), `reports` (10/j), `blocks` (20/j).
+- Règles de validation du texte saisi : `NoHtml` et `NoInvisibleCharacters` (caractères de contrôle
+  sauf tabulation et retours à la ligne, contrôles de direction U+202A–202E et U+2066–2069, largeur
+  nulle U+200B–200F, U+2060–2064, BOM…), sur **tous** les champs texte saisis. Les emojis composés
+  (qui utilisent U+200D) sont donc refusés.
 - **Journal de sécurité** : canal `security` (`storage/logs/security-AAAA-MM-JJ.log`, 30 jours), écrit
   par `App\Support\SecurityLog::record()`. Chaque entrée : `event`, `user_id`, `ip`, `route`, `at`
   (UTC). Jamais d'email (utiliser `SecurityLog::emailHash()`), de nom, de mot de passe, de jeton ni
@@ -346,7 +425,10 @@ Aucune réponse ne révèle si une adresse email correspond à un compte.
   `auth.password_reset_requested` (avec `outcome`), `auth.password_reset`, `auth.password_changed`,
   `auth.two_factor_enabled|confirmed|disabled|failed|recovery_codes_regenerated`, `account.deleted`,
   `authorization.denied` (`Gate::after`, avec `ability`, `resource`, `resource_ref`, `status`),
-  `rate_limit.exceeded`, `projects.browse`, `projects.view`, `projects.scraping_suspected`.
+  `rate_limit.exceeded`, `projects.browse`, `projects.view`, `projects.scraping_suspected`,
+  `match_requests.created`, `match_requests.limit_exceeded` (avec `window`), `messaging.user_blocked`,
+  `messaging.user_unblocked`, `moderation.report_created`. **Jamais le contenu d'un message, d'une
+  demande ni d'un commentaire de signalement** (test `MatchingPrivacyTest`).
   Les événements Laravel et Fortify sont journalisés par `App\Listeners\LogSecurityEvents`
   (listeners découverts automatiquement dans `app/Listeners`). Les tests gardent ce journal en
   mémoire (`securityLog()` dans `tests/Pest.php`).
@@ -421,7 +503,8 @@ composer security            # composer audit : vulnérabilités connues des dé
 - La limite mémoire par défaut de PHP (128 Mo) ne suffit plus : `phpunit.xml` fixe 512 Mo pour les
   tests, et PHPStan se lance avec `--memory-limit=1G`.
 - Les helpers de test partagés (`serviceCategory()`, `projectOwner()`, `browsingProvider()`,
-  `projectPayload()`, `userWithTwoFactor()`, `verificationUrlFor()`, `securityLog()`,
+  `projectPayload()`, `publishedProjectOf()`, `pendingProposal()`, `acceptedConversation()`,
+  `postMessage()`, `expectNoPrivateFields()`, `userWithTwoFactor()`, `verificationUrlFor()`, `securityLog()`,
   `allowDemoSeeding()`, images…) sont dans `tests/Pest.php`. Les requêtes de test envoient `Accept-Language: fr-FR` par défaut
   (`tests/TestCase.php`).
 
