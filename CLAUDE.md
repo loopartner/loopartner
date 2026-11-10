@@ -34,7 +34,9 @@ entrepreneurs.
   et au plus tard après 50 secondes. Tâche cron Hostinger :
   `* * * * * cd <chemin>/backend && php artisan schedule:run >> /dev/null 2>&1`.
 - Les tâches planifiées sont déclarées dans `routes/console.php`, et le worker de file d'attente
-  reste déclaré en dernier. `tests/Feature/SchedulerTest.php` vérifie la planification du worker.
+  reste déclaré en dernier. `tests/Feature/SchedulerTest.php` vérifie la planification de chaque
+  tâche et la position du worker. Tâches actuelles : `projects:close-expired` (02:00),
+  `media:prune-orphans` (03:00), puis le worker.
 - Toutes les dates sont stockées en **UTC** (`app.timezone = UTC`, connexion MySQL en `+00:00`).
   La conversion vers le fuseau de l'utilisateur se fait à l'affichage, côté frontend.
 
@@ -49,8 +51,12 @@ Chaque module contient :
 Models/  Http/Controllers/  Http/Requests/  Http/Resources/  Policies/  Actions/  Jobs/  routes.php
 ```
 
-Et, au besoin : `Enums/` (enums PHP), `Rules/` (règles de validation) et `Support/` (petites classes
-utilitaires du module).
+Et, au besoin : `Enums/` (enums PHP), `Rules/` (règles de validation), `Support/` (petites classes
+utilitaires du module) et `Console/Commands/` (commandes Artisan du module).
+
+- Les commandes des modules sont chargées par `bootstrap/app.php`
+  (`withCommands(glob('app/Modules/*/Console/Commands'))`), en plus de `app/Console/Commands`.
+  Une commande de module se nomme `<Nom>Command` pour ne pas se confondre avec l'Action qu'elle appelle.
 
 - `App\Providers\ModuleServiceProvider` charge automatiquement chaque `routes.php` avec le préfixe
   `/api/v1`, le middleware `api` et `throttle:api`. Pour ajouter un module, il suffit de créer son

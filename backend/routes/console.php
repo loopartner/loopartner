@@ -24,6 +24,11 @@ Schedule::command('media:prune-orphans')
     ->dailyAt('03:00')
     ->withoutOverlapping();
 
+// Projets (module Directory) publiés depuis plus de 60 jours : clôturés.
+Schedule::command('projects:close-expired')
+    ->dailyAt('02:00')
+    ->withoutOverlapping();
+
 // File d'attente (driver database) : traitée chaque minute, sans worker permanent.
 // Le worker s'arrête dès que la file est vide, et au plus tard après 50 secondes pour ne pas
 // déborder sur le schedule:run suivant. Le verrou anti-chevauchement expire après 5 minutes

@@ -14,6 +14,9 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
+    // Commandes Artisan des modules (app/Modules/<Module>/Console/Commands), en plus de
+    // app/Console/Commands déjà chargé par défaut.
+    ->withCommands(glob(__DIR__.'/../app/Modules/*/Console/Commands', GLOB_ONLYDIR) ?: [])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi();
 
