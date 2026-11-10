@@ -67,6 +67,8 @@ utilitaires du module).
   (ISO 4217). Les listes de codes sont statiques (ni package ni extension intl).
 - Langues : `App\Support\Locale` (`fr`, `en`). `Locale::fromRequest()` choisit la langue d'une réponse :
   paramètre `locale`, puis en-tête `Accept-Language`, puis `fr`. Une valeur inconnue est ignorée.
+- Pagination des listes : `App\Support\Pagination` (paramètres `page` et `per_page`, 20 par défaut,
+  50 au maximum, 422 au-delà). Réponse paginée standard de Laravel (`data`, `links`, `meta`).
 - Le test d'architecture vérifie que le noyau (`App\Models`, `App\Rules`, `App\Support`, `App\Http`,
   `App\Console`) ne dépend d'aucun module.
 - Les routes du noyau (hors modules, par exemple `POST /media`) sont dans `routes/api.php`, sous le
@@ -104,6 +106,13 @@ utilitaires du module).
   brouillon peut n'avoir aucune catégorie, mais **la publication exige au moins une catégorie** (422
   sur `categories`). Table pivot `provider_profile_category`. Les Resources exposent `categories`
   (slug et nom traduit).
+- `GET /providers` : recherche publique des profils **publiés**, triée par `published_at` décroissant.
+  Filtres facultatifs (un paramètre vide est ignoré) : `category` (slug actif, sous-catégories
+  incluses), `country`, `city` (égalité sans tenir compte de la casse) et `q` (2 à 100 caractères,
+  dans `display_name`, `headline` et `bio`). Même Resource que la page publique.
+- La recherche texte est un simple `LIKE` (`App\Support\Database\Like`, qui échappe `%`, `_` et `!`
+  avec `ESCAPE '!'`, compatible SQLite et MariaDB 10.4). Une recherche plein texte (index FULLTEXT ou
+  moteur dédié) pourra la remplacer plus tard si le volume l'exige.
 - Comptes locaux créés par `DatabaseSeeder` (environnement `local` uniquement) : `<rôle>@example.com`
   pour chaque rôle, mot de passe `password`, email vérifié.
 

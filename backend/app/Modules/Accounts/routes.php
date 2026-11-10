@@ -25,6 +25,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
 });
 
 // Public, sans authentification.
+Route::get('providers', [PublicProviderController::class, 'index'])->name('accounts.providers.index');
 Route::get('providers/{slug}', [PublicProviderController::class, 'show'])
     ->where('slug', '[a-z0-9]+(?:-[a-z0-9]+)*')
     ->name('accounts.providers.show');
