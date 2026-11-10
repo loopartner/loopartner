@@ -3,11 +3,16 @@
 use App\Models\ServiceCategory;
 use App\Models\User;
 use App\Modules\Accounts\Models\ProviderProfile;
+use App\Modules\Directory\Enums\MatchRequestStatus;
+use App\Modules\Directory\Enums\MatchRequestType;
 use App\Modules\Directory\Enums\ProjectStatus;
+use App\Modules\Directory\Models\Conversation;
+use App\Modules\Directory\Models\MatchRequest;
 use App\Modules\Directory\Models\Project;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\ServiceCategorySeeder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 it('crée un utilisateur vérifié par rôle en local et peut être relancé', function (): void {
@@ -56,6 +61,50 @@ it('donne un projet publié et un brouillon au particulier et à l\'entrepreneur
 
     $provider = User::query()->where('email', 'prestataire@example.com')->sole();
     $this->actingAs($provider)->getJson('/api/v1/projects')->assertOk()->assertJsonCount(2, 'data');
+});
+
+it('crée une mise en relation de démonstration, sans email, et peut être relancé', function (): void {
+    allowDemoSeeding();
+    // Driver de production : un email mis en file d'attente laisserait une ligne dans jobs.
+    config(['queue.default' => 'database']);
+
+    $this->seed(DatabaseSeeder::class);
+    $this->seed(DatabaseSeeder::class);
+
+    $provider = User::query()->where('email', 'prestataire@example.com')->sole();
+    $particulier = User::query()->where('email', 'particulier@example.com')->sole();
+    $entrepreneur = User::query()->where('email', 'entrepreneur@example.com')->sole();
+
+    expect(MatchRequest::query()->count())->toBe(3);
+
+    $accepted = MatchRequest::query()->where('status', MatchRequestStatus::Accepted->value)->sole();
+    expect($accepted->type)->toBe(MatchRequestType::Proposal)
+        ->and($accepted->author_id)->toBe($provider->id)
+        ->and($accepted->recipient_id)->toBe($particulier->id);
+
+    $pending = MatchRequest::query()->where('status', MatchRequestStatus::Pending->value)->sole();
+    expect($pending->type)->toBe(MatchRequestType::Proposal)
+        ->and($pending->recipient_id)->toBe($entrepreneur->id);
+
+    $declined = MatchRequest::query()->where('status', MatchRequestStatus::Declined->value)->sole();
+    expect($declined->type)->toBe(MatchRequestType::Contact)
+        ->and($declined->author_id)->toBe($entrepreneur->id)
+        ->and($declined->recipient_id)->toBe($provider->id);
+
+    $conversation = Conversation::query()->sole();
+    expect($conversation->match_request_id)->toBe($accepted->id)
+        ->and($conversation->messages()->count())->toBe(count(DatabaseSeeder::DEMO_MESSAGES));
+
+    $this->actingAs($particulier)->getJson('/api/v1/me/conversations')
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.unread_count', 1);
+    $this->actingAs($provider)->getJson('/api/v1/me/match-requests?box=received')
+        ->assertOk()
+        ->assertJsonPath('data.0.status', 'declined');
+
+    // Aucun email n'est mis en file d'attente pour les données de démonstration.
+    expect(DB::table('jobs')->count())->toBe(0);
 });
 
 it('republie un projet de démonstration expiré', function (): void {
