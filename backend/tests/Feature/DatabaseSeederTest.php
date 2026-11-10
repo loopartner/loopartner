@@ -24,7 +24,10 @@ it('crée un utilisateur vérifié par rôle en local et peut être relancé', f
     $profile = ProviderProfile::query()->sole();
     expect($profile->user->email)->toBe('prestataire@example.com')
         ->and($profile->isPublished())->toBeTrue()
-        ->and($profile->slug)->toBe('prestataire-test');
+        ->and($profile->slug)->toBe('prestataire-test')
+        // Un profil publié doit avoir au moins une catégorie.
+        ->and($profile->categories()->pluck('slug')->all())
+        ->toEqualCanonicalizing(['creation-statuts', 'developpement-web', 'identite-visuelle']);
 
     $this->getJson('/api/v1/providers/prestataire-test')->assertOk();
 });

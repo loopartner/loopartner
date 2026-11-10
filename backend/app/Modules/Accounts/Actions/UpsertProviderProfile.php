@@ -2,6 +2,7 @@
 
 namespace App\Modules\Accounts\Actions;
 
+use App\Models\ServiceCategory;
 use App\Models\User;
 use App\Modules\Accounts\Enums\ProviderProfileStatus;
 use App\Modules\Accounts\Models\ProviderProfile;
@@ -17,7 +18,8 @@ use Illuminate\Validation\ValidationException;
  *
  * - Le slug est calculé à partir de display_name à la création uniquement, puis ne change
  *   plus : les URL publiques restent stables.
- * - La publication exige un email vérifié.
+ * - La publication exige un email vérifié et au moins une catégorie de services.
+ * - categories absent : les catégories restent inchangées ; sinon elles sont remplacées.
  * - published_at est fixé au passage en "published" et remis à null au retour en brouillon.
  */
 class UpsertProviderProfile
@@ -29,7 +31,7 @@ class UpsertProviderProfile
     public function __construct(private MediaLibrary $library) {}
 
     /**
-     * @param  array{display_name: string, headline?: string|null, bio?: string|null, city?: string|null, country?: string|null, website?: string|null, status?: string, logo?: string|null}  $data
+     * @param  array{display_name: string, headline?: string|null, bio?: string|null, city?: string|null, country?: string|null, website?: string|null, status?: string, logo?: string|null, categories?: list<string>}  $data
      *
      * @throws ValidationException
      */
@@ -46,7 +48,7 @@ class UpsertProviderProfile
     }
 
     /**
-     * @param  array{display_name: string, headline?: string|null, bio?: string|null, city?: string|null, country?: string|null, website?: string|null, status?: string, logo?: string|null}  $data
+     * @param  array{display_name: string, headline?: string|null, bio?: string|null, city?: string|null, country?: string|null, website?: string|null, status?: string, logo?: string|null, categories?: list<string>}  $data
      */
     private function save(User $user, array $data): ProviderProfile
     {
@@ -60,6 +62,21 @@ class UpsertProviderProfile
             throw ValidationException::withMessages([
                 'status' => 'Vous devez vérifier votre adresse email avant de publier votre profil.',
             ]);
+        }
+
+        // categories absent : les catégories actuelles sont conservées.
+        $categoryIds = array_key_exists('categories', $data)
+            ? ServiceCategory::query()->whereIn('slug', $data['categories'])->pluck('id')->all()
+            : null;
+
+        if ($status === ProviderProfileStatus::Published) {
+            $categoryCount = $categoryIds !== null ? count($categoryIds) : ($profile?->categories()->count() ?? 0);
+
+            if ($categoryCount === 0) {
+                throw ValidationException::withMessages([
+                    'categories' => 'Choisissez au moins une catégorie de services avant de publier votre profil.',
+                ]);
+            }
         }
 
         $attributes = [
@@ -101,7 +118,11 @@ class UpsertProviderProfile
 
         $profile->save();
 
-        return $profile->load('logo');
+        if ($categoryIds !== null) {
+            $profile->categories()->sync($categoryIds);
+        }
+
+        return $profile->load(['logo', 'categories']);
     }
 
     private function uniqueSlug(string $displayName): string

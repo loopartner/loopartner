@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Storage;
 
 beforeEach(function (): void {
     Storage::fake('public');
+    serviceCategory('design');
 });
 
 function logoProvider(): User
@@ -36,7 +37,7 @@ function profileWithLogo(User $user): ProviderProfile
 
 function logoPayload(array $overrides = []): array
 {
-    return array_merge(['display_name' => 'Atelier Logo', 'status' => 'published'], $overrides);
+    return array_merge(['display_name' => 'Atelier Logo', 'status' => 'published', 'categories' => ['design']], $overrides);
 }
 
 it('rattache le logo à la création du profil et l\'expose sur la page publique', function (): void {

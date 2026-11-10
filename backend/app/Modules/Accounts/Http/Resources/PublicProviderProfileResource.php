@@ -2,6 +2,7 @@
 
 namespace App\Modules\Accounts\Http\Resources;
 
+use App\Http\Resources\ServiceCategoryResource;
 use App\Modules\Accounts\Models\ProviderProfile;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -30,6 +31,7 @@ class PublicProviderProfileResource extends JsonResource
             'country' => $this->country,
             'website' => $this->website,
             'logo_url' => $this->logo?->url(),
+            'categories' => ServiceCategoryResource::collection($this->whenLoaded('categories')),
             'published_at' => $this->published_at?->toIso8601ZuluString(),
         ];
     }

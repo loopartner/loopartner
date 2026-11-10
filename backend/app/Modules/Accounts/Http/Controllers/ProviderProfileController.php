@@ -27,7 +27,7 @@ class ProviderProfileController extends Controller
         $profile = ProviderProfile::query()->where('user_id', $user->id)->first();
         abort_if($profile === null, 404, 'Aucun profil prestataire.');
 
-        return new ProviderProfileResource($profile->load('logo'));
+        return new ProviderProfileResource($profile->load(['logo', 'categories']));
     }
 
     public function upsert(UpsertProviderProfileRequest $request, UpsertProviderProfile $upsertProfile): JsonResponse
@@ -40,7 +40,7 @@ class ProviderProfileController extends Controller
             Gate::authorize('update', $existing);
         }
 
-        /** @var array{display_name: string, headline?: string|null, bio?: string|null, city?: string|null, country?: string|null, website?: string|null, status?: string, logo?: string|null} $data */
+        /** @var array{display_name: string, headline?: string|null, bio?: string|null, city?: string|null, country?: string|null, website?: string|null, status?: string, logo?: string|null, categories?: list<string>} $data */
         $data = $request->validated();
 
         $profile = $upsertProfile->handle($user, $data);

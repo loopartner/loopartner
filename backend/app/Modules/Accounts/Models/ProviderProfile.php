@@ -3,6 +3,7 @@
 namespace App\Modules\Accounts\Models;
 
 use App\Models\Media;
+use App\Models\ServiceCategory;
 use App\Models\User;
 use App\Modules\Accounts\Enums\ProviderProfileStatus;
 use Carbon\CarbonImmutable;
@@ -14,6 +15,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -80,6 +82,18 @@ class ProviderProfile extends Model
     public function logo(): BelongsTo
     {
         return $this->belongsTo(Media::class, 'logo_media_id');
+    }
+
+    /**
+     * Catégories de services (modèle du noyau, partagé par tous les modules), de 1 à 5.
+     *
+     * @return BelongsToMany<ServiceCategory, $this>
+     */
+    public function categories(): BelongsToMany
+    {
+        return $this->belongsToMany(ServiceCategory::class, 'provider_profile_category')
+            ->orderBy('service_categories.position')
+            ->orderBy('service_categories.slug');
     }
 
     public function isPublished(): bool

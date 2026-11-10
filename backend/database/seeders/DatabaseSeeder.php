@@ -56,6 +56,7 @@ class DatabaseSeeder extends Seeder
                     'bio' => 'Profil prestataire créé par le seeder pour le développement local.',
                     'city' => 'Lyon',
                     'country' => 'FR',
+                    'categories' => ['creation-statuts', 'developpement-web', 'identite-visuelle'],
                     'status' => 'published',
                 ]);
             }

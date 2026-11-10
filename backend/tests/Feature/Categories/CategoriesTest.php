@@ -3,23 +3,12 @@
 use App\Models\ServiceCategory;
 use Database\Seeders\ServiceCategorySeeder;
 
-function category(string $slug, string $fr, string $en, ?ServiceCategory $parent = null, int $position = 0, bool $active = true): ServiceCategory
-{
-    return ServiceCategory::factory()->create([
-        'slug' => $slug,
-        'name' => ['fr' => $fr, 'en' => $en],
-        'parent_id' => $parent?->id,
-        'position' => $position,
-        'is_active' => $active,
-    ]);
-}
-
 describe('GET /categories', function (): void {
     it('renvoie l\'arbre des catégories actives, dans l\'ordre, sans identifiant interne', function (): void {
-        $legal = category('juridique', 'Juridique', 'Legal', position: 20);
-        category('contrats', 'Contrats', 'Contracts', $legal, 20);
-        category('statuts', 'Statuts', 'Articles', $legal, 10);
-        category('design', 'Design', 'Design', position: 10);
+        $legal = serviceCategory('juridique', 'Juridique', 'Legal', position: 20);
+        serviceCategory('contrats', 'Contrats', 'Contracts', $legal, 20);
+        serviceCategory('statuts', 'Statuts', 'Articles', $legal, 10);
+        serviceCategory('design', 'Design', 'Design', position: 10);
 
         $response = $this->getJson('/api/v1/categories')->assertOk();
 
@@ -36,7 +25,7 @@ describe('GET /categories', function (): void {
     });
 
     it('traduit les noms selon le paramètre locale, puis Accept-Language, puis en français', function (): void {
-        category('juridique', 'Juridique', 'Legal');
+        serviceCategory('juridique', 'Juridique', 'Legal');
 
         $this->getJson('/api/v1/categories?locale=en', ['Accept-Language' => 'fr-FR'])
             ->assertJsonPath('data.0.name', 'Legal');
@@ -59,11 +48,11 @@ describe('GET /categories', function (): void {
     });
 
     it('masque les catégories inactives et les sous-catégories d\'un parent inactif', function (): void {
-        $legal = category('juridique', 'Juridique', 'Legal');
-        category('statuts', 'Statuts', 'Articles', $legal);
-        category('contrats', 'Contrats', 'Contracts', $legal, active: false);
-        $hidden = category('cache', 'Caché', 'Hidden', active: false);
-        category('enfant-cache', 'Enfant caché', 'Hidden child', $hidden);
+        $legal = serviceCategory('juridique', 'Juridique', 'Legal');
+        serviceCategory('statuts', 'Statuts', 'Articles', $legal);
+        serviceCategory('contrats', 'Contrats', 'Contracts', $legal, active: false);
+        $hidden = serviceCategory('cache', 'Caché', 'Hidden', active: false);
+        serviceCategory('enfant-cache', 'Enfant caché', 'Hidden child', $hidden);
 
         $response = $this->getJson('/api/v1/categories')->assertOk();
 
@@ -81,38 +70,38 @@ describe('GET /categories', function (): void {
 
 describe('modèle', function (): void {
     it('refuse un troisième niveau', function (): void {
-        $parent = category('a', 'A', 'A');
-        $child = category('b', 'B', 'B', $parent);
+        $parent = serviceCategory('a', 'A', 'A');
+        $child = serviceCategory('b', 'B', 'B', $parent);
 
-        category('c', 'C', 'C', $child);
+        serviceCategory('c', 'C', 'C', $child);
     })->throws(LogicException::class);
 
     it('refuse de donner un parent à une catégorie qui a des sous-catégories', function (): void {
-        $parent = category('a', 'A', 'A');
-        category('b', 'B', 'B', $parent);
-        $other = category('c', 'C', 'C');
+        $parent = serviceCategory('a', 'A', 'A');
+        serviceCategory('b', 'B', 'B', $parent);
+        $other = serviceCategory('c', 'C', 'C');
 
         $parent->update(['parent_id' => $other->id]);
     })->throws(LogicException::class);
 
     it('refuse qu\'une catégorie soit son propre parent', function (): void {
-        $category = category('a', 'A', 'A');
+        $category = serviceCategory('a', 'A', 'A');
 
         $category->update(['parent_id' => $category->id]);
     })->throws(LogicException::class);
 
     it('considère une sous-catégorie d\'un parent inactif comme inactive', function (): void {
-        $parent = category('a', 'A', 'A', active: false);
-        category('b', 'B', 'B', $parent);
+        $parent = serviceCategory('a', 'A', 'A', active: false);
+        serviceCategory('b', 'B', 'B', $parent);
 
         expect(ServiceCategory::query()->active()->count())->toBe(0)
             ->and(ServiceCategory::idsWithDescendants('b'))->toBe([]);
     });
 
     it('inclut les sous-catégories actives dans idsWithDescendants', function (): void {
-        $parent = category('a', 'A', 'A');
-        $child = category('b', 'B', 'B', $parent);
-        category('c', 'C', 'C', $parent, active: false);
+        $parent = serviceCategory('a', 'A', 'A');
+        $child = serviceCategory('b', 'B', 'B', $parent);
+        serviceCategory('c', 'C', 'C', $parent, active: false);
 
         expect(ServiceCategory::idsWithDescendants('a'))->toBe([$parent->id, $child->id])
             ->and(ServiceCategory::idsWithDescendants('b'))->toBe([$child->id])

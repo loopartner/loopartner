@@ -99,6 +99,11 @@ utilitaires du module).
   champ `logo`) : uuid d'un média envoyé par `POST /media`, ou `null` pour le retirer. Dans le PUT,
   un `logo` absent laisse le logo inchangé (même exception que `status`). Les réponses exposent
   `avatar_url` et `logo_url` (null si absent).
+- Catégories du profil prestataire (`PUT /me/provider-profile`, champ `categories`) : liste de 1 à 5
+  slugs de catégories actives, qui remplace la précédente. Absent : inchangé (comme `logo`). Un
+  brouillon peut n'avoir aucune catégorie, mais **la publication exige au moins une catégorie** (422
+  sur `categories`). Table pivot `provider_profile_category`. Les Resources exposent `categories`
+  (slug et nom traduit).
 - Comptes locaux créés par `DatabaseSeeder` (environnement `local` uniquement) : `<rôle>@example.com`
   pour chaque rôle, mot de passe `password`, email vérifié.
 

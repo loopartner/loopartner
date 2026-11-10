@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\ServiceCategory;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Factory;
@@ -146,4 +147,26 @@ function jpegWithMetadata(string $exifMarker, string $hiddenMarker): UploadedFil
     $segment = "\xFF\xE1".pack('n', strlen($app1) + 2).$app1;
 
     return uploadedFileWithContents(substr($jpeg, 0, 2).$segment.substr($jpeg, 2).$hiddenMarker, 'vacances.jpg');
+}
+
+/*
+|--------------------------------------------------------------------------
+| Catégories de services
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * Crée une catégorie de services (nom anglais : nom français suivi de " (en)" par défaut).
+ */
+function serviceCategory(string $slug, ?string $fr = null, ?string $en = null, ?ServiceCategory $parent = null, int $position = 0, bool $active = true): ServiceCategory
+{
+    $fr ??= ucfirst(str_replace('-', ' ', $slug));
+
+    return ServiceCategory::factory()->create([
+        'slug' => $slug,
+        'name' => ['fr' => $fr, 'en' => $en ?? $fr.' (en)'],
+        'parent_id' => $parent?->id,
+        'position' => $position,
+        'is_active' => $active,
+    ]);
 }

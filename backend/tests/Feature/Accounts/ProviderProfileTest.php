@@ -22,8 +22,13 @@ function profilePayload(array $overrides = []): array
         'city' => 'Lyon',
         'country' => 'fr',
         'website' => 'https://electricite-dupont.example',
+        'categories' => ['travaux-electricite'],
     ], $overrides);
 }
+
+beforeEach(function (): void {
+    serviceCategory('travaux-electricite', 'Électricité', 'Electrical work');
+});
 
 describe('autorisation', function (): void {
     it('refuse l\'accès à un utilisateur sans le rôle prestataire', function (string $role): void {
@@ -251,7 +256,7 @@ describe('GET /providers/{slug}', function (): void {
         $response = $this->getJson('/api/v1/providers/electricite-dupont')->assertOk();
 
         expect(array_keys($response->json('data')))->toEqualCanonicalizing([
-            'display_name', 'slug', 'headline', 'bio', 'city', 'country', 'website', 'logo_url', 'published_at',
+            'display_name', 'slug', 'headline', 'bio', 'city', 'country', 'website', 'logo_url', 'categories', 'published_at',
         ]);
         expect($response->getContent())
             ->not->toContain('secret@example.com')

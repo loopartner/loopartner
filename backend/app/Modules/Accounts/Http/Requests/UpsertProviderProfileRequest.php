@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Modules\Accounts\Enums\ProviderProfileStatus;
 use App\Modules\Accounts\Models\ProviderProfile;
 use App\Modules\Accounts\Support\PreferenceRules;
+use App\Rules\ActiveServiceCategory;
 use App\Rules\CountryCode;
 use App\Rules\NoHtml;
 use App\Support\Media\MediaPurpose;
@@ -21,6 +22,10 @@ use Illuminate\Validation\Rule;
  *
  * logo suit la même exception que le statut : absent, il reste inchangé ; null le retire
  * (fichier compris) ; sinon c'est l'uuid d'un média "provider_logo" de l'utilisateur.
+ *
+ * categories suit la même exception : absent, rien ne change ; sinon c'est une liste de 1 à 5
+ * slugs de catégories actives, qui remplace la précédente. Un profil publié doit avoir au
+ * moins une catégorie (vérifié par UpsertProviderProfile).
  */
 class UpsertProviderProfileRequest extends FormRequest
 {
@@ -52,6 +57,8 @@ class UpsertProviderProfileRequest extends FormRequest
             'country' => ['nullable', 'string', 'size:2', new CountryCode],
             'website' => ['nullable', 'string', 'max:255', 'url:http,https'],
             'status' => ['sometimes', 'required', 'string', Rule::enum(ProviderProfileStatus::class)],
+            'categories' => ['sometimes', 'required', 'list', 'min:1', 'max:5'],
+            'categories.*' => ['required', 'string', 'distinct', new ActiveServiceCategory],
             'logo' => [
                 'sometimes',
                 'nullable',
