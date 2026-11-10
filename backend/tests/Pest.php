@@ -69,6 +69,32 @@ function registrationPayload(array $overrides = []): array
 
 /*
 |--------------------------------------------------------------------------
+| Double authentification
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * Secret TOTP (base32) des utilisateurs de test ayant la double authentification.
+ */
+const TWO_FACTOR_SECRET = 'JBSWY3DPEHPK3PXP';
+
+/**
+ * Utilisateur dont la double authentification est activée et confirmée.
+ */
+function userWithTwoFactor(array $attributes = []): User
+{
+    $user = User::factory()->create($attributes);
+    $user->forceFill([
+        'two_factor_secret' => encrypt(TWO_FACTOR_SECRET),
+        'two_factor_recovery_codes' => encrypt(json_encode(['code-de-secours-1', 'code-de-secours-2'])),
+        'two_factor_confirmed_at' => now(),
+    ])->save();
+
+    return $user;
+}
+
+/*
+|--------------------------------------------------------------------------
 | Données de démonstration
 |--------------------------------------------------------------------------
 */

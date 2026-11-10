@@ -286,11 +286,14 @@ modules comme `User` et `Media`.
 
 - Le middleware `App\Http\Middleware\SecurityHeaders` ajoute à chaque réponse : `X-Content-Type-Options`,
   `Referrer-Policy`, `X-Frame-Options` et `Permissions-Policy`.
-- Limiteurs de débit nommés (`AppServiceProvider`) :
-  - `login` : 5 tentatives par minute, par email et IP ;
-  - `two-factor` : 5 tentatives par minute ;
-  - `api` : 60 requêtes par minute, par utilisateur ou par IP.
-- `DELETE /api/v1/me` (suppression de compte) est en plus limité à 6 requêtes par minute (`throttle:6,1`).
+- Limiteurs de débit nommés (`AppServiceProvider`), valeurs dans **`config/security.php`**
+  (`rate_limits`) : `login` (5/min par email + IP, 30/h par email), `two-factor` (5/min, 20/h par
+  connexion en cours), `register` (30/h par IP), `forgot-password` (5/h par email, 20/h par IP),
+  `reset-password` (10/h par IP), `password-update` et `password-confirm` (5/min par utilisateur),
+  `verification` (3/min, 10/h), `api` (60/min), `media-uploads` (20/min), `account-deletion` (6/min).
+- Les routes Fortify n'ont pas le groupe `api` : `App\Http\Middleware\ThrottleAuthRoutes` (ajouté
+  dans `fortify.middleware`) leur applique le limiteur correspondant à leur nom de route.
+  `tests/Feature/Security/AuthRateLimitTest.php` vérifie chaque limite.
 
 ## Qualité
 

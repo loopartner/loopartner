@@ -15,7 +15,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('me', [MeController::class, 'show'])->name('accounts.me.show');
     Route::patch('me', [MeController::class, 'update'])->name('accounts.me.update');
     Route::delete('me', [MeController::class, 'destroy'])
-        ->middleware('throttle:6,1')
+        ->middleware('throttle:account-deletion')
         ->name('accounts.me.destroy');
 
     Route::get('me/provider-profile', [ProviderProfileController::class, 'show'])
