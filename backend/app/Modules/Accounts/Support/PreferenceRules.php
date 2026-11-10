@@ -2,7 +2,8 @@
 
 namespace App\Modules\Accounts\Support;
 
-use App\Modules\Accounts\Rules\CountryCode;
+use App\Rules\CountryCode;
+use App\Support\Locale;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\In;
@@ -13,7 +14,7 @@ use Illuminate\Validation\Rules\In;
 final class PreferenceRules
 {
     /** @var list<string> */
-    public const LOCALES = ['fr', 'en'];
+    public const LOCALES = Locale::SUPPORTED;
 
     /**
      * Toutes les préférences sont facultatives ; le pays peut être vidé avec null.

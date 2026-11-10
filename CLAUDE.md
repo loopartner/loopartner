@@ -62,6 +62,13 @@ utilitaires du module).
 - **Exception** : `App\Models\User` est le modèle partagé du projet, tous les modules peuvent l'utiliser.
   Il en va de même pour la brique média du noyau (`App\Models\Media` et `App\Support\Media`, voir la
   section « Brique média »). Le noyau, lui, ne dépend jamais d'un module.
+- Règles de validation partagées du noyau, dans `app/Rules` (namespace `App\Rules`), utilisables par
+  tous les modules : `NoHtml` (refuse le HTML), `CountryCode` (ISO 3166-1 alpha-2) et `CurrencyCode`
+  (ISO 4217). Les listes de codes sont statiques (ni package ni extension intl).
+- Langues : `App\Support\Locale` (`fr`, `en`). `Locale::fromRequest()` choisit la langue d'une réponse :
+  paramètre `locale`, puis en-tête `Accept-Language`, puis `fr`. Une valeur inconnue est ignorée.
+- Le test d'architecture vérifie que le noyau (`App\Models`, `App\Rules`, `App\Support`, `App\Http`,
+  `App\Console`) ne dépend d'aucun module.
 - Les routes du noyau (hors modules, par exemple `POST /media`) sont dans `routes/api.php`, sous le
   même préfixe `/api/v1`, avec `api` et `throttle:api`.
 - Les actions Fortify restent dans `app/Actions/Fortify`.

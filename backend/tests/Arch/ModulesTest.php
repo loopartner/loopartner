@@ -19,16 +19,17 @@ foreach (MODULES as $module) {
 }
 
 /*
-| La brique média appartient au noyau, comme App\Models\User : tous les modules peuvent
-| l'utiliser, mais elle ne dépend d'aucun module.
+| Le noyau (modèles partagés, règles de validation, brique média, catégories de services,
+| contrôleurs et commandes hors modules) est utilisable par tous les modules, mais ne dépend
+| d'aucun module. App\Actions (Fortify) en est exclu : il délègue l'inscription au module Accounts.
 */
-arch('la brique média ne dépend d\'aucun module')
+arch('le noyau ne dépend d\'aucun module')
     ->expect([
-        'App\Support\Media',
-        'App\Models\Media',
-        'App\Http\Controllers\MediaController',
-        'App\Http\Requests\StoreMediaRequest',
-        'App\Http\Resources\MediaResource',
+        'App\Models',
+        'App\Rules',
+        'App\Support',
+        'App\Http',
+        'App\Console',
     ])
     ->not->toUse('App\Modules');
 
