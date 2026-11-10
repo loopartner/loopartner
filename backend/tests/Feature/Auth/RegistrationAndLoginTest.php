@@ -57,21 +57,3 @@ it('refuse un mot de passe présent dans une fuite connue', function (): void {
 
     expect(User::query()->count())->toBe(0);
 });
-
-it('bloque la connexion après 5 tentatives échouées en une minute', function (): void {
-    User::factory()->create(['email' => 'camille@example.com']);
-
-    foreach (range(1, 5) as $attempt) {
-        $this->postJson('/api/v1/auth/login', [
-            'email' => 'camille@example.com',
-            'password' => 'mauvais-mot-de-passe',
-        ])->assertUnprocessable();
-    }
-
-    $this->postJson('/api/v1/auth/login', [
-        'email' => 'camille@example.com',
-        'password' => 'mauvais-mot-de-passe',
-    ])->assertTooManyRequests();
-
-    $this->assertGuest();
-});

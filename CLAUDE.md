@@ -11,6 +11,9 @@ entrepreneurs.
 
 - `backend/` : API Laravel 13, PHP 8.4. Elle ne sert aucune vue : elle renvoie uniquement du JSON.
 - `frontend/` (à venir) : Next.js, servi sur un autre sous-domaine. Il consomme l'API avec des cookies de session.
+- `SECURITY.md` : signalement des vulnérabilités, principes de sécurité, journal de sécurité et
+  vérifications avant chaque mise en production. La liste de contrôle de chaque tâche est la section
+  « Sécurité : liste de contrôle obligatoire » ci-dessous.
 
 ## Environnement local
 
@@ -362,6 +365,46 @@ Aucune réponse ne révèle si une adresse email correspond à un compte.
 - Les routes Fortify n'ont pas le groupe `api` : `App\Http\Middleware\ThrottleAuthRoutes` (ajouté
   dans `fortify.middleware`) leur applique le limiteur correspondant à leur nom de route.
   `tests/Feature/Security/AuthRateLimitTest.php` vérifie chaque limite.
+
+## Sécurité : liste de contrôle obligatoire
+
+À appliquer à **chaque** tâche qui ajoute ou modifie un endpoint, une Action, un modèle ou une
+configuration. Référentiels : OWASP API Security Top 10 et ASVS niveau 2. Voir aussi `SECURITY.md`.
+
+1. **Autorisation de chaque endpoint, au niveau de l'objet et de la fonction.** Policy (ou
+   FormRequest `authorize()`) pour chaque route : qui peut appeler la fonction (rôle, email vérifié,
+   profil publié…) et à quels objets il a accès. La ressource d'un autre utilisateur donne **404**
+   (`denyAsNotFound`), pas 403. Toute nouvelle route `api/*` est ajoutée à l'inventaire de
+   `tests/Feature/Security/AuthorizationMatrixTest.php` (publique ou authentifiée).
+2. **Validation de chaque entrée.** FormRequest avec des règles explicites pour chaque champ, y
+   compris les paramètres d'URL et de requête (longueurs, formats, listes fermées, `NoHtml` sur le
+   texte libre, `per_page` borné). Aucune donnée brute de la requête dans une requête SQL : liaisons
+   (`?`) et `App\Support\Database\Like` pour les recherches.
+3. **Champs assignables.** `#[Fillable]` limité aux champs de contenu ; identifiants, propriétaire,
+   statut, dates du cycle de vie et `*_media_id` fixés par les Actions (`forceFill`). Les contrôleurs
+   n'utilisent que `$request->validated()`. Les champs sensibles envoyés par le client sont ignorés
+   ou refusés (`prohibited`), et un test le vérifie.
+4. **Données exposées.** API Resource avec chaque champ listé : jamais d'`id` interne, de `user_id`,
+   de chemin ou de disque, ni de donnée personnelle non nécessaire. Les messages d'erreur ne révèlent
+   ni l'existence d'un compte, ni le nom d'un modèle, ni une valeur reçue sensible.
+5. **Limites de débit.** Toute route a au moins `throttle:api`. Une route coûteuse, sensible ou
+   exposée à la collecte massive a un limiteur nommé dédié, avec ses valeurs dans
+   `config/security.php`, et un test du 429.
+6. **Journalisation sans données sensibles.** Les événements de sécurité (authentification, refus,
+   abus, actions d'administration) passent par `App\Support\SecurityLog` : jamais de mot de passe, de
+   jeton, de code 2FA, d'email (utiliser `SecurityLog::emailHash()`) ni de nom. Les paramètres qui
+   portent un secret ont `#[\SensitiveParameter]`.
+7. **Tests des cas d'abus.** En plus du cas nominal : anonyme (401), mauvais rôle (403), objet d'un
+   autre utilisateur (404), entrées invalides ou malveillantes (422), assignation de champs interdits,
+   dépassement de limite (429), absence de donnée sensible dans la réponse et dans le journal. Les
+   tests transversaux vont dans `tests/Feature/Security/`. Pour corriger une faille : le test échoue
+   avant la correction et passe après.
+8. **Configuration.** Toute nouvelle variable d'environnement liée à la sécurité est documentée dans
+   `.env.example` et vérifiée par `security:check-config` (avec son test).
+
+**Résumé de fin de tâche** : chaque résumé contient un paragraphe **« Sécurité »** qui reprend
+les points 1 à 8, un par un, en indiquant ce qui a été fait (ou pourquoi le point ne s'applique pas),
+ainsi que les risques restants.
 
 ## Qualité
 

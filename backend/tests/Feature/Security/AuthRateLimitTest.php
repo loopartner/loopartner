@@ -174,6 +174,24 @@ it('limite les renvois du lien de vérification par minute et par heure', functi
     $this->actingAs($user)->postJson('/api/v1/auth/email/verification-notification')->assertTooManyRequests();
 });
 
+it('bloque la connexion après 5 tentatives échouées en une minute', function (): void {
+    User::factory()->create(['email' => 'camille@example.com']);
+
+    foreach (range(1, rateLimit('login.per_minute')) as $attempt) {
+        $this->postJson('/api/v1/auth/login', [
+            'email' => 'camille@example.com',
+            'password' => 'mauvais-mot-de-passe',
+        ])->assertUnprocessable();
+    }
+
+    $this->postJson('/api/v1/auth/login', [
+        'email' => 'camille@example.com',
+        'password' => 'mauvais-mot-de-passe',
+    ])->assertTooManyRequests();
+
+    $this->assertGuest();
+});
+
 it('limite les tentatives de connexion par email, toutes IP confondues', function (): void {
     User::factory()->create(['email' => 'camille@example.com']);
     $limit = rateLimit('login.per_hour_per_email');
