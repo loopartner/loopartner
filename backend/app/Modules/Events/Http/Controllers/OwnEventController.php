@@ -9,6 +9,7 @@ use App\Modules\Events\Actions\CreateEvent;
 use App\Modules\Events\Actions\DeleteEvent;
 use App\Modules\Events\Actions\SubmitEvent;
 use App\Modules\Events\Actions\UpdateEvent;
+use App\Modules\Events\Actions\WithdrawRevision;
 use App\Modules\Events\Actions\WithdrawSubmission;
 use App\Modules\Events\Enums\CancelledBy;
 use App\Modules\Events\Enums\EventStatus;
@@ -67,14 +68,42 @@ class OwnEventController extends Controller
         return new OwnEventResource($event->load(self::RELATIONS));
     }
 
-    public function update(UpdateEventRequest $request, UpdateEvent $updateEvent): OwnEventResource
+    /**
+     * Brouillon ou refusé : modification directe (200). Publié : révision en attente de
+     * validation (202), la version publique ne change pas. Un admin dont la session a passé la
+     * 2FA modifie directement son propre événement publié (200) ; sans 2FA : 403.
+     */
+    public function update(UpdateEventRequest $request, UpdateEvent $updateEvent): JsonResponse
     {
         /** @var array<string, mixed> $data */
         $data = $request->validated();
+        $user = self::user($request);
+        $event = $request->event();
 
-        $event = $updateEvent->handle(self::user($request), $request->event(), $data);
+        $adminDirect = Organizers::isAdmin($user) && $event->status === EventStatus::Published;
 
-        return new OwnEventResource($event->load(self::RELATIONS));
+        if ($adminDirect && ! TwoFactorSession::passed($request)) {
+            abort(403, 'La modification d\'un événement publié par un admin exige la double authentification : activez-la, puis reconnectez-vous avec votre code.');
+        }
+
+        ['event' => $event, 'revision' => $revision] = $updateEvent->handle($user, $event, $data, $adminDirect);
+
+        return (new OwnEventResource($event->load(self::RELATIONS)))
+            ->response()
+            ->setStatusCode($revision !== null ? 202 : 200);
+    }
+
+    /**
+     * Retire la modification en attente de validation (la version publiée reste affichée).
+     */
+    public function withdrawRevision(string $uuid, WithdrawRevision $withdrawRevision): Response
+    {
+        $event = self::find($uuid);
+        Gate::authorize('update', $event);
+
+        $withdrawRevision->handle($event);
+
+        return response()->noContent();
     }
 
     public function destroy(string $uuid, DeleteEvent $deleteEvent): Response

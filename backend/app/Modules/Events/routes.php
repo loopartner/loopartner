@@ -25,6 +25,7 @@ Route::middleware(['auth:sanctum', 'verified'])
             Route::patch('{uuid}', [OwnEventController::class, 'update'])->whereUuid('uuid')->name('update');
             Route::delete('{uuid}', [OwnEventController::class, 'destroy'])->whereUuid('uuid')->name('destroy');
             Route::post('{uuid}/withdraw', [OwnEventController::class, 'withdraw'])->whereUuid('uuid')->name('withdraw');
+            Route::delete('{uuid}/revision', [OwnEventController::class, 'withdrawRevision'])->whereUuid('uuid')->name('revision.destroy');
             Route::post('{uuid}/cancel', [OwnEventController::class, 'cancel'])->whereUuid('uuid')->name('cancel');
         });
 

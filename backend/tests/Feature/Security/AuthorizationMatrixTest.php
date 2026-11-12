@@ -82,6 +82,7 @@ const API_ROUTES = [
     'DELETE api/v1/me/events/{uuid}' => 'auth',
     'POST api/v1/me/events/{uuid}/submit' => 'auth',
     'POST api/v1/me/events/{uuid}/withdraw' => 'auth',
+    'DELETE api/v1/me/events/{uuid}/revision' => 'auth',
     'POST api/v1/me/events/{uuid}/cancel' => 'auth',
 ];
 
