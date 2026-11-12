@@ -174,6 +174,22 @@ return [
         // supprimés.
         'abuse_reports_months' => 12,
 
+        // Événements (module Events, purge quotidienne events:prune).
+        // Inscriptions aux événements terminés depuis cette durée : supprimées (seul le nombre
+        // d'inscrits reste sur l'événement).
+        'event_registrations_months' => 12,
+
+        // Révisions refusées, retirées ou appliquées : supprimées (la version publiée et le
+        // journal d'audit restent).
+        'event_revisions_months' => 6,
+
+        // Annonces aux inscrits des événements terminés depuis cette durée : supprimées.
+        'event_announcements_months' => 12,
+
+        // Événements annulés, ou détachés de leur organisateur (compte supprimé), terminés
+        // depuis cette durée : supprimés avec leur couverture.
+        'closed_events_months' => 12,
+
         // Journal d'audit des décisions d'administration (table admin_audit_logs) : supprimé
         // après cette durée (admin-audit:prune).
         'admin_audit_months' => 24,

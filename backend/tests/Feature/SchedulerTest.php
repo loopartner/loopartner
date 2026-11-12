@@ -38,6 +38,18 @@ it('purge les données de mise en relation arrivées au bout de leur conservatio
         ->and($event->withoutOverlapping)->toBeTrue();
 });
 
+it('planifie les tâches du module Events, sans chevauchement', function (string $command, string $expression): void {
+    $event = scheduledEvent($command);
+
+    expect($event)->not->toBeNull()
+        ->and($event->expression)->toBe($expression)
+        ->and($event->withoutOverlapping)->toBeTrue();
+})->with([
+    'rappels' => ['events:send-reminders', '*/15 * * * *'],
+    'événements passés' => ['events:close-past', '0 * * * *'],
+    'purge' => ['events:prune', '0 4 * * *'],
+]);
+
 it('prévient les admins des éléments à valider toutes les 5 minutes, sans chevauchement', function (): void {
     $event = scheduledEvent('events:notify-moderators');
 

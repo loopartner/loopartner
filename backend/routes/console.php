@@ -40,6 +40,21 @@ Schedule::command('matching:prune')
     ->dailyAt('03:30')
     ->withoutOverlapping();
 
+// Événements (module Events) : rappel aux inscrits 24 heures avant le début, sans doublon.
+Schedule::command('events:send-reminders')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping(10);
+
+// Événements terminés : statut "past" ; soumissions dont la date est passée : refusées.
+Schedule::command('events:close-past')
+    ->hourly()
+    ->withoutOverlapping(30);
+
+// Minimisation des données des événements (durées dans config/security.php, retention).
+Schedule::command('events:prune')
+    ->dailyAt('04:00')
+    ->withoutOverlapping();
+
 // Événements (module Events) : récapitulatif des éléments en attente de validation envoyé aux
 // admins, au plus une fois toutes les 30 minutes (config/events.php, moderation_digest_minutes).
 Schedule::command('events:notify-moderators')
