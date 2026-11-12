@@ -68,6 +68,14 @@ class EventFactory extends Factory
         ]);
     }
 
+    /**
+     * Brouillon (état par défaut, explicite pour la lisibilité des tests).
+     */
+    public function draft(): static
+    {
+        return $this->state(fn (): array => ['status' => EventStatus::Draft]);
+    }
+
     public function pendingReview(): static
     {
         return $this->state(fn (): array => [

@@ -9,7 +9,19 @@
 use App\Http\Middleware\EnsureModerator;
 use App\Modules\Events\Http\Controllers\ModerationController;
 use App\Modules\Events\Http\Controllers\OwnEventController;
+use App\Modules\Events\Http\Controllers\PublicEventController;
 use Illuminate\Support\Facades\Route;
+
+// Slug public d'un événement (calculé à la première validation).
+$eventSlug = '[a-z0-9]+(?:-[a-z0-9]+)*';
+
+/*
+| Agenda public : uniquement les événements validés par un admin. Le lien de connexion n'y
+| apparaît jamais.
+*/
+Route::get('events', [PublicEventController::class, 'index'])->name('events.index');
+Route::get('events/{slug}', [PublicEventController::class, 'show'])->where('slug', $eventSlug)->name('events.show');
+Route::get('events/{slug}/calendar.ics', [PublicEventController::class, 'calendar'])->where('slug', $eventSlug)->name('events.calendar');
 
 /*
 | Événements de l'organisateur connecté (prestataires avec un profil publié, entrepreneurs,
