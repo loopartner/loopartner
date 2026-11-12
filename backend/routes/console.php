@@ -40,6 +40,12 @@ Schedule::command('matching:prune')
     ->dailyAt('03:30')
     ->withoutOverlapping();
 
+// Événements (module Events) : récapitulatif des éléments en attente de validation envoyé aux
+// admins, au plus une fois toutes les 30 minutes (config/events.php, moderation_digest_minutes).
+Schedule::command('events:notify-moderators')
+    ->everyFiveMinutes()
+    ->withoutOverlapping(10);
+
 // Journal d'audit des décisions d'administration (noyau) : entrées au-delà de leur durée de
 // conservation (config/security.php, retention.admin_audit_months) supprimées.
 Schedule::command('admin-audit:prune')

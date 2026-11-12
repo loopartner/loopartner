@@ -38,6 +38,14 @@ it('purge les données de mise en relation arrivées au bout de leur conservatio
         ->and($event->withoutOverlapping)->toBeTrue();
 });
 
+it('prévient les admins des éléments à valider toutes les 5 minutes, sans chevauchement', function (): void {
+    $event = scheduledEvent('events:notify-moderators');
+
+    expect($event)->not->toBeNull()
+        ->and($event->expression)->toBe('*/5 * * * *')
+        ->and($event->withoutOverlapping)->toBeTrue();
+});
+
 it('purge le journal d\'audit d\'administration chaque jour, sans chevauchement', function (): void {
     $event = scheduledEvent('admin-audit:prune');
 

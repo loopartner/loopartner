@@ -6,6 +6,8 @@
 | avec les middlewares "api" et "throttle:api".
 */
 
+use App\Http\Middleware\EnsureModerator;
+use App\Modules\Events\Http\Controllers\ModerationController;
 use App\Modules\Events\Http\Controllers\OwnEventController;
 use Illuminate\Support\Facades\Route;
 
@@ -33,4 +35,27 @@ Route::middleware(['auth:sanctum', 'verified'])
             ->whereUuid('uuid')
             ->middleware('throttle:event-submissions')
             ->name('submit');
+    });
+
+/*
+| Modération (API minimale, le back-office viendra plus tard) : rôle admin ET double
+| authentification au niveau du compte et de la session (EnsureModerator). Tout autre rôle
+| reçoit 404 ; un admin sans 2FA, 403. Chaque décision est limitée (event-moderation),
+| journalisée (canal security) et tracée dans le journal d'audit.
+*/
+Route::middleware(['auth:sanctum', 'verified', EnsureModerator::class])
+    ->prefix('admin')
+    ->name('events.moderation.')
+    ->group(function (): void {
+        Route::get('events/queue', [ModerationController::class, 'queue'])->name('queue');
+        Route::get('events/{uuid}', [ModerationController::class, 'showEvent'])->whereUuid('uuid')->name('events.show');
+        Route::get('event-revisions/{uuid}', [ModerationController::class, 'showRevision'])->whereUuid('uuid')->name('revisions.show');
+
+        Route::middleware('throttle:event-moderation')->group(function (): void {
+            Route::post('events/{uuid}/approve', [ModerationController::class, 'approveEvent'])->whereUuid('uuid')->name('events.approve');
+            Route::post('events/{uuid}/reject', [ModerationController::class, 'rejectEvent'])->whereUuid('uuid')->name('events.reject');
+            Route::post('events/{uuid}/cancel', [ModerationController::class, 'cancelEvent'])->whereUuid('uuid')->name('events.cancel');
+            Route::post('event-revisions/{uuid}/approve', [ModerationController::class, 'approveRevision'])->whereUuid('uuid')->name('revisions.approve');
+            Route::post('event-revisions/{uuid}/reject', [ModerationController::class, 'rejectRevision'])->whereUuid('uuid')->name('revisions.reject');
+        });
     });

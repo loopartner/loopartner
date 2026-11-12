@@ -84,6 +84,15 @@ const API_ROUTES = [
     'POST api/v1/me/events/{uuid}/withdraw' => 'auth',
     'DELETE api/v1/me/events/{uuid}/revision' => 'auth',
     'POST api/v1/me/events/{uuid}/cancel' => 'auth',
+    // Modération des événements : admin avec double authentification (EnsureModerator).
+    'GET api/v1/admin/events/queue' => 'auth',
+    'GET api/v1/admin/events/{uuid}' => 'auth',
+    'POST api/v1/admin/events/{uuid}/approve' => 'auth',
+    'POST api/v1/admin/events/{uuid}/reject' => 'auth',
+    'POST api/v1/admin/events/{uuid}/cancel' => 'auth',
+    'GET api/v1/admin/event-revisions/{uuid}' => 'auth',
+    'POST api/v1/admin/event-revisions/{uuid}/approve' => 'auth',
+    'POST api/v1/admin/event-revisions/{uuid}/reject' => 'auth',
 ];
 
 /**
