@@ -6,7 +6,6 @@ use App\Models\User;
 use App\Support\Media\ImageProcessor;
 use App\Support\Media\MediaPurpose;
 use App\Support\Media\Rules\ImageFitsPurpose;
-use Closure;
 use Illuminate\Auth\Access\Response;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\UploadedFile;
@@ -21,7 +20,7 @@ use Illuminate\Validation\Rule;
 class StoreMediaRequest extends FormRequest
 {
     /**
-     * Le rôle requis par l'usage est vérifié ici (403). Un usage inconnu ou fermé est
+     * Le rôle requis par l'usage est vérifié ici (403). Un usage inconnu est
      * signalé par la validation (422).
      */
     public function authorize(): Response
@@ -48,11 +47,6 @@ class StoreMediaRequest extends FormRequest
                 'required',
                 'string',
                 Rule::enum(MediaPurpose::class),
-                function (string $attribute, mixed $value, Closure $fail): void {
-                    if (MediaPurpose::tryFrom((string) $value)?->isUploadable() === false) {
-                        $fail('Cet usage n\'est pas encore disponible.');
-                    }
-                },
             ],
             'file' => [
                 'required',

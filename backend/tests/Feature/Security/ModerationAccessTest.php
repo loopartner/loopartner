@@ -85,6 +85,34 @@ describe('EnsureModerator', function (): void {
     });
 });
 
+describe('EnsureModerator avec des rôles en paramètre', function (): void {
+    beforeEach(function (): void {
+        Route::middleware(['api', 'auth:sanctum', 'verified', EnsureModerator::class.':admin,redacteur'])
+            ->get('api/v1/admin/editorial-probe', fn () => response()->json(['ok' => true]));
+    });
+
+    it('accepte les rôles indiqués, avec la 2FA de session', function (string $role): void {
+        $user = userWithTwoFactor();
+        $user->assignRole($role);
+
+        asModerator($user)->getJson('/api/v1/admin/editorial-probe')->assertOk();
+    })->with(['admin', 'redacteur']);
+
+    it('cache la route derrière un 404 pour les autres rôles', function (string $role): void {
+        $user = userWithTwoFactor();
+        $user->assignRole($role);
+
+        asModerator($user)->getJson('/api/v1/admin/editorial-probe')->assertNotFound();
+    })->with(['particulier', 'prestataire', 'entrepreneur']);
+
+    it('exige aussi la 2FA de session pour un rédacteur', function (): void {
+        $user = userWithTwoFactor();
+        $user->assignRole('redacteur');
+
+        fromFrontend()->actingAs($user)->getJson('/api/v1/admin/editorial-probe')->assertForbidden();
+    });
+});
+
 describe('marque 2FA de la session', function (): void {
     it('marque la session ouverte par le défi 2FA (code TOTP)', function (): void {
         registerModerationProbe();

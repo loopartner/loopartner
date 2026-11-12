@@ -10,11 +10,14 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Endpoints de modération (/admin/…) : rôle admin ET double authentification.
+ * Endpoints de modération (/admin/…) : rôle de modérateur ET double authentification.
  *
- * - Pas admin : 404, comme une route inconnue. La surface d'administration n'est pas révélée.
- * - Admin sans 2FA activée et confirmée : 403, avec un message qui demande de l'activer.
- * - Admin dont la session n'a pas été ouverte avec un code 2FA (session antérieure à
+ * Rôles acceptés : "admin" par défaut ; une route peut en indiquer d'autres en paramètre
+ * (EnsureModerator::class.':admin,redacteur' pour la modération éditoriale du Blog).
+ *
+ * - Pas l'un de ces rôles : 404, comme une route inconnue. La surface d'administration n'est pas révélée.
+ * - Modérateur sans 2FA activée et confirmée : 403, avec un message qui demande de l'activer.
+ * - Modérateur dont la session n'a pas été ouverte avec un code 2FA (session antérieure à
  *   l'activation, par exemple) : 403, avec un message qui demande de se reconnecter.
  *
  * Chaque refus est journalisé (moderation.access_denied, avec reason). À placer après
@@ -24,11 +27,12 @@ class EnsureModerator
 {
     public const ADMIN_ROLE = 'admin';
 
-    public function handle(Request $request, Closure $next): Response
+    public function handle(Request $request, Closure $next, string ...$roles): Response
     {
         $user = $request->user();
+        $roles = $roles === [] ? [self::ADMIN_ROLE] : $roles;
 
-        if (! $user instanceof User || ! $user->hasRole(self::ADMIN_ROLE)) {
+        if (! $user instanceof User || ! $user->hasAnyRole($roles)) {
             $this->deny($request, 'role');
             abort(404);
         }

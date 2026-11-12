@@ -178,14 +178,43 @@ describe('refus', function (): void {
             ->assertJsonValidationErrors(['purpose']);
     })->with(['inconnu' => 'banner', 'absent' => null]);
 
-    it('refuse un usage pas encore disponible', function (string $purpose): void {
+    it('accepte une couverture d\'article des rôles auteurs, réduite à 2400×1260', function (string $role): void {
         $user = User::factory()->create();
-        $user->assignRole('admin');
+        $user->assignRole($role);
 
-        uploadMedia($user, testImage('jpeg', 1600, 900), $purpose)
+        uploadMedia($user, testImage('jpeg', 3000, 1575), 'article_cover')
+            ->assertCreated()
+            ->assertJsonPath('data.purpose', 'article_cover')
+            ->assertJsonPath('data.width', 2400)
+            ->assertJsonPath('data.height', 1260);
+    })->with(['prestataire', 'entrepreneur', 'redacteur', 'admin']);
+
+    it('refuse une couverture d\'article plus petite que 1200×630', function (): void {
+        $user = User::factory()->create();
+        $user->assignRole('entrepreneur');
+
+        uploadMedia($user, testImage('jpeg', 1100, 630), 'article_cover')
             ->assertUnprocessable()
-            ->assertJsonValidationErrors(['purpose' => 'pas encore disponible']);
-    })->with(['article_cover']);
+            ->assertJsonValidationErrors(['file']);
+    });
+
+    it('accepte une image d\'article, réduite à 1600 px de côté', function (string $role): void {
+        $user = User::factory()->create();
+        $user->assignRole($role);
+
+        uploadMedia($user, testImage('png', 2000, 1000), 'article_image')
+            ->assertCreated()
+            ->assertJsonPath('data.purpose', 'article_image')
+            ->assertJsonPath('data.width', 1600)
+            ->assertJsonPath('data.height', 800);
+    })->with(['prestataire', 'entrepreneur', 'redacteur', 'admin']);
+
+    it('refuse les images d\'article au particulier (403)', function (string $purpose): void {
+        $user = User::factory()->create();
+        $user->assignRole('particulier');
+
+        uploadMedia($user, testImage('jpeg', 1600, 900), $purpose)->assertForbidden();
+    })->with(['article_cover', 'article_image']);
 
     it('accepte une couverture d\'événement des rôles organisateurs, réduite à 1920×1080', function (string $role): void {
         $user = User::factory()->create();

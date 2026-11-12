@@ -11,7 +11,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use LogicException;
 use RuntimeException;
 
 /**
@@ -19,6 +18,7 @@ use RuntimeException;
  *
  * - store()          : traite et enregistre une image envoyée (média non rattaché) ;
  * - replace()        : rattache un média à un champ (avatar, logo…) et supprime l'ancien ;
+ * - attachMany()     : rattache plusieurs médias d'un même usage (images d'un texte) ;
  * - deleteOwnedBy()  : supprime tous les médias d'un utilisateur, fichiers compris ;
  * - pruneOrphans()   : supprime les médias jamais rattachés après un délai.
  *
@@ -37,7 +37,7 @@ class MediaLibrary
      */
     public function store(User $owner, UploadedFile $file, MediaPurpose $purpose): Media
     {
-        $limits = $purpose->limits() ?? throw new LogicException("L'usage {$purpose->value} n'est pas ouvert à l'upload.");
+        $limits = $purpose->limits();
 
         $maxPending = (int) config('media.max_pending_per_user');
         if (Media::query()->pending()->where('user_id', $owner->id)->count() >= $maxPending) {
@@ -146,6 +146,55 @@ class MediaLibrary
             }
 
             return $new?->id;
+        });
+    }
+
+    /**
+     * Rattache plusieurs médias d'un même usage (images dans le corps d'un article…).
+     *
+     * Chaque média est relu sous verrou : il appartient à l'utilisateur, a le bon usage, et il
+     * est libre ou fait partie des médias déjà rattachés à ce contenu ($attachedIds). Les médias
+     * libres sont rattachés ; aucun média n'est supprimé : le caller supprime avec delete() ceux
+     * qu'il ne garde plus, au moment voulu (par exemple après la validation d'une révision).
+     *
+     * @param  list<string>  $uuids
+     * @param  list<int>  $attachedIds  médias déjà rattachés à ce contenu
+     * @param  string  $attribute  nom du champ, pour le message d'erreur
+     * @return array<string, int> identifiant interne de chaque média, par uuid
+     *
+     * @throws ValidationException si un média n'est pas rattachable
+     */
+    public function attachMany(User $owner, MediaPurpose $purpose, array $uuids, array $attachedIds, string $attribute): array
+    {
+        $uuids = array_values(array_unique($uuids));
+
+        if ($uuids === []) {
+            return [];
+        }
+
+        return DB::transaction(function () use ($owner, $purpose, $uuids, $attachedIds, $attribute): array {
+            $valid = array_values(array_filter($uuids, fn (string $uuid): bool => Str::isUuid($uuid)));
+            $found = Media::query()->whereIn('uuid', $valid)->lockForUpdate()->get()->keyBy('uuid');
+            $ids = [];
+
+            foreach ($uuids as $uuid) {
+                /** @var Media|null $media */
+                $media = $found->get($uuid);
+                $alreadyHere = $media !== null && in_array($media->id, $attachedIds, true);
+
+                if (! $this->isAttachable($media, $owner, $purpose, $alreadyHere ? $media->id : null)) {
+                    throw ValidationException::withMessages([$attribute => self::notAttachableMessage()]);
+                }
+
+                /** @var Media $media */
+                if (! $media->isAttached()) {
+                    $media->forceFill(['attached_at' => now()])->save();
+                }
+
+                $ids[$uuid] = $media->id;
+            }
+
+            return $ids;
         });
     }
 
