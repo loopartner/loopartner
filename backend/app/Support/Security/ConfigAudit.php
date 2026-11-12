@@ -2,6 +2,7 @@
 
 namespace App\Support\Security;
 
+use App\Support\Links\ExternalLink;
 use App\Support\LocalHost;
 use Closure;
 use Composer\InstalledVersions;
@@ -51,6 +52,7 @@ class ConfigAudit
         $this->checkInfrastructure();
         $this->checkMedia();
         $this->checkProxies();
+        $this->checkLinks();
         $this->checkPhp();
 
         return $this->findings;
@@ -202,6 +204,21 @@ class ConfigAudit
 
         if (in_array('*', $proxies, true) || in_array('**', $proxies, true)) {
             $this->error('TRUSTED_PROXIES', 'ne doit pas valoir "*" : n\'importe quel client pourrait choisir son IP (X-Forwarded-For). Lister les plages du proxy.');
+        }
+    }
+
+    /**
+     * Domaines refusés dans les liens saisis : une entrée mal écrite ("https://exemple.fr",
+     * "*.exemple.fr") ne bloquerait rien, sans aucune erreur visible.
+     */
+    private function checkLinks(): void
+    {
+        $entries = array_filter(array_map('trim', explode(',', (string) config('security.links.denied_domains'))));
+
+        foreach ($entries as $entry) {
+            if (! ExternalLink::isValidHostname($entry)) {
+                $this->error('DENIED_LINK_DOMAINS', 'contient une entrée qui n\'est pas un nom de domaine ("'.mb_strimwidth($entry, 0, 60, '…').'") : écrire seulement le domaine, par exemple exemple.fr.');
+            }
         }
     }
 

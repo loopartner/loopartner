@@ -33,8 +33,18 @@ enum MediaPurpose: string
                 maxHeight: 1024,
                 allowedRoles: ['prestataire'],
             ),
-            // Pas encore disponibles : définis avec les modules Events et Blog.
-            self::EventCover, self::ArticleCover => null,
+            // Couverture d'un événement (module Events), au format 16:9 conseillé : réservée aux
+            // rôles qui peuvent organiser un événement.
+            self::EventCover => new PurposeLimits(
+                maxKilobytes: 5 * 1024,
+                minWidth: 960,
+                minHeight: 540,
+                maxWidth: 1920,
+                maxHeight: 1080,
+                allowedRoles: ['prestataire', 'entrepreneur', 'redacteur', 'admin'],
+            ),
+            // Pas encore disponible : défini avec le module Blog.
+            self::ArticleCover => null,
         };
     }
 

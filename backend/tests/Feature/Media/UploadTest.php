@@ -185,7 +185,34 @@ describe('refus', function (): void {
         uploadMedia($user, testImage('jpeg', 1600, 900), $purpose)
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['purpose' => 'pas encore disponible']);
-    })->with(['event_cover', 'article_cover']);
+    })->with(['article_cover']);
+
+    it('accepte une couverture d\'événement des rôles organisateurs, réduite à 1920×1080', function (string $role): void {
+        $user = User::factory()->create();
+        $user->assignRole($role);
+
+        uploadMedia($user, testImage('jpeg', 2400, 1350), 'event_cover')
+            ->assertCreated()
+            ->assertJsonPath('data.purpose', 'event_cover')
+            ->assertJsonPath('data.width', 1920)
+            ->assertJsonPath('data.height', 1080);
+    })->with(['prestataire', 'entrepreneur', 'redacteur', 'admin']);
+
+    it('réserve la couverture d\'événement aux rôles organisateurs', function (): void {
+        $user = User::factory()->create();
+        $user->assignRole('particulier');
+
+        uploadMedia($user, testImage('jpeg', 1600, 900), 'event_cover')->assertForbidden();
+    });
+
+    it('refuse une couverture d\'événement trop petite', function (): void {
+        $user = User::factory()->create();
+        $user->assignRole('entrepreneur');
+
+        uploadMedia($user, testImage('jpeg', 800, 450), 'event_cover')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['file']);
+    });
 
     it('refuse un fichier absent', function (): void {
         uploadMedia(User::factory()->create(), null)

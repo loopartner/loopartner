@@ -11,6 +11,7 @@ use App\Modules\Directory\Models\MatchRequest;
 use App\Modules\Directory\Models\Message;
 use App\Modules\Directory\Models\Project;
 use App\Notifications\VerifyEmailNotification;
+use App\Support\TwoFactorSession;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Factory;
@@ -148,6 +149,39 @@ function userWithTwoFactor(array $attributes = []): User
     ])->save();
 
     return $user;
+}
+
+/**
+ * Requête venant du frontend (SPA) : Sanctum n'ouvre une session sur les routes de l'API que
+ * pour un domaine déclaré dans sanctum.stateful (en-tête Referer ou Origin). Indispensable pour
+ * tester une donnée de session (withSession) sur une route /api/v1 hors Fortify.
+ */
+function fromFrontend(): TestCase
+{
+    config(['sanctum.stateful' => ['localhost:3000']]);
+
+    return test()->withHeader('Referer', 'http://localhost:3000/');
+}
+
+/**
+ * Admin dont la double authentification est activée et confirmée.
+ */
+function moderator(array $attributes = []): User
+{
+    $admin = userWithTwoFactor($attributes);
+    $admin->assignRole('admin');
+
+    return $admin;
+}
+
+/**
+ * Requête d'un admin dont la session a été ouverte avec un code 2FA (accès à la modération).
+ */
+function asModerator(?User $admin = null): TestCase
+{
+    return fromFrontend()
+        ->actingAs($admin ?? moderator())
+        ->withSession([TwoFactorSession::KEY => time()]);
 }
 
 /*

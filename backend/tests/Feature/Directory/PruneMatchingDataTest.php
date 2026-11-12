@@ -19,7 +19,7 @@ beforeEach(function (): void {
 });
 
 it('conserve 12 mois par défaut chaque type de données', function (): void {
-    expect(config('security.retention'))->toBe([
+    expect(config('security.retention'))->toMatchArray([
         'orphaned_conversations_months' => 12,
         'closed_match_requests_months' => 12,
         'abuse_reports_months' => 12,

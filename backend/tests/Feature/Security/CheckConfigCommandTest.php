@@ -99,6 +99,8 @@ it('échoue sur une valeur dangereuse en production', function (Closure $degrade
     'R2 incomplet' => [fn () => config(['filesystems.disks.r2.secret' => null]), 'R2_SECRET_ACCESS_KEY'],
     'URL publique R2 en HTTP' => [fn () => config(['filesystems.disks.r2.url' => 'http://media.loopartner.fr']), 'R2_PUBLIC_URL'],
     'tous les proxys de confiance' => [fn () => config(['security.trusted_proxies' => '*']), 'TRUSTED_PROXIES'],
+    'domaine refusé écrit comme une URL' => [fn () => config(['security.links.denied_domains' => 'arnaque.example,https://spam.example']), 'DENIED_LINK_DOMAINS'],
+    'domaine refusé avec joker' => [fn () => config(['security.links.denied_domains' => '*.spam.example']), 'DENIED_LINK_DOMAINS'],
     'dépendances de développement' => [fn () => safeProductionConfig(devDependencies: true), 'composer install --no-dev'],
 ]);
 

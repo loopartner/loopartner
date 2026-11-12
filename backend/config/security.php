@@ -132,6 +132,32 @@ return [
         // supprimés.
         'abuse_reports_months' => 12,
 
+        // Journal d'audit des décisions d'administration (table admin_audit_logs) : supprimé
+        // après cette durée (admin-audit:prune).
+        'admin_audit_months' => 24,
+
+    ],
+
+    /*
+    | Liens externes saisis par les utilisateurs (règles App\Rules\SafeExternalUrl et
+    | SafeLinksInText, App\Support\Links\ExternalLink). Seul https est accepté ; les adresses IP,
+    | les hôtes locaux, les raccourcisseurs et les domaines refusés sont rejetés (sous-domaines
+    | compris). Le serveur n'ouvre jamais ces liens : aucune requête sortante.
+    */
+    'links' => [
+
+        // Raccourcisseurs de liens : ils masquent la destination réelle à la modération.
+        'shorteners' => [
+            'bit.ly', 'bitly.com', 'tinyurl.com', 't.co', 'goo.gl', 'ow.ly', 'is.gd', 'buff.ly',
+            'cutt.ly', 'rebrand.ly', 'shorturl.at', 'tiny.cc', 'rb.gy', 't.ly', 's.id', 'lnkd.in',
+            'v.gd', 'bl.ink', 'shorte.st', 'adf.ly', 'qrco.de', 'urlz.fr', 'tinu.be', 'short.io',
+            'linktr.ee', 'x.co', 'po.st', 'soo.gd', 'clck.ru', 'gg.gg', 'trib.al', 'dlvr.it',
+        ],
+
+        // Domaines refusés (hameçonnage, spam…), séparés par des virgules, sous-domaines compris.
+        // security:check-config vérifie que chaque entrée est un nom de domaine valide.
+        'denied_domains' => env('DENIED_LINK_DOMAINS', ''),
+
     ],
 
     'scraping' => [

@@ -38,6 +38,14 @@ it('purge les données de mise en relation arrivées au bout de leur conservatio
         ->and($event->withoutOverlapping)->toBeTrue();
 });
 
+it('purge le journal d\'audit d\'administration chaque jour, sans chevauchement', function (): void {
+    $event = scheduledEvent('admin-audit:prune');
+
+    expect($event)->not->toBeNull()
+        ->and($event->expression)->toBe('30 4 * * *')
+        ->and($event->withoutOverlapping)->toBeTrue();
+});
+
 it('déclare le worker de file d\'attente après toutes les autres tâches', function (): void {
     $commands = collect(app(Schedule::class)->events())->map(fn (Event $event): string => (string) $event->command);
 
