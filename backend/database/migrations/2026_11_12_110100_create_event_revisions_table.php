@@ -31,7 +31,8 @@ return new class extends Migration
             $table->json('changed_fields');
             $table->foreignId('cover_media_id')->nullable()->constrained('media')->nullOnDelete();
             $table->unsignedBigInteger('pending_key')->nullable()->unique();
-            $table->timestamp('submitted_at');
+            // dateTime : voir create_events_table (pas de ON UPDATE implicite sur MariaDB/MySQL).
+            $table->dateTime('submitted_at');
             $table->timestamp('decided_at')->nullable();
             $table->unsignedBigInteger('decided_by')->nullable();
             $table->text('rejection_reason')->nullable();

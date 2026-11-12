@@ -47,8 +47,11 @@ return new class extends Migration
             $table->boolean('is_free')->default(true);
             $table->string('ticket_url', 2048)->nullable();
 
-            $table->timestamp('starts_at');
-            $table->timestamp('ends_at');
+            // dateTime (et non timestamp) pour les dates obligatoires : sur MariaDB/MySQL sans
+            // explicit_defaults_for_timestamp, la première colonne TIMESTAMP NOT NULL reçoit
+            // ON UPDATE CURRENT_TIMESTAMP et changerait à chaque modification. Valeurs en UTC.
+            $table->dateTime('starts_at');
+            $table->dateTime('ends_at');
             $table->string('timezone', 64);
 
             $table->unsignedInteger('capacity')->nullable();
