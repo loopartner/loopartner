@@ -155,6 +155,31 @@ return [
             'per_hour' => 60,
         ],
 
+        // Articles (module Blog), par utilisateur.
+        // Création, modification, suppression, retrait d'une soumission ou d'une révision.
+        'article_writes' => [
+            'per_hour' => 60,
+            'per_day' => 300,
+        ],
+
+        // Soumissions à la validation (et publications directes de l'équipe). S'ajoute au quota
+        // gratuit et au plafond d'articles en attente (config/blog.php).
+        'article_submissions' => [
+            'per_hour' => 5,
+            'per_day' => 10,
+        ],
+
+        // Révisions d'un article publié (création ou remplacement), comptées par l'Action.
+        'article_revisions' => [
+            'per_hour' => 10,
+            'per_day' => 30,
+        ],
+
+        // Décisions de modération du Blog (validation, refus, dépublication), par modérateur.
+        'blog_moderation' => [
+            'per_hour' => 60,
+        ],
+
         // Attribution et retrait du statut premium par un admin (module Accounts) : limite
         // l'effet d'un compte admin compromis.
         'premium_admin' => [
@@ -195,6 +220,23 @@ return [
         // Événements annulés, ou détachés de leur organisateur (compte supprimé), terminés
         // depuis cette durée : supprimés avec leur couverture.
         'closed_events_months' => 12,
+
+        // Articles (module Blog, purge quotidienne blog:prune).
+        // Révisions validées, refusées, retirées ou remplacées : supprimées (la version publiée
+        // et le journal d'audit restent).
+        'article_revisions_months' => 6,
+
+        // Brouillons jamais soumis et sans modification depuis cette durée : supprimés avec
+        // leurs images.
+        'abandoned_article_drafts_months' => 12,
+
+        // Articles refusés ou dépubliés, sans modification depuis cette durée : supprimés avec
+        // leurs images (le décompte du quota gratuit reste).
+        'closed_articles_months' => 12,
+
+        // Slugs d'articles supprimés : gardés pour répondre 410 et empêcher qu'un autre article
+        // les reprenne, puis supprimés.
+        'retired_article_slugs_months' => 24,
 
         // Journal d'audit des décisions d'administration (table admin_audit_logs) : supprimé
         // après cette durée (admin-audit:prune).

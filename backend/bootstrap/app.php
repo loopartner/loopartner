@@ -42,6 +42,10 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Réponses JSON sur toute l'API, même sans en-tête Accept (pas de redirection vers une page).
         $middleware->prepend(ForceJsonOnApi::class);
+
+        // Corps d'un article (module Blog) : un texte est découpé en segments (gras, lien…) dont
+        // les espaces de début et de fin comptent. Ils ne sont pas rognés.
+        $middleware->trimStrings(except: ['body.blocks.*']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
