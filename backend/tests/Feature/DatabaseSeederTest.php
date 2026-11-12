@@ -9,11 +9,15 @@ use App\Modules\Directory\Enums\ProjectStatus;
 use App\Modules\Directory\Models\Conversation;
 use App\Modules\Directory\Models\MatchRequest;
 use App\Modules\Directory\Models\Project;
+use App\Modules\Events\Enums\EventStatus;
+use App\Modules\Events\Models\Event;
+use App\Modules\Events\Models\EventRegistration;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\ServiceCategorySeeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use PragmaRX\Google2FA\Google2FA;
 
 it('crée un utilisateur vérifié par rôle en local et peut être relancé', function (): void {
     allowDemoSeeding();
@@ -127,4 +131,55 @@ it('crée les catégories, mais aucun utilisateur ni projet, hors de l\'environn
     expect(User::query()->count())->toBe(0)
         ->and(Project::query()->count())->toBe(0)
         ->and(ServiceCategory::query()->whereNull('parent_id')->count())->toBe(count(ServiceCategorySeeder::CATEGORIES));
+});
+
+it('crée des événements de démonstration dans chaque état, sans email, et peut être relancé', function (): void {
+    allowDemoSeeding();
+
+    $this->seed(DatabaseSeeder::class);
+    $this->seed(DatabaseSeeder::class);
+
+    $events = Event::query()->get()->keyBy('title');
+
+    expect($events)->toHaveCount(7)
+        ->and($events['Atelier : bien démarrer sa comptabilité']->status)->toBe(EventStatus::Published)
+        ->and($events['Webinaire : protéger sa marque']->format->value)->toBe('online')
+        ->and($events['Conférence : financer sa création d\'entreprise']->format->value)->toBe('hybrid')
+        ->and($events['Conférence : financer sa création d\'entreprise']->pendingRevision)->not->toBeNull()
+        ->and($events['Salon des jeunes entreprises']->is_free)->toBeFalse()
+        ->and($events['Salon des jeunes entreprises']->status)->toBe(EventStatus::Published)
+        ->and($events['Networking : entrepreneurs de Lille']->status)->toBe(EventStatus::PendingReview)
+        ->and($events['Atelier : devenir riche en une semaine']->status)->toBe(EventStatus::Rejected)
+        ->and($events['Atelier : devenir riche en une semaine']->rejection_reason)->toBe(DatabaseSeeder::DEMO_REJECTION_REASON)
+        ->and($events['Atelier : choisir son statut juridique']->status)->toBe(EventStatus::Past)
+        ->and(EventRegistration::query()->count())->toBe(6)
+        ->and($events['Atelier : bien démarrer sa comptabilité']->registrations_count)->toBe(2);
+
+    $this->getJson('/api/v1/events')->assertOk()->assertJsonCount(4, 'data');
+
+    // Aucun email n'est mis en file d'attente pour les données de démonstration.
+    expect(DB::table('jobs')->count())->toBe(0);
+});
+
+it('active la double authentification de l\'admin de démonstration avec un secret documenté', function (): void {
+    allowDemoSeeding();
+    $this->seed(DatabaseSeeder::class);
+    $admin = User::query()->where('email', 'admin@example.com')->sole();
+
+    expect($admin->two_factor_confirmed_at)->not->toBeNull()
+        ->and(decrypt($admin->two_factor_secret))->toBe(DatabaseSeeder::DEMO_ADMIN_TWO_FACTOR_SECRET);
+
+    // Parcours complet : mot de passe, puis code TOTP calculé depuis le secret documenté.
+    // L'environnement redevient "testing" (allowDemoSeeding l'a passé en local, ce qui
+    // réactiverait la vérification CSRF des requêtes de test).
+    app()->detectEnvironment(fn (): string => 'testing');
+    $this->postJson('/api/v1/auth/login', ['email' => 'admin@example.com', 'password' => DatabaseSeeder::LOCAL_PASSWORD])
+        ->assertOk()
+        ->assertJsonPath('two_factor', true);
+    $this->postJson('/api/v1/auth/two-factor-challenge', ['code' => app(Google2FA::class)->getCurrentOtp(DatabaseSeeder::DEMO_ADMIN_TWO_FACTOR_SECRET)])
+        ->assertSuccessful();
+
+    fromFrontend()->getJson('/api/v1/admin/events/queue')
+        ->assertOk()
+        ->assertJsonPath('meta.counts', ['event' => 1, 'revision' => 1, 'announcement' => 0]);
 });
