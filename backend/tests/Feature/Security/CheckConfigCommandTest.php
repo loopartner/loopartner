@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\Database\TimestampSchema;
 use App\Support\Security\ConfigAudit;
 
 /*
@@ -52,6 +53,19 @@ function safeProductionConfig(bool $devDependencies = false, array $ini = []): v
     app()->bind(ConfigAudit::class, fn (): ConfigAudit => new ConfigAudit(
         devDependenciesInstalled: fn (): bool => $devDependencies,
         ini: fn (string $key): string|false => $ini[$key] ?? false,
+        timestampSchema: fn (): array => ['explicit_defaults' => true, 'on_update_columns' => []],
+    ));
+}
+
+/**
+ * Remplace la lecture du schéma MySQL/MariaDB (par défaut : base saine).
+ */
+function fakeTimestampSchema(Closure $timestampSchema): void
+{
+    app()->bind(ConfigAudit::class, fn (): ConfigAudit => new ConfigAudit(
+        devDependenciesInstalled: fn (): bool => false,
+        ini: fn (string $key): string|false => ['zend.exception_ignore_args' => '1', 'expose_php' => '0'][$key] ?? false,
+        timestampSchema: $timestampSchema,
     ));
 }
 
@@ -126,6 +140,51 @@ it('avertit sans échouer sur les réglages PHP et la durée de session', functi
     'version de PHP exposée' => [['expose_php' => '1'], fn () => null, 'expose_php'],
     'session très longue' => [[], fn () => config(['session.lifetime' => 10080]), 'SESSION_LIFETIME'],
 ]);
+
+it('avertit sans échouer quand explicit_defaults_for_timestamp vaut OFF', function (): void {
+    safeProductionConfig();
+    fakeTimestampSchema(fn (): array => ['explicit_defaults' => false, 'on_update_columns' => []]);
+
+    $this->artisan('security:check-config')
+        ->expectsOutputToContain('explicit_defaults_for_timestamp')
+        ->expectsOutputToContain('avertissement')
+        ->assertSuccessful();
+});
+
+it('échoue sur une colonne réelle avec ON UPDATE CURRENT_TIMESTAMP', function (): void {
+    safeProductionConfig();
+    fakeTimestampSchema(fn (): array => ['explicit_defaults' => true, 'on_update_columns' => ['events.starts_at', 'event_revisions.submitted_at']]);
+
+    $this->artisan('security:check-config')
+        ->expectsOutputToContain('events.starts_at')
+        ->expectsOutputToContain('event_revisions.submitted_at')
+        ->expectsOutputToContain('2 erreur(s)')
+        ->assertFailed();
+});
+
+it('avertit sans échouer quand la base ne répond pas, sans reprendre le message de l\'exception', function (): void {
+    safeProductionConfig();
+    fakeTimestampSchema(fn (): never => throw new RuntimeException('SQLSTATE[HY000] [2002] connexion refusée pour u123_admin@db-secret.hostinger'));
+
+    $this->artisan('security:check-config')
+        ->expectsOutputToContain('ne répond pas')
+        ->doesntExpectOutputToContain('db-secret')
+        ->doesntExpectOutputToContain('u123_admin')
+        ->assertSuccessful();
+});
+
+it('ne vérifie pas le schéma hors MySQL et MariaDB', function (): void {
+    safeProductionConfig();
+    fakeTimestampSchema(fn (): ?array => null);
+
+    $this->artisan('security:check-config')
+        ->expectsOutputToContain('Aucun problème')
+        ->assertSuccessful();
+});
+
+it('lit le schéma par défaut sans erreur sur la connexion de test (SQLite)', function (): void {
+    expect(TimestampSchema::inspect(DB::connection()))->toBeNull();
+});
 
 it('n\'affiche jamais la valeur des secrets', function (): void {
     safeProductionConfig();

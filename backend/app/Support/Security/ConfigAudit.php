@@ -2,10 +2,13 @@
 
 namespace App\Support\Security;
 
+use App\Support\Database\TimestampSchema;
 use App\Support\Links\ExternalLink;
 use App\Support\LocalHost;
 use Closure;
 use Composer\InstalledVersions;
+use Illuminate\Support\Facades\DB;
+use Throwable;
 
 /**
  * Vérifie que la configuration chargée est sûre pour la production (commande
@@ -24,18 +27,23 @@ class ConfigAudit
     /** @var Closure(string): (string|false) */
     private Closure $ini;
 
+    /** @var Closure(): (array{explicit_defaults: bool, on_update_columns: list<string>}|null) */
+    private Closure $timestampSchema;
+
     /** @var list<ConfigFinding> */
     private array $findings = [];
 
     /**
      * @param  (Closure(): bool)|null  $devDependenciesInstalled  dépendances "require-dev" installées ?
      * @param  (Closure(string): (string|false))|null  $ini  lecture d'un réglage php.ini
+     * @param  (Closure(): (array{explicit_defaults: bool, on_update_columns: list<string>}|null))|null  $timestampSchema  schéma MySQL/MariaDB (TimestampSchema::inspect)
      */
-    public function __construct(?Closure $devDependenciesInstalled = null, ?Closure $ini = null)
+    public function __construct(?Closure $devDependenciesInstalled = null, ?Closure $ini = null, ?Closure $timestampSchema = null)
     {
         $this->devDependenciesInstalled = $devDependenciesInstalled
             ?? fn (): bool => collect(InstalledVersions::getAllRawData())->contains(fn (array $data): bool => $data['root']['dev']);
         $this->ini = $ini ?? fn (string $key): string|false => ini_get($key);
+        $this->timestampSchema = $timestampSchema ?? fn (): ?array => TimestampSchema::inspect(DB::connection());
     }
 
     /**
@@ -54,6 +62,7 @@ class ConfigAudit
         $this->checkProxies();
         $this->checkLinks();
         $this->checkPhp();
+        $this->checkTimestampColumns();
 
         return $this->findings;
     }
@@ -230,6 +239,35 @@ class ConfigAudit
 
         if (filter_var(($this->ini)('expose_php'), FILTER_VALIDATE_BOOLEAN)) {
             $this->warning('expose_php', 'vaut On (php.ini) : la version de PHP est annoncée dans les en-têtes.');
+        }
+    }
+
+    /**
+     * Sans explicit_defaults_for_timestamp, la première colonne TIMESTAMP NOT NULL d'une table
+     * reçoit ON UPDATE CURRENT_TIMESTAMP : sa valeur est réécrite à chaque modification de la ligne.
+     * Une base qui ne répond pas donne un avertissement, jamais un échec de la commande.
+     */
+    private function checkTimestampColumns(): void
+    {
+        try {
+            $schema = ($this->timestampSchema)();
+        } catch (Throwable) {
+            // Le message de l'exception n'est pas repris : il peut contenir l'hôte ou l'utilisateur.
+            $this->warning('Base de données', 'ne répond pas : explicit_defaults_for_timestamp et les colonnes ON UPDATE CURRENT_TIMESTAMP n\'ont pas été vérifiés. Relancer la commande une fois la base accessible.');
+
+            return;
+        }
+
+        if ($schema === null) {
+            return;
+        }
+
+        if (! $schema['explicit_defaults']) {
+            $this->warning('explicit_defaults_for_timestamp', 'vaut OFF (MySQL/MariaDB) : la première colonne TIMESTAMP NOT NULL d\'une table reçoit ON UPDATE CURRENT_TIMESTAMP. Les migrations utilisent dateTime() pour les dates obligatoires (tests/Arch/MigrationsTest.php) ; ne jamais modifier le schéma à la main.');
+        }
+
+        foreach ($schema['on_update_columns'] as $column) {
+            $this->error($column, 'a ON UPDATE CURRENT_TIMESTAMP : sa valeur est réécrite à chaque modification de la ligne. La passer en DATETIME par une nouvelle migration, puis vérifier les données déjà enregistrées.');
         }
     }
 
