@@ -6,8 +6,10 @@
 | avec les middlewares "api" et "throttle:api".
 */
 
+use App\Http\Middleware\EnsureModerator;
 use App\Modules\Accounts\Http\Controllers\EmailVerificationController;
 use App\Modules\Accounts\Http\Controllers\MeController;
+use App\Modules\Accounts\Http\Controllers\PremiumGrantController;
 use App\Modules\Accounts\Http\Controllers\ProviderProfileController;
 use App\Modules\Accounts\Http\Controllers\PublicProviderController;
 use App\Modules\Accounts\Http\Controllers\RegisterController;
@@ -47,3 +49,21 @@ Route::get('providers', [PublicProviderController::class, 'index'])->name('accou
 Route::get('providers/{slug}', [PublicProviderController::class, 'show'])
     ->where('slug', '[a-z0-9]+(?:-[a-z0-9]+)*')
     ->name('accounts.providers.show');
+
+/*
+| Statut premium attribué à la main (en attendant le paiement) : rôle admin ET double
+| authentification au niveau du compte et de la session (EnsureModerator). Tout autre rôle
+| reçoit 404. Chaque décision est limitée (premium-admin), journalisée et tracée dans le
+| journal d'audit.
+*/
+Route::middleware(['auth:sanctum', 'verified', EnsureModerator::class])
+    ->prefix('admin/premium-grants')
+    ->name('accounts.premium.')
+    ->group(function (): void {
+        Route::get('/', [PremiumGrantController::class, 'index'])->name('index');
+
+        Route::middleware('throttle:premium-admin')->group(function (): void {
+            Route::post('/', [PremiumGrantController::class, 'store'])->name('store');
+            Route::post('{uuid}/revoke', [PremiumGrantController::class, 'revoke'])->whereUuid('uuid')->name('revoke');
+        });
+    });

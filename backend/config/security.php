@@ -155,6 +155,12 @@ return [
             'per_hour' => 60,
         ],
 
+        // Attribution et retrait du statut premium par un admin (module Accounts) : limite
+        // l'effet d'un compte admin compromis.
+        'premium_admin' => [
+            'per_hour' => 30,
+        ],
+
     ],
 
     /*

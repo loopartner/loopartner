@@ -184,6 +184,9 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('event-registrant-removals', fn (Request $request): Limit => Limit::perDay(self::limit('event_registrant_removals.per_day'))->by($this->userOrIp($request)));
         RateLimiter::for('event-announcements', fn (Request $request): Limit => Limit::perDay(self::limit('event_announcements.per_day'))->by($this->userOrIp($request)));
         RateLimiter::for('event-moderation', fn (Request $request): Limit => Limit::perHour(self::limit('event_moderation.per_hour'))->by($this->userOrIp($request)));
+
+        // Attribution et retrait du statut premium (module Accounts) : par admin.
+        RateLimiter::for('premium-admin', fn (Request $request): Limit => Limit::perHour(self::limit('premium_admin.per_hour'))->by($this->userOrIp($request)));
     }
 
     /**

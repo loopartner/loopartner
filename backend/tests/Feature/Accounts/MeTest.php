@@ -28,6 +28,7 @@ describe('GET /me', function (): void {
                     'avatar_url' => null,
                     'email_verified' => true,
                     'two_factor_enabled' => false,
+                    'premium' => ['active' => false, 'source' => null, 'starts_at' => null, 'ends_at' => null],
                 ],
             ]);
     });

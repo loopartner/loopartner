@@ -109,6 +109,10 @@ const API_ROUTES = [
     'GET api/v1/admin/event-announcements/{uuid}' => 'auth',
     'POST api/v1/admin/event-announcements/{uuid}/approve' => 'auth',
     'POST api/v1/admin/event-announcements/{uuid}/reject' => 'auth',
+    // Statut premium : admin avec double authentification (voir PremiumTest).
+    'GET api/v1/admin/premium-grants' => 'auth',
+    'POST api/v1/admin/premium-grants' => 'auth',
+    'POST api/v1/admin/premium-grants/{uuid}/revoke' => 'auth',
 ];
 
 /**
