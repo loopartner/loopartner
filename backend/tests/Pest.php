@@ -10,6 +10,9 @@ use App\Modules\Directory\Models\Conversation;
 use App\Modules\Directory\Models\MatchRequest;
 use App\Modules\Directory\Models\Message;
 use App\Modules\Directory\Models\Project;
+use App\Modules\Events\Enums\RegistrationStatus;
+use App\Modules\Events\Models\Event;
+use App\Modules\Events\Models\EventRegistration;
 use App\Notifications\VerifyEmailNotification;
 use App\Support\TwoFactorSession;
 use Database\Seeders\RoleSeeder;
@@ -19,6 +22,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use Monolog\LogRecord;
@@ -445,6 +449,75 @@ function expectNoPrivateFields(array $data): void
             expectNoPrivateFields($value);
         }
     }
+}
+
+/*
+|--------------------------------------------------------------------------
+| Événements (module Events)
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * Organisateur d'événements : prestataire avec un profil publié, ou utilisateur vérifié du rôle donné.
+ */
+function eventOrganizer(string $role = 'entrepreneur'): User
+{
+    return $role === 'prestataire' ? browsingProvider() : projectOwner($role);
+}
+
+/**
+ * Données valides d'un événement en présentiel, dans 10 jours à 18 h 30 (heure de Paris).
+ *
+ * @return array<string, mixed>
+ */
+function eventPayload(array $overrides = []): array
+{
+    $start = now()->setTimezone('Europe/Paris')->addDays(10)->setTime(18, 30);
+
+    return array_merge([
+        'title' => 'Atelier : bien démarrer sa comptabilité',
+        'description' => 'Un atelier pratique de deux heures pour mettre en place la comptabilité de sa jeune entreprise.',
+        'type' => 'workshop',
+        'format' => 'in_person',
+        'language' => 'fr',
+        'organizer_name' => 'Collectif des indépendants',
+        'venue_name' => 'La Cordée',
+        'address_line' => '12 rue de la République',
+        'postal_code' => '69001',
+        'city' => 'Lyon',
+        'country' => 'FR',
+        'starts_at' => $start->format('Y-m-d\TH:i'),
+        'ends_at' => $start->copy()->addHours(2)->format('Y-m-d\TH:i'),
+        'timezone' => 'Europe/Paris',
+    ], $overrides);
+}
+
+/**
+ * Événement publié et à venir d'un organisateur (entrepreneur par défaut).
+ *
+ * @param  array<string, mixed>  $attributes
+ */
+function publishedEventOf(?User $organizer = null, array $attributes = []): Event
+{
+    return Event::factory()->published()->create(['user_id' => ($organizer ?? eventOrganizer())->id, ...$attributes]);
+}
+
+/**
+ * Inscription active d'un utilisateur à un événement (sans HTTP ni email).
+ */
+function registerTo(Event $event, ?User $user = null): EventRegistration
+{
+    $registration = new EventRegistration;
+    $registration->forceFill([
+        'uuid' => (string) Str::uuid(),
+        'event_id' => $event->id,
+        'user_id' => ($user ?? projectOwner('particulier'))->id,
+        'status' => RegistrationStatus::Registered,
+    ])->save();
+
+    $event->increment('registrations_count');
+
+    return $registration;
 }
 
 /**

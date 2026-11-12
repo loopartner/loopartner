@@ -113,6 +113,48 @@ return [
             'per_day' => 20,
         ],
 
+        // Événements (module Events), par utilisateur.
+        // Création, modification, suppression, retrait d'une soumission et annulation.
+        'event_writes' => [
+            'per_hour' => 60,
+            'per_day' => 300,
+        ],
+
+        // Soumissions à la validation d'un admin. S'ajoute au plafond d'événements en attente
+        // (config/events.php, max_pending_review_per_organizer).
+        'event_submissions' => [
+            'per_hour' => 5,
+            'per_day' => 15,
+        ],
+
+        // Révisions d'un événement publié (création ou remplacement), comptées par l'Action.
+        'event_revisions' => [
+            'per_hour' => 10,
+            'per_day' => 30,
+        ],
+
+        // Inscriptions et désinscriptions.
+        'event_registrations' => [
+            'per_hour' => 20,
+            'per_day' => 60,
+        ],
+
+        // Inscrits retirés par l'organisateur.
+        'event_registrant_removals' => [
+            'per_day' => 20,
+        ],
+
+        // Annonces aux inscrits. S'ajoute aux limites par événement (config/events.php).
+        'event_announcements' => [
+            'per_day' => 3,
+        ],
+
+        // Décisions de modération (validation, refus, annulation), par admin : limite l'effet
+        // d'un compte admin compromis.
+        'event_moderation' => [
+            'per_hour' => 60,
+        ],
+
     ],
 
     /*

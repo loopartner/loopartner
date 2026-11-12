@@ -74,6 +74,15 @@ const API_ROUTES = [
     'GET api/v1/me/conversations/{uuid}/messages' => 'auth',
     'POST api/v1/me/conversations/{uuid}/messages' => 'auth',
     'POST api/v1/me/conversations/{uuid}/messages/{messageUuid}/report' => 'auth',
+    // Événements : organisateur (voir aussi EventsAuthorizationTest).
+    'GET api/v1/me/events' => 'auth',
+    'POST api/v1/me/events' => 'auth',
+    'GET api/v1/me/events/{uuid}' => 'auth',
+    'PATCH api/v1/me/events/{uuid}' => 'auth',
+    'DELETE api/v1/me/events/{uuid}' => 'auth',
+    'POST api/v1/me/events/{uuid}/submit' => 'auth',
+    'POST api/v1/me/events/{uuid}/withdraw' => 'auth',
+    'POST api/v1/me/events/{uuid}/cancel' => 'auth',
 ];
 
 /**

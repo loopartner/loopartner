@@ -167,6 +167,23 @@ class AppServiceProvider extends ServiceProvider
         // Signalements, blocages et déblocages : par utilisateur.
         RateLimiter::for('reports', fn (Request $request): Limit => Limit::perDay(self::limit('reports.per_day'))->by($this->userOrIp($request)));
         RateLimiter::for('blocks', fn (Request $request): Limit => Limit::perDay(self::limit('blocks.per_day'))->by($this->userOrIp($request)));
+
+        // Événements (module Events) : par utilisateur.
+        RateLimiter::for('event-writes', fn (Request $request): array => [
+            Limit::perHour(self::limit('event_writes.per_hour'))->by('hour:'.$this->userOrIp($request)),
+            Limit::perDay(self::limit('event_writes.per_day'))->by('day:'.$this->userOrIp($request)),
+        ]);
+        RateLimiter::for('event-submissions', fn (Request $request): array => [
+            Limit::perHour(self::limit('event_submissions.per_hour'))->by('hour:'.$this->userOrIp($request)),
+            Limit::perDay(self::limit('event_submissions.per_day'))->by('day:'.$this->userOrIp($request)),
+        ]);
+        RateLimiter::for('event-registrations', fn (Request $request): array => [
+            Limit::perHour(self::limit('event_registrations.per_hour'))->by('hour:'.$this->userOrIp($request)),
+            Limit::perDay(self::limit('event_registrations.per_day'))->by('day:'.$this->userOrIp($request)),
+        ]);
+        RateLimiter::for('event-registrant-removals', fn (Request $request): Limit => Limit::perDay(self::limit('event_registrant_removals.per_day'))->by($this->userOrIp($request)));
+        RateLimiter::for('event-announcements', fn (Request $request): Limit => Limit::perDay(self::limit('event_announcements.per_day'))->by($this->userOrIp($request)));
+        RateLimiter::for('event-moderation', fn (Request $request): Limit => Limit::perHour(self::limit('event_moderation.per_hour'))->by($this->userOrIp($request)));
     }
 
     /**
