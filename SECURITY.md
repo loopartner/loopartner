@@ -168,6 +168,8 @@ Depuis `backend/`, sur le serveur de production :
    php.ini).
 3. **Base de données** : `php artisan migrate --force`, puis uniquement les données de référence :
    `php artisan db:seed --class="Database\Seeders\ReferenceDataSeeder" --force`.
+   Relancer ensuite `php artisan security:check-config` : il vérifie aussi le schéma migré (aucune
+   colonne `ON UPDATE CURRENT_TIMESTAMP` hors `updated_at`).
    Ne jamais lancer `db:seed` sans `--class` en production, ni définir `SEED_DEMO_DATA`.
 4. **Tâche cron** du planificateur en place (`php artisan schedule:run` chaque minute) : sans elle,
    aucun email (vérification, réinitialisation) ne part.

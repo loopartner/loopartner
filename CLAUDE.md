@@ -20,9 +20,20 @@ entrepreneurs.
 - Le `php` du PATH Windows est en PHP 8.4 : utilise directement `php`, `composer` et `vendor/bin/...`.
 - Base de données locale : MariaDB/MySQL via XAMPP (configurée dans `backend/.env` par l'utilisateur).
   Les tests utilisent SQLite en mémoire (`phpunit.xml`).
-- Les migrations doivent fonctionner sur MySQL, MariaDB et SQLite : jeu de caractères `utf8mb4`,
-  longueur explicite et raisonnable pour les chaînes indexées (191 caractères maximum pour un index
-  sur une seule colonne `string`), pas de type ni de fonction propre à un seul moteur.
+- **Liste de contrôle des migrations** (tous les modules, y compris Blog et Compliance) :
+  - Elles doivent fonctionner sur MySQL, MariaDB et SQLite : jeu de caractères `utf8mb4`, longueur
+    explicite et raisonnable pour les chaînes indexées (191 caractères maximum pour un index sur une
+    seule colonne `string`), pas de type ni de fonction propre à un seul moteur.
+  - **Une date obligatoire s'écrit `dateTime()` (valeur en UTC), jamais `timestamp()`** :
+    `timestamp()` et `timestampTz()` seulement avec `->nullable()` ou `->useCurrent()`
+    (`timestamps()` et `softDeletes()` restent permis). Raison : sur MariaDB 10.4 (XAMPP) et MySQL
+    sans `explicit_defaults_for_timestamp`, la première colonne `TIMESTAMP NOT NULL` d'une table
+    reçoit implicitement `ON UPDATE CURRENT_TIMESTAMP` et sa valeur serait réécrite à chaque
+    modification de la ligne, ce que SQLite (tests) ne montre pas.
+  - Vérifié par `tests/Arch/MigrationsTest.php` (lecture du code des migrations) et, sur la base
+    réelle, par `security:check-config` (erreur sur toute colonne `ON UPDATE CURRENT_TIMESTAMP` hors
+    `updated_at`).
+  - Une migration déjà exécutée ne se modifie pas : toute correction passe par une nouvelle migration.
 - **Ne lis jamais et ne modifie jamais `backend/.env`**. Cette interdiction est aussi bloquée dans
   `.claude/settings.json`. Seul `backend/.env.example` se modifie.
 - N'installe aucun package Composer ou npm sans l'accord explicite de l'utilisateur.
@@ -560,8 +571,11 @@ Aucune réponse ne révèle si une adresse email correspond à un compte.
 - **`php artisan security:check-config`** (à lancer à chaque déploiement, après `config:cache`) :
   vérifie la configuration de production (`App\Support\Security\ConfigAudit`) et échoue (code 1)
   sur toute valeur dangereuse (`APP_DEBUG`, cookies de session, Sanctum, CORS, `LOG_LEVEL`,
-  `MAIL_MAILER`, dépendances de développement installées…). Les avertissements (`TRUSTED_PROXIES`
-  vide, réglages php.ini) ne bloquent pas. Toute nouvelle variable de sécurité doit y être ajoutée,
+  `MAIL_MAILER`, dépendances de développement installées, colonne réelle avec
+  `ON UPDATE CURRENT_TIMESTAMP` hors `updated_at`…). Les avertissements (`TRUSTED_PROXIES` vide,
+  réglages php.ini, `explicit_defaults_for_timestamp` à OFF, base qui ne répond pas) ne bloquent
+  pas. Le schéma est lu par `App\Support\Database\TimestampSchema` (MySQL et MariaDB seulement) ;
+  relancer la commande après `migrate`. Toute nouvelle variable de sécurité doit y être ajoutée,
   avec son test dans `tests/Feature/Security/CheckConfigCommandTest.php`.
 - URL générées : `AppServiceProvider` force la racine et le schéma de `APP_URL` (jamais l'en-tête
   `Host`). Hors local, `trustHosts` n'accepte que l'hôte de `APP_URL` et ses sous-domaines.
