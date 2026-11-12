@@ -6,6 +6,7 @@ use App\Models\AdminAuditLog;
 use App\Models\User;
 use App\Modules\Events\Enums\EventStatus;
 use App\Modules\Events\Models\Event;
+use App\Modules\Events\Models\EventAnnouncement;
 use App\Modules\Events\Models\EventRevision;
 use App\Modules\Events\Support\EventContent;
 use App\Modules\Events\Support\EventLinks;
@@ -102,6 +103,38 @@ final class ModerationView
             ...EventLinks::inspect($proposed, $event->user_id, $event->id),
             'organizer' => app(OrganizerHistory::class)->for($event->user),
             'decisions' => self::decisions('revision', $revision->uuid),
+        ];
+    }
+
+    /**
+     * Annonce contenant un lien : texte complet, liens et domaines, événement et organisateur.
+     *
+     * @return array<string, mixed>
+     */
+    public static function announcement(EventAnnouncement $announcement): array
+    {
+        $event = $announcement->event;
+        $links = EventLinks::inspect(['description' => $announcement->body], $event->user_id, $event->id);
+
+        return [
+            'uuid' => $announcement->uuid,
+            'status' => $announcement->status->value,
+            'body' => $announcement->body,
+            'created_at' => $announcement->created_at?->toIso8601ZuluString(),
+            'rejection_reason' => $announcement->rejection_reason,
+            'recipients_count' => $announcement->recipients_count,
+            'event' => [
+                'uuid' => $event->uuid,
+                'slug' => $event->slug,
+                'title' => $event->title,
+                'status' => $event->status->value,
+                'starts_at' => $event->starts_at->toIso8601ZuluString(),
+                'registrations_count' => $event->registrations_count,
+            ],
+            'links' => array_map(fn (array $link): array => [...$link, 'field' => 'body'], $links['links']),
+            'domains' => array_map(fn (array $domain): array => [...$domain, 'fields' => ['body']], $links['domains']),
+            'organizer' => app(OrganizerHistory::class)->for($event->user),
+            'decisions' => self::decisions('announcement', $announcement->uuid),
         ];
     }
 

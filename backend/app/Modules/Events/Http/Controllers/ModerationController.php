@@ -7,12 +7,14 @@ use App\Models\User;
 use App\Modules\Events\Actions\ApproveEvent;
 use App\Modules\Events\Actions\ApproveRevision;
 use App\Modules\Events\Actions\CancelEventByModeration;
+use App\Modules\Events\Actions\ModerateAnnouncement;
 use App\Modules\Events\Actions\RejectEvent;
 use App\Modules\Events\Actions\RejectRevision;
 use App\Modules\Events\Http\Requests\ModerationDecisionRequest;
 use App\Modules\Events\Http\Requests\ModerationQueueRequest;
 use App\Modules\Events\Http\Resources\ModerationView;
 use App\Modules\Events\Models\Event;
+use App\Modules\Events\Models\EventAnnouncement;
 use App\Modules\Events\Models\EventRevision;
 use App\Modules\Events\Support\ModerationQueue;
 use App\Support\Pagination;
@@ -121,6 +123,33 @@ class ModerationController extends Controller
         $revision = $rejectRevision->handle(self::admin($request), self::revision($uuid), $request->integer('version'), $request->string('reason')->toString());
 
         return $this->showRevision($revision->uuid);
+    }
+
+    public function showAnnouncement(string $uuid): JsonResponse
+    {
+        return response()->json(['data' => ModerationView::announcement(self::announcement($uuid))]);
+    }
+
+    public function approveAnnouncement(ModerationDecisionRequest $request, string $uuid, ModerateAnnouncement $moderateAnnouncement): JsonResponse
+    {
+        $announcement = $moderateAnnouncement->approve(self::admin($request), self::announcement($uuid));
+
+        return $this->showAnnouncement($announcement->uuid);
+    }
+
+    public function rejectAnnouncement(ModerationDecisionRequest $request, string $uuid, ModerateAnnouncement $moderateAnnouncement): JsonResponse
+    {
+        $announcement = $moderateAnnouncement->reject(self::admin($request), self::announcement($uuid), $request->string('reason')->toString());
+
+        return $this->showAnnouncement($announcement->uuid);
+    }
+
+    private static function announcement(string $uuid): EventAnnouncement
+    {
+        $announcement = EventAnnouncement::query()->where('uuid', $uuid)->with('event.user.roles')->first();
+        abort_if($announcement === null, 404, 'Annonce introuvable.');
+
+        return $announcement;
     }
 
     /**

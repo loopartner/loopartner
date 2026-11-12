@@ -7,6 +7,7 @@ use App\Modules\Accounts\Actions\HasPublishedProviderProfile;
 use App\Modules\Directory\Actions\IsBlockedBetween;
 use App\Modules\Events\Models\Event;
 use App\Modules\Events\Support\Organizers;
+use App\Support\SecurityLog;
 use Illuminate\Auth\Access\Response;
 
 /**
@@ -105,6 +106,8 @@ class EventPolicy
         }
 
         if ($event->user_id !== null && $this->isBlockedBetween->handle($user->id, $event->user_id)) {
+            SecurityLog::record('events.registration_blocked', ['user_id' => $user->id, 'event' => $event->uuid], 'warning');
+
             return Response::deny('Vous ne pouvez pas vous inscrire à cet événement.');
         }
 

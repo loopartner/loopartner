@@ -87,6 +87,16 @@ const API_ROUTES = [
     'POST api/v1/me/events/{uuid}/withdraw' => 'auth',
     'DELETE api/v1/me/events/{uuid}/revision' => 'auth',
     'POST api/v1/me/events/{uuid}/cancel' => 'auth',
+    'GET api/v1/me/events/{uuid}/registrations' => 'auth',
+    'DELETE api/v1/me/events/{uuid}/registrations/{registrationUuid}' => 'auth',
+    'GET api/v1/me/events/{uuid}/announcements' => 'auth',
+    'POST api/v1/me/events/{uuid}/announcements' => 'auth',
+    // Événements : inscriptions.
+    'POST api/v1/events/{slug}/registration' => 'auth',
+    'DELETE api/v1/events/{slug}/registration' => 'auth',
+    'GET api/v1/me/event-registrations' => 'auth',
+    'GET api/v1/me/event-registrations/{slug}' => 'auth',
+    'GET api/v1/me/event-registrations/{slug}/calendar.ics' => 'auth',
     // Modération des événements : admin avec double authentification (EnsureModerator).
     'GET api/v1/admin/events/queue' => 'auth',
     'GET api/v1/admin/events/{uuid}' => 'auth',
@@ -96,6 +106,9 @@ const API_ROUTES = [
     'GET api/v1/admin/event-revisions/{uuid}' => 'auth',
     'POST api/v1/admin/event-revisions/{uuid}/approve' => 'auth',
     'POST api/v1/admin/event-revisions/{uuid}/reject' => 'auth',
+    'GET api/v1/admin/event-announcements/{uuid}' => 'auth',
+    'POST api/v1/admin/event-announcements/{uuid}/approve' => 'auth',
+    'POST api/v1/admin/event-announcements/{uuid}/reject' => 'auth',
 ];
 
 /**
@@ -106,6 +119,7 @@ function concreteUri(string $uri): string
     return '/'.strtr($uri, [
         '{uuid}' => '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d',
         '{messageUuid}' => '1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed',
+        '{registrationUuid}' => '6ec0bd7f-11c0-43da-975e-2a8ad9ebae0b',
         '{slug}' => 'un-prestataire',
         '{id}' => '1',
         '{hash}' => str_repeat('a', 40),
