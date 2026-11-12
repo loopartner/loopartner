@@ -185,6 +185,17 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('event-announcements', fn (Request $request): Limit => Limit::perDay(self::limit('event_announcements.per_day'))->by($this->userOrIp($request)));
         RateLimiter::for('event-moderation', fn (Request $request): Limit => Limit::perHour(self::limit('event_moderation.per_hour'))->by($this->userOrIp($request)));
 
+        // Articles (module Blog) : par utilisateur.
+        RateLimiter::for('article-writes', fn (Request $request): array => [
+            Limit::perHour(self::limit('article_writes.per_hour'))->by('hour:'.$this->userOrIp($request)),
+            Limit::perDay(self::limit('article_writes.per_day'))->by('day:'.$this->userOrIp($request)),
+        ]);
+        RateLimiter::for('article-submissions', fn (Request $request): array => [
+            Limit::perHour(self::limit('article_submissions.per_hour'))->by('hour:'.$this->userOrIp($request)),
+            Limit::perDay(self::limit('article_submissions.per_day'))->by('day:'.$this->userOrIp($request)),
+        ]);
+        RateLimiter::for('blog-moderation', fn (Request $request): Limit => Limit::perHour(self::limit('blog_moderation.per_hour'))->by($this->userOrIp($request)));
+
         // Attribution et retrait du statut premium (module Accounts) : par admin.
         RateLimiter::for('premium-admin', fn (Request $request): Limit => Limit::perHour(self::limit('premium_admin.per_hour'))->by($this->userOrIp($request)));
     }

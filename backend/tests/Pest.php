@@ -2,7 +2,12 @@
 
 use App\Models\ServiceCategory;
 use App\Models\User;
+use App\Modules\Accounts\Models\PremiumGrant;
 use App\Modules\Accounts\Models\ProviderProfile;
+use App\Modules\Blog\Enums\AuthorKind;
+use App\Modules\Blog\Models\Article;
+use App\Modules\Blog\Models\ArticleQuotaEntry;
+use App\Modules\Blog\Support\Authors;
 use App\Modules\Directory\Actions\AcceptMatchRequest;
 use App\Modules\Directory\Actions\SendMessage;
 use App\Modules\Directory\Actions\SendProposal;
@@ -15,6 +20,7 @@ use App\Modules\Events\Models\Event;
 use App\Modules\Events\Models\EventRegistration;
 use App\Notifications\VerifyEmailNotification;
 use App\Support\TwoFactorSession;
+use Database\Factories\Modules\Blog\ArticleFactory;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Factory;
@@ -526,4 +532,102 @@ function registerTo(Event $event, ?User $user = null): EventRegistration
 function postMessage(User $sender, Conversation $conversation, string $body = 'Bonjour, voici quelques précisions sur le projet.'): Message
 {
     return app(SendMessage::class)->handle($sender, $conversation->fresh(['participants.user']), $body);
+}
+
+/*
+|--------------------------------------------------------------------------
+| Blog
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * Auteur d'articles avec un email vérifié : prestataire avec un profil publié, entrepreneur, ou
+ * membre de l'équipe (rédacteur, admin) avec la double authentification confirmée.
+ */
+function articleAuthor(string $role = 'entrepreneur'): User
+{
+    if ($role === 'prestataire') {
+        return browsingProvider();
+    }
+
+    if (in_array($role, ['redacteur', 'admin'], true)) {
+        $user = userWithTwoFactor();
+        $user->assignRole($role);
+
+        return $user;
+    }
+
+    return projectOwner($role);
+}
+
+/**
+ * Requête d'un auteur, avec une session ouverte par un code 2FA (équipe).
+ */
+function asAuthor(User $user): TestCase
+{
+    return fromFrontend()->actingAs($user)->withSession([TwoFactorSession::KEY => time()]);
+}
+
+/**
+ * Catégorie active utilisée par les articles des tests.
+ */
+function blogCategory(): ServiceCategory
+{
+    return ServiceCategory::query()->where('slug', 'creation-entreprise')->first()
+        ?? serviceCategory('creation-entreprise', 'Création d\'entreprise', 'Starting a business');
+}
+
+/**
+ * Données complètes d'un article (prêt à être soumis). Le nom d'auteur n'est envoyé que pour
+ * un entrepreneur (il est interdit aux autres).
+ *
+ * @param  array<string, mixed>  $overrides
+ * @return array<string, mixed>
+ */
+function articlePayload(array $overrides = [], bool $withAuthorName = true): array
+{
+    return [
+        'title' => 'Bien choisir le statut juridique de son entreprise',
+        'excerpt' => 'Micro-entreprise, SASU ou EURL : les critères qui comptent vraiment pour bien démarrer son activité.',
+        'language' => 'fr',
+        'categories' => [blogCategory()->slug],
+        'body' => ArticleFactory::body(),
+        ...($withAuthorName ? ['author_name' => 'Camille, fondatrice'] : []),
+        ...$overrides,
+    ];
+}
+
+/**
+ * Article d'un auteur, complet, dans l'état demandé (draft, pending, published), avec une
+ * catégorie. Le type d'auteur suit son rôle.
+ *
+ * @param  array<string, mixed>  $attributes
+ */
+function articleOf(User $author, string $state = 'draft', array $attributes = []): Article
+{
+    $factory = Article::factory()->for($author, 'user');
+    $factory = match (Authors::kindOf($author)) {
+        AuthorKind::Editorial => $factory->editorial(),
+        AuthorKind::Provider => $factory->provider(),
+        default => $factory,
+    };
+    $factory = match ($state) {
+        'pending' => $factory->pending(),
+        'published' => $factory->published(),
+        default => $factory,
+    };
+
+    $article = $factory->create($attributes);
+    $article->categories()->attach(blogCategory());
+
+    if ($state !== 'draft' && ! $article->author_kind->isEditorial()) {
+        ArticleQuotaEntry::query()->forceCreate(['user_id' => $author->id, 'article_uuid' => $article->uuid, 'counted_at' => now()]);
+    }
+
+    return $article;
+}
+
+function makePremium(User $user, array $attributes = []): PremiumGrant
+{
+    return PremiumGrant::factory()->for($user)->create($attributes);
 }

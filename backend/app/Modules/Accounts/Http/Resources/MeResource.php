@@ -4,6 +4,7 @@ namespace App\Modules\Accounts\Http\Resources;
 
 use App\Models\User;
 use App\Modules\Accounts\Actions\GetPremiumStatus;
+use App\Modules\Blog\Actions\GetArticleQuota;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -34,6 +35,8 @@ class MeResource extends JsonResource
             'two_factor_enabled' => $this->two_factor_confirmed_at !== null,
             // Statut premium en cours, sans motif ni admin.
             'premium' => app(GetPremiumStatus::class)->handle($this->id),
+            // Quota gratuit d'articles (module Blog) : prestataires et entrepreneurs, null sinon.
+            'article_quota' => app(GetArticleQuota::class)->handle($this->resource),
         ];
     }
 }

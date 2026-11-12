@@ -109,6 +109,16 @@ const API_ROUTES = [
     'GET api/v1/admin/event-announcements/{uuid}' => 'auth',
     'POST api/v1/admin/event-announcements/{uuid}/approve' => 'auth',
     'POST api/v1/admin/event-announcements/{uuid}/reject' => 'auth',
+    // Blog : articles de l'auteur (voir BlogAuthorizationTest).
+    'GET api/v1/me/articles' => 'auth',
+    'POST api/v1/me/articles' => 'auth',
+    'GET api/v1/me/articles/quota' => 'auth',
+    'GET api/v1/me/articles/{uuid}' => 'auth',
+    'PATCH api/v1/me/articles/{uuid}' => 'auth',
+    'DELETE api/v1/me/articles/{uuid}' => 'auth',
+    'POST api/v1/me/articles/{uuid}/submit' => 'auth',
+    'POST api/v1/me/articles/{uuid}/withdraw' => 'auth',
+    'DELETE api/v1/me/articles/{uuid}/revision' => 'auth',
     // Statut premium : admin avec double authentification (voir PremiumTest).
     'GET api/v1/admin/premium-grants' => 'auth',
     'POST api/v1/admin/premium-grants' => 'auth',
