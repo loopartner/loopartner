@@ -39,8 +39,10 @@ entrepreneurs.
 - Les tâches planifiées sont déclarées dans `routes/console.php`, et le worker de file d'attente
   reste déclaré en dernier. `tests/Feature/SchedulerTest.php` vérifie la planification de chaque
   tâche et la position du worker. Tâches actuelles : `projects:close-expired` (02:00),
-  `match-requests:expire` (02:30), `media:prune-orphans` (03:00), `matching:prune` (03:30), puis
-  le worker.
+  `match-requests:expire` (02:30), `media:prune-orphans` (03:00), `matching:prune` (03:30),
+  `events:send-reminders` (toutes les 15 minutes), `events:close-past` (chaque heure),
+  `events:prune` (04:00), `events:notify-moderators` (toutes les 5 minutes), `admin-audit:prune`
+  (04:30), puis le worker.
 - Toutes les dates sont stockées en **UTC** (`app.timezone = UTC`, connexion MySQL en `+00:00`).
   La conversion vers le fuseau de l'utilisateur se fait à l'affichage, côté frontend.
 
@@ -78,8 +80,18 @@ utilitaires du module), `Console/Commands/` (commandes Artisan du module), `Noti
 - Un module peut lire les enums publics d'un autre module (par exemple `AccountType` pour les rôles),
   jamais ses modèles.
 - Règles de validation partagées du noyau, dans `app/Rules` (namespace `App\Rules`), utilisables par
-  tous les modules : `NoHtml` (refuse le HTML), `CountryCode` (ISO 3166-1 alpha-2) et `CurrencyCode`
-  (ISO 4217). Les listes de codes sont statiques (ni package ni extension intl).
+  tous les modules : `NoHtml` (refuse le HTML), `CountryCode` (ISO 3166-1 alpha-2), `CurrencyCode`
+  (ISO 4217), `LanguageCode` (ISO 639-1), `SafeExternalUrl` (lien externe : https, nom de domaine
+  public, ni IP, ni hôte local, ni raccourcisseur, ni domaine refusé) et `SafeLinksInText` (mêmes
+  règles pour les liens écrits dans un texte libre ; `App\Support\Links\ExternalLink`). Les listes de
+  codes sont statiques (ni package ni extension intl).
+- Journal d'audit des décisions d'administration (noyau) : `App\Support\AdminAudit::record()`
+  (table `admin_audit_logs`, lignes jamais modifiées, `admin_id` sans clé étrangère), purgé après
+  `security.retention.admin_audit_months` (24) par `admin-audit:prune`.
+- Fonctions d'administration : middleware du noyau `App\Http\Middleware\EnsureModerator` (rôle admin
+  sinon 404 ; 2FA confirmée et session ouverte avec un code 2FA sinon 403). La session est marquée
+  par `App\Listeners\TrackTwoFactorSession` (`App\Support\TwoFactorSession`) : un admin qui vient
+  d'activer sa 2FA doit se reconnecter avec son code.
 - Langues : `App\Support\Locale` (`fr`, `en`). `Locale::fromRequest()` choisit la langue d'une réponse :
   paramètre `locale`, puis en-tête `Accept-Language`, puis `fr`. Une valeur inconnue est ignorée.
 - Pagination des listes : `App\Support\Pagination` (paramètres `page` et `per_page`, 20 par défaut,
@@ -115,7 +127,7 @@ utilitaires du module), `Console/Commands/` (commandes Artisan du module), `Noti
   `slug` (null si dépublié), `headline`, `city`, `country`, `logo_url`).
 - Événement public `Accounts\Events\AccountDeleting` : envoyé de façon synchrone par `DeleteAccount`,
   dans sa transaction et avant la suppression de la ligne `users`. Les autres modules y traitent les
-  données de l'utilisateur (Directory : `ForgetUserMatching`). Un écouteur ne doit pas être mis en file
+  données de l'utilisateur (Directory : `ForgetUserMatching` ; Events : `ForgetUserEvents`). Un écouteur ne doit pas être mis en file
   d'attente ; une exception annule toute la suppression.
 - Le slug d'un profil prestataire est calculé à la création puis ne change plus (URL stables).
 - Les champs texte saisis par les utilisateurs refusent le HTML (règle `NoHtml`) plutôt que de le
@@ -147,7 +159,21 @@ utilitaires du module), `Console/Commands/` (commandes Artisan du module), `Noti
   démonstration expiré. Mise en relation de démonstration (sans aucun email) : proposition du
   prestataire acceptée sur le projet du particulier, avec une conversation
   (`DatabaseSeeder::DEMO_MESSAGES`) ; proposition en attente sur le projet de l'entrepreneur ; contact
-  de l'entrepreneur vers le prestataire, refusé.
+  de l'entrepreneur vers le prestataire, refusé. Événements de démonstration (sans aucun email) :
+  publiés (atelier en présentiel, webinaire, conférence hybride avec une révision en attente, salon
+  payant publié par l'admin), un en attente, un refusé, un passé, et des inscriptions entre les
+  comptes.
+- **Double authentification de `admin@example.com`** (démonstration uniquement) : activée et
+  confirmée par le seeder avec un secret fixe, `DatabaseSeeder::DEMO_ADMIN_TWO_FACTOR_SECRET`
+  (`LOOPARTNERDEMOAD`), pour tester la modération. Pour se connecter : ajouter un compte dans une
+  application d'authentification (Google Authenticator, Microsoft Authenticator, 2FAS, Aegis…) en
+  **saisie manuelle de la clé** : nom `Loopartner admin (démo)`, clé `LOOPARTNERDEMOAD`, type
+  « basé sur le temps » (TOTP, 6 chiffres, 30 secondes). Se connecter avec `admin@example.com` /
+  `password`, puis envoyer le code affiché à `POST /api/v1/auth/two-factor-challenge`. Codes de
+  secours : `DatabaseSeeder::DEMO_ADMIN_RECOVERY_CODES`. Ce secret est public, comme le mot de passe
+  des comptes de démonstration : `DemoDataGuard` empêche de le créer hors du poste local, et **une base
+  de démonstration ne doit jamais être copiée vers un autre environnement** (préproduction,
+  production, sauvegarde partagée).
 
 ## Brique média (images)
 
@@ -170,11 +196,11 @@ Usages (`App\Support\Media\MediaPurpose`, limites définies dans l'enum) :
 |---|---|---|---|---|
 | `avatar` | 5 Mo | 128×128 | 512×512 | tous |
 | `provider_logo` | 5 Mo | 128×128 | 1024×1024 | prestataire |
-| `event_cover`, `article_cover` | — | — | — | pas encore disponibles (422) |
+| `event_cover` | 5 Mo | 960×540 | 1920×1080 | prestataire, entrepreneur, rédacteur, admin |
+| `article_cover` | — | — | — | pas encore disponible (422) |
 
-Les limites et les rôles de `event_cover` et `article_cover` seront définis avec les modules Events
-et Blog. Les rôles de `article_cover` ne doivent pas être figés sur `redacteur`/`admin` : les
-prestataires pourront aussi écrire des articles.
+Les limites et les rôles de `article_cover` seront définis avec le module Blog. Ils ne doivent pas
+être figés sur `redacteur`/`admin` : les prestataires pourront aussi écrire des articles.
 
 ### Utiliser la brique depuis un module
 
@@ -329,6 +355,92 @@ validation). Un participant qui tente l'action de l'autre reçoit 403 ; un état
 - **Minimisation** (`matching:prune`, 03:30, durées en mois dans `config/security.php`, `retention`) :
   conversations orphelines (12), demandes refusées, retirées ou expirées (12), copie du contenu et
   commentaire des signalements, puis signalements clos (12).
+- **Actions publiques** (lecture seule, pour d'autres modules) : `IsBlockedBetween` (blocage dans un
+  sens ou dans l'autre) et `GetUserModerationSignals` (nombre de signalements reçus et de blocages
+  subis, sans aucun détail).
+
+## Module Events (agenda d'événements)
+
+Agenda public d'événements pour entrepreneurs (ateliers, conférences, webinaires, networking,
+salons) avec inscription des participants. **Principe central : aucun événement proposé par un
+utilisateur n'apparaît dans l'agenda public sans la validation d'un admin.** Réglages métier dans
+`config/events.php`, limites et durées de conservation dans `config/security.php`.
+
+- **Organisateurs** (`EventPolicy`, `Support/Organizers`) : prestataires avec un profil publié et au
+  moins une catégorie (Action publique `HasPublishedProviderProfile`), entrepreneurs, rédacteurs et
+  admins, avec un email vérifié. L'événement d'un autre utilisateur donne **404**, admin compris :
+  la modération passe uniquement par `/admin/…`.
+- **Statuts** (`EventStatus`) : `draft` → `pending_review` → `published` → `past` (tâche
+  `events:close-past`) ; `pending_review` → `rejected` (motif obligatoire ; corrigé puis soumis à
+  nouveau) ; `published` → `cancelled`. Seul l'admin publie sans validation (`POST …/submit` répond
+  200 au lieu de 202), et seulement si sa session a passé la 2FA (403 sinon), avec une trace d'audit.
+  Plafonds : 3 événements en attente et 20 publiés à venir par organisateur (409).
+- **Contenu** (`Support/EventContent`, `Support/EventRules`) : titre, description (texte brut), type
+  (`workshop`, `conference`, `webinar`, `networking`, `trade_show`, `other`), format (`in_person`,
+  `online`, `hybrid`), langue (`LanguageCode`), 0 à 3 catégories, lieu (`address_visibility` :
+  `public` ou `registrants`), lien de connexion (`online_url`, **chiffré en base**, jamais public),
+  site (`external_url`), gratuit ou payant (`ticket_url`, billetterie externe sans inscription
+  interne), capacité facultative, couverture (`event_cover`). Dates **saisies en heure locale**
+  (`starts_at: "2026-12-03T18:30"`) avec le fuseau IANA (`timezone`), converties une fois en UTC ;
+  une heure inexistante (passage à l'heure d'été) donne 422. Les réponses donnent les dates en UTC,
+  le fuseau et un objet `local`. Les champs incompatibles avec le format ou la gratuité sont vidés.
+  `organizer_name` est obligatoire sauf pour un prestataire (présenté par son profil, champ interdit).
+  Les champs fixés par la plateforme (`status`, `slug`, `version`, `user_id`, dates du cycle de
+  vie…) sont **refusés** (`prohibited`, 422).
+- **Révisions** (`EventRevision`, `SubmitRevision`) : modifier un événement publié (non-admin) crée
+  ou remplace **une révision en attente** (202) contenant la version complète proposée (JSON chiffré)
+  et `changed_fields`. Le public voit la version validée jusqu'à l'accord d'un admin. Tous les champs
+  sont concernés (lien de connexion, liens, adresse, capacité…). Une couverture proposée est rattachée
+  à la révision. Un événement en attente se retire (`POST …/withdraw`) avant d'être modifié (409
+  sinon) ; un événement commencé n'est plus modifiable. L'annulation reste immédiate.
+- **Versions** : `events.version` et `event_revisions.version` augmentent à chaque modification ;
+  l'admin envoie la `version` qu'il a lue, sinon 409 (pas de validation d'un contenu non relu).
+- **Modération** (`/admin/…`, `ModerationController`) : middleware du noyau `EnsureModerator` (rôle
+  admin, sinon **404** ; 2FA confirmée sur le compte **et** session ouverte avec un code 2FA, sinon
+  **403**). File d'attente (`GET /admin/events/queue`, événements, révisions et annonces du plus
+  ancien au plus récent, `kind`, `meta.counts`), détail avec le contenu complet (lien de connexion
+  en clair seulement pendant la modération), liens et domaines signalés (`punycode`,
+  `previously_approved`) et historique de l'organisateur (`OrganizerHistory`, avec l'Action publique
+  `Directory\Actions\GetUserModerationSignals`). Validation, refus avec motif (10 à 1000 caractères),
+  annulation par un admin (motif). Chaque décision : journal d'audit en base (`AdminAudit`), canal
+  security, limiteur `event-moderation`.
+- **Récapitulatif aux admins** (`events:notify-moderators`, toutes les 5 minutes) : au plus un email
+  toutes les 30 minutes, seulement si un élément est arrivé depuis le précédent, sans contenu.
+- **Agenda public** : `GET /events` (publiés et pas terminés, tri par début ; filtres `from`, `to`
+  (journées UTC, 366 jours au plus), `type`, `format`, `country`, `city`, `category` (sous-catégories
+  comprises), `language`, `free`, `q` (`Like` sur titre, description, ville)), `GET /events/{slug}`
+  (publié ou passé, 404 sinon) et `GET /events/{slug}/calendar.ics` (sans lien de connexion, adresse
+  masquée si réservée aux inscrits). Slug calculé à la **première validation**, puis stable.
+  L'organisateur est présenté par son profil prestataire (`GetProviderSummaries`) ou par
+  `organizer_name`, jamais par son nom d'utilisateur. `registration.privacy` annonce avant
+  l'inscription que le nom et le type de compte de l'inscrit seront visibles par l'organisateur.
+- **Inscriptions** (`RegisterForEvent`) : événement gratuit, publié et pas commencé ; capacité et
+  plafond `events.max_registrations` (300) respectés sous verrou de la ligne de l'événement, index
+  unique (`event_id`, `user_id`) ; pas de liste d'attente (409 complet). L'organisateur et tout
+  utilisateur bloqué dans un sens ou dans l'autre (Action publique `Directory\Actions\IsBlockedBetween`)
+  reçoivent 403. Désinscription avant le début. L'inscrit trouve le lien de connexion et l'adresse
+  complète dans `GET /me/event-registrations/{slug}` et son `.ics`, **jamais dans un email**.
+- **Organisateur et inscrits** : liste des inscrits (nom et type de compte uniquement) ; retrait
+  d'un inscrit (`DELETE /me/events/{uuid}/registrations/{registrationUuid}`, statut `removed`, email
+  neutre sans motif, réinscription impossible, `events.registration_removed`) ; annonces
+  (`POST /me/events/{uuid}/announcements`, 20 à 2000 caractères) : l'email ne contient pas le texte,
+  lu sur la page de l'événement ; une annonce avec un lien ou un nom de domaine attend la validation
+  d'un admin. 1 annonce par 24 h, 5 par événement.
+- **Liens** : règles du noyau `SafeExternalUrl` et `SafeLinksInText` (https, ni IP, ni hôte local,
+  ni raccourcisseur, ni domaine de `DENIED_LINK_DOMAINS`), aussi sur les liens écrits dans le texte.
+  Le frontend ne transforme jamais une URL de la description ou d'une annonce en lien cliquable.
+- **Emails** (`EventNotification`, textes dans `EventNotice`, file d'attente après commit, langue du
+  destinataire) : confirmation, rappel 24 h avant, modification importante validée (date, lieu,
+  lien), annulation, annonce, retrait (participants) ; validation ou refus avec motif (organisateur).
+  Ni lien de connexion, ni texte d'annonce, ni nom ou email d'un autre utilisateur.
+- **Tâches** : `events:send-reminders` (15 min, sans doublon : `UPDATE` conditionnel sur
+  `reminder_sent_at`), `events:close-past` (chaque heure), `events:notify-moderators` (5 min),
+  `events:prune` (04:00).
+- **Suppression de compte** (`ForgetUserEvents`, sur `AccountDeleting`) : inscriptions supprimées
+  et places libérées ; événements publiés à venir annulés (`cancelled_by = system`), inscrits
+  prévenus, puis détachés (`user_id` et `organizer_name` à null) ; autres événements supprimés.
+- **Minimisation** (`events:prune`, `config/security.php`, `retention`) : inscriptions et annonces
+  12 mois après la fin, révisions décidées 6 mois, événements annulés ou détachés 12 mois après la fin.
 
 ## Catégories de services (noyau)
 
@@ -412,7 +524,10 @@ Aucune réponse ne révèle si une adresse email correspond à un compte.
   `reset-password` (10/h par IP), `password-update` et `password-confirm` (5/min par utilisateur),
   `verification` (3/min, 10/h), `api` (60/min), `media-uploads` (20/min), `account-deletion` (6/min),
   `projects-browse` (30/min, 500/j), `match-requests` (10/h, 20/j, propositions et contacts confondus),
-  `messages` (10/min, 300/j), `reports` (10/j), `blocks` (20/j).
+  `messages` (10/min, 300/j), `reports` (10/j), `blocks` (20/j), `event-writes` (60/h, 300/j),
+  `event-submissions` (5/h, 15/j), `event_revisions` (10/h, 30/j, compté par `SubmitRevision`),
+  `event-registrations` (20/h, 60/j), `event-registrant-removals` (20/j), `event-announcements`
+  (3/j), `event-moderation` (60/h par admin).
 - Règles de validation du texte saisi : `NoHtml` et `NoInvisibleCharacters` (caractères de contrôle
   sauf tabulation et retours à la ligne, contrôles de direction U+202A–202E et U+2066–2069, espace
   de largeur nulle U+200B, marques de direction U+200E et U+200F, U+2060–2064, BOM…), sur **tous**
@@ -428,8 +543,17 @@ Aucune réponse ne révèle si une adresse email correspond à un compte.
   `authorization.denied` (`Gate::after`, avec `ability`, `resource`, `resource_ref`, `status`),
   `rate_limit.exceeded`, `projects.browse`, `projects.view`, `projects.scraping_suspected`,
   `match_requests.created`, `match_requests.limit_exceeded` (avec `window`), `messaging.user_blocked`,
-  `messaging.user_unblocked`, `moderation.report_created`. **Jamais le contenu d'un message, d'une
-  demande ni d'un commentaire de signalement** (test `MatchingPrivacyTest`).
+  `messaging.user_unblocked`, `moderation.report_created`, `moderation.access_denied` (avec
+  `reason` : `role`, `two_factor_disabled`, `two_factor_session`), `events.submitted`,
+  `events.submission_withdrawn`, `events.pending_limit_reached`, `events.published_directly`,
+  `events.updated_directly`, `events.approved`, `events.rejected`, `events.expired_in_review`,
+  `events.revision_submitted` (avec `changed_fields`), `events.revision_withdrawn`,
+  `events.revision_approved`, `events.revision_rejected`, `events.cancelled` (avec `by`),
+  `events.registration_blocked`, `events.registration_removed`, `events.announcement_submitted`,
+  `events.announcement_published`, `events.announcement_approved`, `events.announcement_rejected`.
+  **Jamais le contenu d'un message, d'une demande, d'un commentaire de signalement, la description
+  d'un événement, son lien de connexion, le texte d'une annonce, un motif ni une donnée des inscrits**
+  (tests `MatchingPrivacyTest` et `EventsPrivacyTest`).
   Les événements Laravel et Fortify sont journalisés par `App\Listeners\LogSecurityEvents`
   (listeners découverts automatiquement dans `app/Listeners`). Les tests gardent ce journal en
   mémoire (`securityLog()` dans `tests/Pest.php`).
@@ -506,7 +630,10 @@ composer security            # composer audit : vulnérabilités connues des dé
 - Les helpers de test partagés (`serviceCategory()`, `projectOwner()`, `browsingProvider()`,
   `projectPayload()`, `publishedProjectOf()`, `pendingProposal()`, `acceptedConversation()`,
   `postMessage()`, `expectNoPrivateFields()`, `userWithTwoFactor()`, `verificationUrlFor()`, `securityLog()`,
-  `allowDemoSeeding()`, images…) sont dans `tests/Pest.php`. Les requêtes de test envoient `Accept-Language: fr-FR` par défaut
+  `allowDemoSeeding()`, `eventOrganizer()`, `eventPayload()`, `publishedEventOf()`, `registerTo()`,
+  `moderator()`, `asModerator()`, `fromFrontend()`, images…) sont dans `tests/Pest.php`. Une donnée de
+  session (`withSession`) sur une route `/api/v1` hors Fortify exige `fromFrontend()` : Sanctum
+  n'ouvre une session que pour une requête du frontend. Les requêtes de test envoient `Accept-Language: fr-FR` par défaut
   (`tests/TestCase.php`).
 
 - Les tests simulent l'API Have I Been Pwned avec `Http::fake` (voir `tests/Pest.php`).

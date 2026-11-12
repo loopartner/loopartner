@@ -105,6 +105,58 @@ de nom, ni le titre du projet d'un autre utilisateur.
 > **À faire avant l'ouverture au public** : reprendre ce tableau dans la **politique de
 > confidentialité**, et prévoir l'outil de modération des signalements (back-office).
 
+## Événements : modération, données personnelles et durées de conservation
+
+- **Validation obligatoire** : un événement proposé par un prestataire, un entrepreneur ou un
+  rédacteur n'est jamais public sans la validation d'un admin, et sa modification après publication
+  est une révision qui ne remplace la version publiée qu'après validation (lien de connexion et liens
+  externes compris). L'admin décide sur la version qu'il a lue (contrôle de version, 409 sinon).
+- **Modération** : réservée aux admins dont la double authentification est confirmée **et** dont la
+  session a été ouverte avec un code 2FA (403 sinon ; 404 pour les autres rôles). Chaque décision
+  (validation, refus, annulation, publication directe d'un admin) est enregistrée dans le journal
+  d'audit en base (`admin_audit_logs` : admin, action, élément, version, motif, IP, date), conservé
+  **24 mois**, en plus du canal security.
+- **Lien de connexion** : chiffré en base, jamais public, jamais dans un email ni dans le journal ;
+  visible par l'organisateur, les inscrits et les admins pendant la modération.
+- **Inscrits** : l'organisateur ne voit que leur nom et leur type de compte (l'inscrit en est
+  prévenu avant de s'inscrire), jamais leur email. Il communique avec eux par des annonces envoyées
+  par la plateforme (texte lu sur la page de l'événement, validation par un admin si un lien y figure).
+- **Liens** : https uniquement ; adresses IP, hôtes locaux, raccourcisseurs et domaines de
+  `DENIED_LINK_DOMAINS` refusés, y compris dans le texte. Le serveur n'ouvre jamais ces liens.
+
+| Données | Conservation | Ensuite |
+|---|---|---|
+| Inscription à un événement | 12 mois après la fin de l'événement | supprimée (seul le nombre d'inscrits reste) |
+| Annonce aux inscrits | 12 mois après la fin de l'événement | supprimée |
+| Révision refusée, retirée ou appliquée | 6 mois après la décision | supprimée |
+| Événement annulé, ou détaché de son organisateur (compte supprimé) | 12 mois après sa date de fin | supprimé avec sa couverture |
+| Journal d'audit des décisions d'administration | 24 mois | supprimé |
+
+- **Suppression de compte** : les inscriptions de l'utilisateur sont supprimées ; ses événements à
+  venir sont annulés (les inscrits sont prévenus) puis détachés de son compte (ni identifiant ni nom
+  d'organisateur) ; ses autres événements sont supprimés. Les décisions d'un admin supprimé restent
+  dans le journal d'audit.
+- **Réglage** : durées dans `backend/config/security.php` (`retention`), appliquées chaque nuit par
+  `events:prune` et `admin-audit:prune`. Toute modification doit être reportée dans la politique de
+  confidentialité.
+
+### Volume d'emails (Resend)
+
+Les emails partent par Resend, dont l'offre de départ a un quota quotidien et mensuel limité. Chaque
+inscrit reçoit **au minimum deux emails** : la confirmation d'inscription et le rappel 24 heures avant
+le début. S'y ajoutent, selon les cas, la modification importante validée, chaque annonce (5 au plus
+par événement) et l'annulation.
+
+- Un événement complet au plafond par défaut (`config/events.php`, `max_registrations` = **300**)
+  représente au moins **600 emails**, dont **300 rappels envoyés le même jour**, et jusqu'à
+  300 × (2 + 1 + 5 + 1) = 2 700 emails dans le pire cas.
+- Plusieurs grands événements le même jour additionnent leurs rappels : vérifier le quota de l'offre
+  Resend avant d'augmenter `max_registrations`, et surveiller la file d'attente (`jobs`, `failed_jobs`)
+  lors des premiers événements.
+
+> **À faire avant l'ouverture au public** : reprendre ce tableau dans la **politique de
+> confidentialité** (inscriptions, nom visible par l'organisateur, durées de conservation).
+
 ## Vérifications avant chaque mise en production
 
 Depuis `backend/`, sur le serveur de production :
@@ -132,7 +184,9 @@ Depuis `backend/`, sur le serveur de production :
 ## Chantiers de sécurité à venir
 
 - Double authentification **obligatoire** pour les rôles `admin` et `redacteur` (avec le back-office).
-- Journal d'audit des actions d'administration.
+  Elle est déjà exigée pour la modération des événements (compte et session).
+- Étendre le journal d'audit (`admin_audit_logs`, en place pour la modération des événements) aux
+  futures actions d'administration (back-office, Blog), et aux consultations de contenus signalés.
 - Notification « nouvelle connexion » et liste des sessions actives, avec déconnexion à distance.
 - Alerte automatique (email ou outil de supervision) sur les avertissements du journal de sécurité
   (`projects.scraping_suspected`, `match_requests.limit_exceeded`, rafales de `auth.login_failed`).
