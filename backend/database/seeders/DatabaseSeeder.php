@@ -4,7 +4,15 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use App\Modules\Accounts\Actions\FindPublishedProvider;
+use App\Modules\Accounts\Actions\GrantPremium;
+use App\Modules\Accounts\Actions\IsPremium;
 use App\Modules\Accounts\Actions\UpsertProviderProfile;
+use App\Modules\Blog\Actions\ApproveArticle;
+use App\Modules\Blog\Actions\CreateArticle;
+use App\Modules\Blog\Actions\RejectArticle;
+use App\Modules\Blog\Actions\SubmitArticle;
+use App\Modules\Blog\Actions\UpdateArticle;
+use App\Modules\Blog\Models\Article;
 use App\Modules\Directory\Actions\AcceptMatchRequest;
 use App\Modules\Directory\Actions\CreateProject;
 use App\Modules\Directory\Actions\DeclineMatchRequest;
@@ -139,7 +147,154 @@ class DatabaseSeeder extends Seeder
             $this->seedDemoMatching();
             $this->seedDemoAdminTwoFactor();
             $this->seedDemoEvents();
+            $this->seedDemoArticles();
         }
+    }
+
+    /**
+     * Motif du refus de l'article de démonstration de l'entrepreneur.
+     */
+    public const DEMO_ARTICLE_REJECTION_REASON = 'Le titre promet des gains irréalistes : racontez plutôt votre expérience concrète.';
+
+    /**
+     * Articles de démonstration, repérés par leur auteur et leur titre (le seeder peut être
+     * relancé). États : direct (publié par l'équipe sans validation), published (validé par
+     * l'admin), revision (validé, avec une révision en attente), pending, rejected, draft.
+     *
+     * - prestataire : premium (attribution manuelle), un article publié avec une révision en
+     *   attente et un article en attente ;
+     * - entrepreneur : quota gratuit atteint (un article publié, un refusé), plus un brouillon
+     *   qu'il ne peut pas soumettre.
+     *
+     * @var array<string, array{author: string, state: string, data: array<string, mixed>}>
+     */
+    public const DEMO_ARTICLES = [
+        'bienvenue' => ['author' => 'redacteur', 'state' => 'direct', 'data' => [
+            'title' => 'Bienvenue sur le blog de Loopartner',
+            'excerpt' => 'Conseils pratiques, retours d\'expérience et actualités pour celles et ceux qui créent et développent leur entreprise.',
+            'categories' => ['conseil-strategie'],
+            'link' => 'https://www.economie.gouv.fr/entreprises',
+        ]],
+        'obligations' => ['author' => 'admin', 'state' => 'direct', 'data' => [
+            'title' => 'Les obligations administratives de la première année',
+            'excerpt' => 'Déclarations, assurances, comptabilité : le calendrier des démarches à ne pas oublier pendant la première année d\'activité.',
+            'categories' => ['juridique', 'comptabilite-fiscalite'],
+            'link' => 'https://entreprendre.service-public.fr/',
+        ]],
+        'identite' => ['author' => 'prestataire', 'state' => 'revision', 'data' => [
+            'title' => 'Cinq conseils pour réussir son identité visuelle',
+            'excerpt' => 'Logo, couleurs, typographies : les questions à se poser avant de confier son identité visuelle à un professionnel.',
+            'categories' => ['identite-visuelle'],
+            'link' => 'https://www.inpi.fr/',
+        ]],
+        'brief' => ['author' => 'prestataire', 'state' => 'pending', 'data' => [
+            'title' => 'Comment rédiger un bon brief pour un prestataire',
+            'excerpt' => 'Objectifs, budget, délais et exemples : ce qu\'un prestataire a besoin de savoir pour vous faire une proposition juste.',
+            'categories' => ['strategie-marketing'],
+        ]],
+        'sasu' => ['author' => 'entrepreneur', 'state' => 'published', 'data' => [
+            'title' => 'Mon retour d\'expérience sur la création de ma SASU',
+            'excerpt' => 'Six mois après l\'immatriculation de ma société, ce que je referais et ce que je ferais autrement.',
+            'categories' => ['creation-statuts'],
+            'author_name' => 'Léa, fondatrice d\'un atelier de céramique',
+        ]],
+        'gains' => ['author' => 'entrepreneur', 'state' => 'rejected', 'data' => [
+            'title' => 'Gagner dix mille euros par mois sans effort',
+            'excerpt' => 'La méthode que j\'ai suivie pour multiplier mon chiffre d\'affaires en quelques semaines seulement, sans prospection.',
+            'categories' => ['strategie-marketing'],
+            'author_name' => 'Léa, fondatrice d\'un atelier de céramique',
+        ]],
+        'clients' => ['author' => 'entrepreneur', 'state' => 'draft', 'data' => [
+            'title' => 'Trouver ses premiers clients sans budget',
+            'excerpt' => 'Réseau, recommandations, salons : les pistes qui ont fonctionné pour décrocher mes dix premiers clients.',
+            'categories' => ['strategie-marketing'],
+            'author_name' => 'Léa, fondatrice d\'un atelier de céramique',
+        ]],
+    ];
+
+    /**
+     * Statut premium du prestataire et articles du blog, sans aucun email.
+     */
+    private function seedDemoArticles(): void
+    {
+        Notification::fake();
+
+        $users = User::query()
+            ->whereIn('email', array_map(fn (string $role): string => "{$role}@example.com", RoleSeeder::ROLES))
+            ->get()
+            ->keyBy(fn (User $user): string => (string) strstr($user->email, '@', true));
+        $admin = $users['admin'];
+
+        if (! app(IsPremium::class)->handle($users['prestataire']->id)) {
+            app(GrantPremium::class)->handle($admin, $users['prestataire'], null, null, 'Prestataire premium de démonstration.');
+        }
+
+        foreach (self::DEMO_ARTICLES as ['author' => $role, 'state' => $state, 'data' => $data]) {
+            $author = $users[$role];
+
+            if (! Article::query()->where('user_id', $author->id)->where('title', $data['title'])->exists()) {
+                $this->createDemoArticle($author, $admin, $state, $data);
+            }
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function createDemoArticle(User $author, User $admin, string $state, array $data): void
+    {
+        $link = is_string($data['link'] ?? null) ? $data['link'] : null;
+        $article = app(CreateArticle::class)->handle($author, [
+            ...collect($data)->except('link')->all(),
+            'language' => 'fr',
+            'body' => self::demoArticleBody((string) $data['title'], $link),
+        ]);
+
+        if ($state === 'draft') {
+            return;
+        }
+
+        $article = app(SubmitArticle::class)->handle($author, $article);
+
+        match ($state) {
+            'direct', 'pending' => null,
+            'rejected' => app(RejectArticle::class)->handle($admin, $article, $article->version, self::DEMO_ARTICLE_REJECTION_REASON),
+            'revision' => app(UpdateArticle::class)->handle($author, app(ApproveArticle::class)->handle($admin, $article, $article->version), [
+                'title' => 'Six conseils pour réussir son identité visuelle',
+            ]),
+            default => app(ApproveArticle::class)->handle($admin, $article, $article->version),
+        };
+    }
+
+    /**
+     * Corps de démonstration (environ 250 mots, au-dessus du minimum pour soumettre), avec un
+     * intertitre, une liste et, si fourni, un lien.
+     *
+     * @return array<string, mixed>
+     */
+    private static function demoArticleBody(string $title, ?string $link): array
+    {
+        $paragraph = fn (string $text): array => ['type' => 'paragraph', 'content' => [['text' => $text]]];
+
+        return ['version' => 1, 'blocks' => [
+            $paragraph("Cet article de démonstration illustre le blog de Loopartner sur le thème « {$title} ». Il montre les éléments de mise en forme acceptés : intertitres, paragraphes, listes, citations et liens vers des sites publics."),
+            ['type' => 'heading', 'level' => 2, 'content' => [['text' => 'Les points essentiels']]],
+            $paragraph('Créer et développer une entreprise demande de prendre de nombreuses décisions en peu de temps. Prendre un moment pour clarifier ses objectifs, son budget et son calendrier permet de mieux choisir ses partenaires et de gagner un temps précieux par la suite.'),
+            ['type' => 'list', 'style' => 'bullet', 'items' => [
+                [['text' => 'Définir un objectif mesurable', 'marks' => ['bold']], ['text' => ' avant de commencer.']],
+                [['text' => 'Comparer plusieurs propositions et demander des références.']],
+                [['text' => 'Prévoir une marge dans le budget et dans le calendrier.']],
+            ]],
+            $paragraph('Les retours d\'expérience des autres entrepreneurs sont aussi une source d\'information précieuse : ils permettent d\'éviter des erreurs courantes et de découvrir des solutions auxquelles on n\'aurait pas pensé seul. N\'hésitez pas à interroger votre réseau, à participer à des ateliers et à lire les ressources publiques disponibles.'),
+            ['type' => 'quote', 'content' => [['text' => 'Un projet bien préparé est déjà à moitié réalisé.']], 'attribution' => 'Proverbe d\'entrepreneur'],
+            ['type' => 'paragraph', 'content' => [
+                ['text' => 'Pour aller plus loin, consultez les informations officielles '],
+                $link !== null ? ['text' => 'sur ce site public', 'link' => $link] : ['text' => 'des organismes publics', 'marks' => ['italic']],
+                ['text' => ', puis échangez avec un professionnel de votre secteur afin d\'adapter ces conseils à votre situation particulière et à vos contraintes du moment.'],
+            ]],
+            ['type' => 'divider'],
+            $paragraph('Enfin, gardez une trace écrite de vos choix et de leurs raisons : elle vous servira à mesurer vos progrès, à expliquer votre démarche à vos partenaires et à ajuster votre stratégie au fil des mois.'),
+        ]];
     }
 
     /**

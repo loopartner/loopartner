@@ -2,7 +2,12 @@
 
 use App\Models\ServiceCategory;
 use App\Models\User;
+use App\Modules\Accounts\Actions\IsPremium;
 use App\Modules\Accounts\Models\ProviderProfile;
+use App\Modules\Blog\Enums\ArticleStatus;
+use App\Modules\Blog\Enums\AuthorKind;
+use App\Modules\Blog\Models\Article;
+use App\Modules\Blog\Support\ArticleQuota;
 use App\Modules\Directory\Enums\MatchRequestStatus;
 use App\Modules\Directory\Enums\MatchRequestType;
 use App\Modules\Directory\Enums\ProjectStatus;
@@ -156,6 +161,34 @@ it('crée des événements de démonstration dans chaque état, sans email, et p
         ->and($events['Atelier : bien démarrer sa comptabilité']->registrations_count)->toBe(2);
 
     $this->getJson('/api/v1/events')->assertOk()->assertJsonCount(4, 'data');
+
+    // Aucun email n'est mis en file d'attente pour les données de démonstration.
+    expect(DB::table('jobs')->count())->toBe(0);
+});
+
+it('crée les articles de démonstration, un prestataire premium et un entrepreneur au quota atteint, sans email', function (): void {
+    allowDemoSeeding();
+
+    $this->seed(DatabaseSeeder::class);
+    $this->seed(DatabaseSeeder::class);
+
+    $articles = Article::query()->get()->keyBy('title');
+    $entrepreneur = User::query()->where('email', 'entrepreneur@example.com')->sole();
+    $provider = User::query()->where('email', 'prestataire@example.com')->sole();
+
+    expect($articles)->toHaveCount(count(DatabaseSeeder::DEMO_ARTICLES))
+        ->and($articles['Bienvenue sur le blog de Loopartner']->status)->toBe(ArticleStatus::Published)
+        ->and($articles['Bienvenue sur le blog de Loopartner']->author_kind)->toBe(AuthorKind::Editorial)
+        ->and($articles['Cinq conseils pour réussir son identité visuelle']->status)->toBe(ArticleStatus::Published)
+        ->and($articles['Cinq conseils pour réussir son identité visuelle']->pendingRevision)->not->toBeNull()
+        ->and($articles['Comment rédiger un bon brief pour un prestataire']->status)->toBe(ArticleStatus::PendingReview)
+        ->and($articles['Gagner dix mille euros par mois sans effort']->status)->toBe(ArticleStatus::Rejected)
+        ->and($articles['Gagner dix mille euros par mois sans effort']->rejection_reason)->toBe(DatabaseSeeder::DEMO_ARTICLE_REJECTION_REASON)
+        ->and($articles['Trouver ses premiers clients sans budget']->status)->toBe(ArticleStatus::Draft)
+        ->and(app(IsPremium::class)->handle($provider->id))->toBeTrue()
+        ->and(ArticleQuota::status($entrepreneur->id))->toBe(['premium' => false, 'limit' => 2, 'used' => 2, 'remaining' => 0]);
+
+    $this->getJson('/api/v1/articles')->assertOk()->assertJsonCount(4, 'data');
 
     // Aucun email n'est mis en file d'attente pour les données de démonstration.
     expect(DB::table('jobs')->count())->toBe(0);

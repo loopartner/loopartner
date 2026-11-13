@@ -97,7 +97,7 @@ describe('modération', function (): void {
         $user = userWithTwoFactor();
         $user->assignRole($role);
 
-        foreach (moderationEndpoints($article, $revision) as [$method, $uri, $data]) {
+        foreach (blogModerationEndpoints($article, $revision) as [$method, $uri, $data]) {
             asModerator($user)->json($method, $uri, $data)->assertNotFound();
         }
     })->with(['particulier', 'prestataire', 'entrepreneur']);
@@ -109,7 +109,7 @@ describe('modération', function (): void {
         // La révision a été créée par une requête avec 2FA : la session ne doit pas en hériter.
         $this->flushSession();
 
-        foreach (moderationEndpoints($article, $revision) as [$method, $uri, $data]) {
+        foreach (blogModerationEndpoints($article, $revision) as [$method, $uri, $data]) {
             fromFrontend()->actingAs($moderator)->json($method, $uri, $data)->assertForbidden();
         }
 
@@ -154,7 +154,7 @@ function pendingRevisionFor(Article $article): ArticleRevision
 /**
  * @return list<array{0: string, 1: string, 2: array<string, mixed>}>
  */
-function moderationEndpoints(Article $article, ArticleRevision $revision): array
+function blogModerationEndpoints(Article $article, ArticleRevision $revision): array
 {
     $reason = ['reason' => 'Un motif de refus suffisamment long.'];
 
