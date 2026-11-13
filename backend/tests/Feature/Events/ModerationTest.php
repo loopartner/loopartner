@@ -48,7 +48,7 @@ describe('file d\'attente', function (): void {
         $published = publishedEventOf();
         $this->travel(-1)->days();
         $revision = pendingRevisionOf($published, ['city' => 'Villeurbanne']);
-        $this->travelBack();
+        $this->travelTo(Carbon::parse('2026-11-12 09:00:00'));
 
         asModerator()->getJson('/api/v1/admin/events/queue')
             ->assertOk()

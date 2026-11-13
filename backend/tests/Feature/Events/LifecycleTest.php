@@ -35,7 +35,7 @@ describe('rappels', function (): void {
         $event = publishedEventOf(null, ['starts_at' => '2026-11-13 08:00:00', 'ends_at' => '2026-11-13 10:00:00']);
         $early = projectOwner('particulier');
         registerTo($event, $early);
-        $this->travelBack();
+        $this->travelTo(Carbon::parse('2026-11-12 09:00:00'));
         $late = projectOwner('particulier');
         registerTo($event, $late);
         $farAway = publishedEventOf(null, ['starts_at' => now()->addDays(3), 'ends_at' => now()->addDays(3)->addHour()]);
@@ -123,7 +123,7 @@ describe('minimisation des données', function (): void {
             'uuid' => (string) Str::uuid(), 'event_id' => $recent->id, 'user_id' => $recent->user_id,
             'status' => RevisionStatus::Rejected, 'payload' => [], 'changed_fields' => ['title'], 'submitted_at' => now(),
         ])->save();
-        $this->travelBack();
+        $this->travelTo(Carbon::parse('2026-11-12 09:00:00'));
 
         $this->artisan('events:prune')->assertSuccessful();
 
