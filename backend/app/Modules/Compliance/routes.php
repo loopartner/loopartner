@@ -9,7 +9,10 @@
 use App\Http\Middleware\EnsureModerator;
 use App\Modules\Compliance\Http\Controllers\CatalogController;
 use App\Modules\Compliance\Http\Controllers\CompanyController;
+use App\Modules\Compliance\Http\Controllers\DeadlineController;
+use App\Modules\Compliance\Http\Controllers\JourneyController;
 use App\Modules\Compliance\Http\Controllers\RuleAdminController;
+use App\Modules\Compliance\Http\Controllers\TaskController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -24,6 +27,9 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function (): void {
     Route::get('compliance/countries/{country}/questionnaire', [CatalogController::class, 'questionnaire'])
         ->where('country', '[A-Za-z]{2}')
         ->name('compliance.questionnaire');
+    Route::get('compliance/countries/{country}/journeys', [JourneyController::class, 'templates'])
+        ->where('country', '[A-Za-z]{2}')
+        ->name('compliance.journeys');
 
     Route::prefix('me/compliance')->name('compliance.own.')->group(function (): void {
         Route::get('/', [CompanyController::class, 'overview'])->name('overview');
@@ -39,9 +45,37 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function (): void {
             ->middleware(['throttle:compliance-companies', 'password.confirm'])
             ->name('companies.destroy');
 
+        // Calendrier : toutes les entreprises, ou une entreprise.
+        Route::get('deadlines', [DeadlineController::class, 'all'])->name('deadlines.all');
+
+        Route::prefix('companies/{company}')->whereUuid('company')->group(function (): void {
+            Route::get('deadlines', [DeadlineController::class, 'index'])->name('deadlines.index');
+            Route::get('deadlines/{deadline}', [DeadlineController::class, 'show'])->whereUuid('deadline')->name('deadlines.show');
+            Route::get('tasks', [TaskController::class, 'index'])->name('tasks.index');
+            Route::get('journeys', [JourneyController::class, 'index'])->name('journeys.index');
+        });
+
         Route::middleware('throttle:compliance-writes')->group(function (): void {
             Route::patch('companies/{company}', [CompanyController::class, 'update'])->whereUuid('company')->name('companies.update');
             Route::post('companies/{company}/activate', [CompanyController::class, 'activate'])->whereUuid('company')->name('companies.activate');
+
+            Route::prefix('companies/{company}')->whereUuid('company')->group(function (): void {
+                Route::post('deadlines', [DeadlineController::class, 'store'])->name('deadlines.store');
+                Route::patch('deadlines/{deadline}', [DeadlineController::class, 'update'])->whereUuid('deadline')->name('deadlines.update');
+                Route::delete('deadlines/{deadline}', [DeadlineController::class, 'destroy'])->whereUuid('deadline')->name('deadlines.destroy');
+                Route::post('deadlines/{deadline}/complete', [DeadlineController::class, 'complete'])->whereUuid('deadline')->name('deadlines.complete');
+                Route::post('deadlines/{deadline}/skip', [DeadlineController::class, 'skip'])->whereUuid('deadline')->name('deadlines.skip');
+                Route::post('deadlines/{deadline}/reopen', [DeadlineController::class, 'reopen'])->whereUuid('deadline')->name('deadlines.reopen');
+
+                Route::post('tasks', [TaskController::class, 'store'])->name('tasks.store');
+                Route::patch('tasks/{task}', [TaskController::class, 'update'])->whereUuid('task')->name('tasks.update');
+                Route::delete('tasks/{task}', [TaskController::class, 'destroy'])->whereUuid('task')->name('tasks.destroy');
+                Route::post('tasks/{task}/complete', [TaskController::class, 'complete'])->whereUuid('task')->name('tasks.complete');
+                Route::post('tasks/{task}/reopen', [TaskController::class, 'reopen'])->whereUuid('task')->name('tasks.reopen');
+
+                Route::post('journeys', [JourneyController::class, 'store'])->name('journeys.store');
+                Route::delete('journeys/{journey}', [JourneyController::class, 'destroy'])->whereUuid('journey')->name('journeys.destroy');
+            });
         });
     });
 });
