@@ -8,6 +8,9 @@ use App\Modules\Blog\Enums\AuthorKind;
 use App\Modules\Blog\Models\Article;
 use App\Modules\Blog\Models\ArticleQuotaEntry;
 use App\Modules\Blog\Support\Authors;
+use App\Modules\Compliance\Actions\CreateCompany;
+use App\Modules\Compliance\Models\Company;
+use App\Modules\Compliance\Models\ComplianceRule;
 use App\Modules\Directory\Actions\AcceptMatchRequest;
 use App\Modules\Directory\Actions\SendMessage;
 use App\Modules\Directory\Actions\SendProposal;
@@ -630,4 +633,80 @@ function articleOf(User $author, string $state = 'draft', array $attributes = []
 function makePremium(User $user, array $attributes = []): PremiumGrant
 {
     return PremiumGrant::factory()->for($user)->create($attributes);
+}
+
+/*
+|--------------------------------------------------------------------------
+| Suivi administratif (module Compliance)
+|--------------------------------------------------------------------------
+| Les règles créées ici sont des règles de TEST, aux valeurs fictives : elles ne décrivent
+| aucune règle réelle.
+*/
+
+/**
+ * Utilisateur du suivi administratif (prestataire ou entrepreneur), email vérifié par défaut.
+ */
+function complianceUser(string $role = 'entrepreneur', bool $verified = true): User
+{
+    $user = $verified ? User::factory()->create() : User::factory()->unverified()->create();
+    $user->assignRole($role);
+
+    return $user;
+}
+
+/**
+ * Statut juridique vérifié, en vigueur depuis le 1er janvier 2026, sans date de fin.
+ *
+ * @param  list<string>  $options
+ */
+function verifiedLegalForm(string $code = 'fr.legal_form.micro', array $options = ['declaration_frequency', 'income_tax_withholding']): ComplianceRule
+{
+    return ComplianceRule::factory()->verified()
+        ->legalForm($code, ['services_commercial', 'sales', 'services_liberal'], ['franchise', 'simplified'], $options)
+        ->create();
+}
+
+/**
+ * Règle d'échéance vérifiée, en vigueur depuis le 1er janvier 2026.
+ *
+ * @param  array<string, mixed>  $schedule
+ * @param  array<string, mixed>  $conditions
+ * @param  list<array<string, mixed>>  $tasks
+ * @param  array<string, mixed>  $attributes
+ */
+function verifiedDeadlineRule(string $code, array $schedule, array $conditions = [], array $tasks = [], array $attributes = []): ComplianceRule
+{
+    return ComplianceRule::factory()->verified()->deadline($code, $schedule, $conditions, $tasks)->create($attributes);
+}
+
+/**
+ * Réponses valides au questionnaire de démarrage.
+ *
+ * @param  array<string, mixed>  $overrides
+ * @return array<string, mixed>
+ */
+function companyPayload(array $overrides = []): array
+{
+    return [
+        'name' => 'Atelier Camille',
+        'country' => 'FR',
+        'legal_form' => 'fr.legal_form.micro',
+        'activity_types' => ['services_commercial'],
+        'vat_regime' => 'franchise',
+        'created_on' => '2026-03-01',
+        'options' => ['declaration_frequency' => 'quarterly'],
+        'registration_number' => '123 456 789 00012',
+        ...$overrides,
+    ];
+}
+
+/**
+ * Entreprise créée par l'Action (questionnaire), avec son calendrier. Le statut juridique
+ * demandé doit exister (verifiedLegalForm()).
+ *
+ * @param  array<string, mixed>  $overrides
+ */
+function complianceCompanyOf(?User $user = null, array $overrides = []): Company
+{
+    return app(CreateCompany::class)->handle($user ?? complianceUser(), companyPayload($overrides));
 }

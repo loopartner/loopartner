@@ -7,8 +7,44 @@
 */
 
 use App\Http\Middleware\EnsureModerator;
+use App\Modules\Compliance\Http\Controllers\CatalogController;
+use App\Modules\Compliance\Http\Controllers\CompanyController;
 use App\Modules\Compliance\Http\Controllers\RuleAdminController;
 use Illuminate\Support\Facades\Route;
+
+/*
+| Suivi administratif des prestataires et des entrepreneurs, avec un email vérifié
+| (CompanyPolicy : 403 pour les autres rôles). Toutes les données d'une entreprise sont
+| strictement privées : l'entreprise d'un autre utilisateur donne 404, admins compris. Chaque
+| réponse contient le champ "disclaimer" (l'outil ne remplace pas un expert-comptable).
+*/
+Route::middleware(['auth:sanctum', 'verified'])->group(function (): void {
+    // Questionnaire de démarrage : règles vérifiées seulement.
+    Route::get('compliance/countries', [CatalogController::class, 'countries'])->name('compliance.countries');
+    Route::get('compliance/countries/{country}/questionnaire', [CatalogController::class, 'questionnaire'])
+        ->where('country', '[A-Za-z]{2}')
+        ->name('compliance.questionnaire');
+
+    Route::prefix('me/compliance')->name('compliance.own.')->group(function (): void {
+        Route::get('/', [CompanyController::class, 'overview'])->name('overview');
+
+        Route::get('companies', [CompanyController::class, 'index'])->name('companies.index');
+        Route::get('companies/{company}', [CompanyController::class, 'show'])->whereUuid('company')->name('companies.show');
+        Route::post('companies', [CompanyController::class, 'store'])
+            ->middleware('throttle:compliance-companies')
+            ->name('companies.store');
+        // Suppression : confirmation récente du mot de passe exigée (423 sinon).
+        Route::delete('companies/{company}', [CompanyController::class, 'destroy'])
+            ->whereUuid('company')
+            ->middleware(['throttle:compliance-companies', 'password.confirm'])
+            ->name('companies.destroy');
+
+        Route::middleware('throttle:compliance-writes')->group(function (): void {
+            Route::patch('companies/{company}', [CompanyController::class, 'update'])->whereUuid('company')->name('companies.update');
+            Route::post('companies/{company}/activate', [CompanyController::class, 'activate'])->whereUuid('company')->name('companies.activate');
+        });
+    });
+});
 
 /*
 | Administration des règles fiscales et sociales : admins seulement, avec la double

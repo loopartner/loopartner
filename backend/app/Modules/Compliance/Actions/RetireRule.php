@@ -31,6 +31,7 @@ class RetireRule
             ])->save();
 
             RuleAdministration::record($admin, 'retired', $rule, $reason);
+            RuleAdministration::refreshCalendarsAfterCommit($rule);
 
             return $rule;
         });

@@ -3,7 +3,9 @@
 namespace App\Modules\Compliance\Support;
 
 use App\Models\User;
+use App\Modules\Compliance\Enums\RuleKind;
 use App\Modules\Compliance\Enums\RuleStatus;
+use App\Modules\Compliance\Jobs\RefreshCountryCalendars;
 use App\Modules\Compliance\Models\ComplianceRule;
 use App\Support\AdminAudit;
 use App\Support\Moderation\VersionGuard;
@@ -39,6 +41,18 @@ final class RuleAdministration
         }
 
         return $locked;
+    }
+
+    /**
+     * Une règle d'échéance vérifiée ou retirée change le calendrier des entreprises du pays :
+     * recalcul en file d'attente, une fois la transaction validée. Les seuils et les taux sont
+     * lus à chaque calcul : rien à recalculer pour eux.
+     */
+    public static function refreshCalendarsAfterCommit(ComplianceRule $rule): void
+    {
+        if ($rule->kind === RuleKind::Deadline) {
+            RefreshCountryCalendars::dispatch($rule->country)->afterCommit();
+        }
     }
 
     public static function record(User $admin, string $action, ComplianceRule $rule, ?string $reason = null): void

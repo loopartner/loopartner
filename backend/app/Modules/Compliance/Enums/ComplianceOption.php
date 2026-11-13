@@ -49,6 +49,17 @@ enum ComplianceOption: string
         };
     }
 
+    public function label(string $locale): string
+    {
+        return match ($this) {
+            self::IncomeTaxWithholding => $locale === 'en' ? 'Income tax paid in instalments with contributions' : 'Versement libératoire de l\'impôt sur le revenu',
+            self::CorporateTaxOption => $locale === 'en' ? 'Option for corporate tax' : 'Option pour l\'impôt sur les sociétés',
+            self::DeclarationFrequency => $locale === 'en' ? 'Revenue declaration frequency' : 'Périodicité des déclarations de chiffre d\'affaires',
+            self::HasEmployees => $locale === 'en' ? 'The company has employees' : 'L\'entreprise emploie des salariés',
+            self::Acre => $locale === 'en' ? 'Business start-up relief (ACRE)' : 'Aide à la création ou à la reprise d\'entreprise (ACRE)',
+        };
+    }
+
     public function isValid(mixed $value): bool
     {
         $choices = $this->choices();

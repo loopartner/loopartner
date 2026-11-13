@@ -16,6 +16,15 @@ enum VatRegime: string
     // Régime réel normal.
     case Normal = 'normal';
 
+    public function label(string $locale): string
+    {
+        return match ($this) {
+            self::Franchise => $locale === 'en' ? 'VAT exemption (no VAT charged)' : 'Franchise en base de TVA',
+            self::Simplified => $locale === 'en' ? 'Simplified VAT scheme' : 'Régime réel simplifié',
+            self::Normal => $locale === 'en' ? 'Standard VAT scheme' : 'Régime réel normal',
+        };
+    }
+
     /**
      * @return list<string>
      */

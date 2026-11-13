@@ -148,6 +148,17 @@ const API_ROUTES = [
     'POST api/v1/admin/compliance/rules/{uuid}/verify' => 'auth',
     'POST api/v1/admin/compliance/rules/{uuid}/retire' => 'auth',
     'GET api/v1/admin/compliance/coverage' => 'auth',
+    // Compliance : suivi administratif des prestataires et entrepreneurs (voir
+    // ComplianceAuthorizationTest : 404 pour l'entreprise d'un autre utilisateur).
+    'GET api/v1/compliance/countries' => 'auth',
+    'GET api/v1/compliance/countries/{country}/questionnaire' => 'auth',
+    'GET api/v1/me/compliance' => 'auth',
+    'GET api/v1/me/compliance/companies' => 'auth',
+    'POST api/v1/me/compliance/companies' => 'auth',
+    'GET api/v1/me/compliance/companies/{company}' => 'auth',
+    'PATCH api/v1/me/compliance/companies/{company}' => 'auth',
+    'DELETE api/v1/me/compliance/companies/{company}' => 'auth',
+    'POST api/v1/me/compliance/companies/{company}/activate' => 'auth',
 ];
 
 /**
@@ -157,6 +168,8 @@ function concreteUri(string $uri): string
 {
     return '/'.strtr($uri, [
         '{uuid}' => '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d',
+        '{company}' => '3f2504e0-4f89-41d3-9a0c-0305e82c3301',
+        '{country}' => 'FR',
         '{messageUuid}' => '1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed',
         '{registrationUuid}' => '6ec0bd7f-11c0-43da-975e-2a8ad9ebae0b',
         '{slug}' => 'un-prestataire',

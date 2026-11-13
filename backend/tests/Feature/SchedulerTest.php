@@ -58,6 +58,7 @@ it('planifie les tâches du module Compliance, sans chevauchement', function (st
         ->and($event->withoutOverlapping)->toBeTrue();
 })->with([
     'couverture annuelle des règles' => ['compliance:check-rule-coverage', '30 6 * * *'],
+    'prolongation des calendriers' => ['compliance:extend-calendars', '30 1 * * *'],
 ]);
 
 it('purge les données du Blog chaque jour à 05:00, sans chevauchement', function (): void {

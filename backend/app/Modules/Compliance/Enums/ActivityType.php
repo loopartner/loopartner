@@ -21,6 +21,16 @@ enum ActivityType: string
     // Professions libérales relevant d'une caisse de retraite propre (CIPAV en France).
     case LiberalCipav = 'liberal_cipav';
 
+    public function label(string $locale): string
+    {
+        return match ($this) {
+            self::Sales => $locale === 'en' ? 'Sale of goods, accommodation' : 'Vente de marchandises, hébergement',
+            self::ServicesCommercial => $locale === 'en' ? 'Commercial or craft services' : 'Prestations de services commerciales ou artisanales',
+            self::ServicesLiberal => $locale === 'en' ? 'Liberal profession (general scheme)' : 'Profession libérale (régime général)',
+            self::LiberalCipav => $locale === 'en' ? 'Regulated liberal profession (CIPAV)' : 'Profession libérale relevant de la CIPAV',
+        };
+    }
+
     /**
      * @return list<string>
      */

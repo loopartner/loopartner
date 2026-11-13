@@ -87,6 +87,7 @@ class VerifyRule
             ])->save();
 
             RuleAdministration::record($admin, 'verified', $rule, $note);
+            RuleAdministration::refreshCalendarsAfterCommit($rule);
 
             return $rule;
         });

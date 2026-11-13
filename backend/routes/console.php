@@ -85,6 +85,12 @@ Schedule::command('compliance:check-rule-coverage')
     ->dailyAt('06:30')
     ->withoutOverlapping();
 
+// Suivi administratif : la fenêtre du calendrier de chaque entreprise avance d'un jour
+// (échéances générées jusqu'à compliance.calendar_horizon_months mois). Idempotente.
+Schedule::command('compliance:extend-calendars')
+    ->dailyAt('01:30')
+    ->withoutOverlapping();
+
 // File d'attente (driver database) : traitée chaque minute, sans worker permanent.
 // Le worker s'arrête dès que la file est vide, et au plus tard après 50 secondes pour ne pas
 // déborder sur le schedule:run suivant. Le verrou anti-chevauchement expire après 5 minutes
