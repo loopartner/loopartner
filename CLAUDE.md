@@ -36,6 +36,14 @@ entrepreneurs.
   - Une migration déjà exécutée ne se modifie pas : toute correction passe par une nouvelle migration.
 - **Ne lis jamais et ne modifie jamais `backend/.env`**. Cette interdiction est aussi bloquée dans
   `.claude/settings.json`. Seul `backend/.env.example` se modifie.
+- **Ne lance jamais de commande Artisan destructrice pour la base** : `migrate:fresh`,
+  `migrate:refresh`, `migrate:reset`, `migrate:rollback`, `db:wipe`, ni aucune commande Artisan
+  avec `--force`. Raison : `backend/.env` pointe vers la base locale de l'utilisateur (XAMPP), qui
+  contient des données qu'il n'a pas forcément sauvegardées ; pendant le module Blog,
+  `migrate:fresh` a été lancé par erreur et n'a été refusé que par chance. Ces commandes sont
+  bloquées dans `.claude/settings.json` (outils Bash et PowerShell). Pour vérifier une migration :
+  `php artisan migrate --pretend` ; les tests utilisent SQLite en mémoire. Si une remise à zéro
+  est nécessaire, demande à l'utilisateur de la lancer lui-même.
 - N'installe aucun package Composer ou npm sans l'accord explicite de l'utilisateur.
 
 ## Contraintes de production (Hostinger mutualisé)

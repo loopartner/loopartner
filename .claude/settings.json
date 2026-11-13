@@ -2,7 +2,19 @@
   "permissions": {
     "deny": [
       "Read(./backend/.env)",
-      "Edit(./backend/.env)"
+      "Edit(./backend/.env)",
+      "Bash(*artisan migrate:fresh*)",
+      "Bash(*artisan migrate:refresh*)",
+      "Bash(*artisan migrate:reset*)",
+      "Bash(*artisan migrate:rollback*)",
+      "Bash(*artisan db:wipe*)",
+      "Bash(*artisan*--force*)",
+      "PowerShell(*artisan migrate:fresh*)",
+      "PowerShell(*artisan migrate:refresh*)",
+      "PowerShell(*artisan migrate:reset*)",
+      "PowerShell(*artisan migrate:rollback*)",
+      "PowerShell(*artisan db:wipe*)",
+      "PowerShell(*artisan*--force*)"
     ]
   }
 }
