@@ -7,14 +7,27 @@
 */
 
 use App\Http\Middleware\EnsureModerator;
+use App\Modules\Compliance\Http\Controllers\CalendarFeedController;
 use App\Modules\Compliance\Http\Controllers\CatalogController;
 use App\Modules\Compliance\Http\Controllers\CompanyController;
 use App\Modules\Compliance\Http\Controllers\DeadlineController;
 use App\Modules\Compliance\Http\Controllers\JourneyController;
 use App\Modules\Compliance\Http\Controllers\RevenueController;
 use App\Modules\Compliance\Http\Controllers\RuleAdminController;
+use App\Modules\Compliance\Http\Controllers\SettingsController;
 use App\Modules\Compliance\Http\Controllers\TaskController;
+use App\Modules\Compliance\Support\CalendarFeedToken;
 use Illuminate\Support\Facades\Route;
+
+/*
+| Abonnement au calendrier depuis Google Agenda, Outlook… : route PUBLIQUE (les agendas
+| n'envoient pas de cookie), protégée par le jeton secret de l'URL, limitée par abonnement et
+| par IP. Titres et dates des échéances seulement.
+*/
+Route::get('compliance/calendar/{token}.ics', [CalendarFeedController::class, 'feed'])
+    ->where('token', CalendarFeedToken::PATTERN)
+    ->middleware('throttle:compliance-feed')
+    ->name('compliance.calendar-feed');
 
 /*
 | Suivi administratif des prestataires et des entrepreneurs, avec un email vérifié
@@ -34,6 +47,18 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function (): void {
 
     Route::prefix('me/compliance')->name('compliance.own.')->group(function (): void {
         Route::get('/', [CompanyController::class, 'overview'])->name('overview');
+
+        // Réglages des rappels et des alertes.
+        Route::get('settings', [SettingsController::class, 'show'])->name('settings.show');
+        Route::patch('settings', [SettingsController::class, 'update'])->middleware('throttle:compliance-writes')->name('settings.update');
+
+        // URL privée d'abonnement au calendrier (montrée une seule fois à la création).
+        Route::get('calendar-feed', [CalendarFeedController::class, 'show'])->name('calendar-feed.show');
+        Route::post('calendar-feed', [CalendarFeedController::class, 'store'])->middleware('throttle:compliance-feed-manage')->name('calendar-feed.store');
+        Route::delete('calendar-feed', [CalendarFeedController::class, 'destroy'])->middleware('throttle:compliance-feed-manage')->name('calendar-feed.destroy');
+
+        // Export complet (portabilité RGPD).
+        Route::get('export', [CompanyController::class, 'export'])->middleware('throttle:compliance-exports')->name('export');
 
         Route::get('companies', [CompanyController::class, 'index'])->name('companies.index');
         Route::get('companies/{company}', [CompanyController::class, 'show'])->whereUuid('company')->name('companies.show');

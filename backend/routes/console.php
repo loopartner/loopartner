@@ -85,6 +85,12 @@ Schedule::command('compliance:check-rule-coverage')
     ->dailyAt('06:30')
     ->withoutOverlapping();
 
+// Suivi administratif : récapitulatif par email (rappels d'échéances, alertes de seuil), un email
+// par utilisateur et par jour au plus, sans doublon (réservation avant l'envoi).
+Schedule::command('compliance:send-reminders')
+    ->dailyAt('06:00')
+    ->withoutOverlapping(30);
+
 // Suivi administratif : la fenêtre du calendrier de chaque entreprise avance d'un jour
 // (échéances générées jusqu'à compliance.calendar_horizon_months mois). Idempotente.
 Schedule::command('compliance:extend-calendars')

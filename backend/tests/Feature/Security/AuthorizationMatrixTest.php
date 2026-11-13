@@ -184,6 +184,15 @@ const API_ROUTES = [
     'DELETE api/v1/me/compliance/companies/{company}/revenue/{period}' => 'auth',
     'GET api/v1/me/compliance/companies/{company}/thresholds' => 'auth',
     'GET api/v1/me/compliance/companies/{company}/estimate' => 'auth',
+    'GET api/v1/me/compliance/settings' => 'auth',
+    'PATCH api/v1/me/compliance/settings' => 'auth',
+    'GET api/v1/me/compliance/calendar-feed' => 'auth',
+    'POST api/v1/me/compliance/calendar-feed' => 'auth',
+    'DELETE api/v1/me/compliance/calendar-feed' => 'auth',
+    'GET api/v1/me/compliance/export' => 'auth',
+    // Abonnement au calendrier : public, protégé par le jeton secret de l'URL (404 sans jeton
+    // valide), voir CalendarFeedTest.
+    'GET api/v1/compliance/calendar/{token}.ics' => 'public',
 ];
 
 /**
@@ -198,6 +207,7 @@ function concreteUri(string $uri): string
         '{task}' => '16fd2706-8baf-433b-82eb-8c7fada847da',
         '{journey}' => 'a8098c1a-f86e-11da-bd1a-00112444be1e',
         '{period}' => '2026-10',
+        '{token}' => str_repeat('a', 56),
         '{country}' => 'FR',
         '{messageUuid}' => '1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed',
         '{registrationUuid}' => '6ec0bd7f-11c0-43da-975e-2a8ad9ebae0b',

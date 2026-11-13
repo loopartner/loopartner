@@ -12,8 +12,11 @@ use App\Modules\Compliance\Http\Requests\StoreCompanyRequest;
 use App\Modules\Compliance\Http\Requests\UpdateCompanyRequest;
 use App\Modules\Compliance\Http\Resources\CompanyResource;
 use App\Modules\Compliance\Models\Company;
+use App\Modules\Compliance\Support\ComplianceExport;
 use App\Modules\Compliance\Support\Disclaimer;
 use App\Modules\Compliance\Support\Entitlements;
+use App\Support\Locale;
+use App\Support\SecurityLog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -85,8 +88,34 @@ class CompanyController extends Controller
                     'count' => Company::query()->where('user_id', $user->id)->count(),
                     'max' => $entitlements->maxCompanies($user->id),
                 ],
+                // Conservation des données passées (purge compliance:prune) : l'export reste
+                // possible à tout moment.
+                'retention' => [
+                    'past_deadlines_months' => (int) config('security.retention.compliance_deadlines_months'),
+                    'revenue_years' => (int) config('security.retention.compliance_revenue_years'),
+                    'next_revenue_purge' => [
+                        'on' => sprintf('%d-01-01', now()->year + 1),
+                        'periods_before' => sprintf('%d-01', now()->year + 1 - (int) config('security.retention.compliance_revenue_years')),
+                    ],
+                ],
             ],
             'disclaimer' => Disclaimer::forRequest($request),
+        ]);
+    }
+
+    /**
+     * Export complet des données du suivi administratif (JSON, portabilité RGPD).
+     */
+    public function export(Request $request): JsonResponse
+    {
+        Gate::authorize('use', Company::class);
+        $user = self::user($request);
+
+        SecurityLog::record('compliance.export_downloaded', ['user_id' => $user->id, 'format' => 'json']);
+
+        return response()->json(ComplianceExport::for($user, Locale::fromRequest($request)), 200, [
+            'Content-Disposition' => 'attachment; filename="loopartner-suivi-administratif-'.now()->format('Ymd').'.json"',
+            'Cache-Control' => 'private, no-store',
         ]);
     }
 
