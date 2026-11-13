@@ -52,8 +52,9 @@ entrepreneurs.
   tâche et la position du worker. Tâches actuelles : `projects:close-expired` (02:00),
   `match-requests:expire` (02:30), `media:prune-orphans` (03:00), `matching:prune` (03:30),
   `events:send-reminders` (toutes les 15 minutes), `events:close-past` (chaque heure),
-  `events:prune` (04:00), `events:notify-moderators` (toutes les 5 minutes), `admin-audit:prune`
-  (04:30), puis le worker.
+  `events:prune` (04:00), `events:notify-moderators` (toutes les 5 minutes), `blog:prune`
+  (05:00), `blog:notify-moderators` (toutes les 5 minutes), `admin-audit:prune` (04:30), puis le
+  worker.
 - Toutes les dates sont stockées en **UTC** (`app.timezone = UTC`, connexion MySQL en `+00:00`).
   La conversion vers le fuseau de l'utilisateur se fait à l'affichage, côté frontend.
 
@@ -100,9 +101,19 @@ utilitaires du module), `Console/Commands/` (commandes Artisan du module), `Noti
   (table `admin_audit_logs`, lignes jamais modifiées, `admin_id` sans clé étrangère), purgé après
   `security.retention.admin_audit_months` (24) par `admin-audit:prune`.
 - Fonctions d'administration : middleware du noyau `App\Http\Middleware\EnsureModerator` (rôle admin
-  sinon 404 ; 2FA confirmée et session ouverte avec un code 2FA sinon 403). La session est marquée
-  par `App\Listeners\TrackTwoFactorSession` (`App\Support\TwoFactorSession`) : un admin qui vient
-  d'activer sa 2FA doit se reconnecter avec son code.
+  sinon 404 ; 2FA confirmée et session ouverte avec un code 2FA sinon 403). Les rôles acceptés se
+  passent en paramètre (`EnsureModerator::class.':admin,redacteur'` pour le Blog ; `admin` par
+  défaut). La session est marquée par `App\Listeners\TrackTwoFactorSession`
+  (`App\Support\TwoFactorSession`) : un admin qui vient d'activer sa 2FA doit se reconnecter avec
+  son code.
+- Briques de modération du noyau : `App\Support\Moderation\VersionGuard` (version lue par le
+  modérateur, 409 sinon), `App\Support\Links\LinkInspection` (liens regroupés par domaine,
+  `punycode`, `previously_approved`), `App\Support\RateLimit\ActionThrottle` (limite de débit
+  comptée dans une Action, sur plusieurs fenêtres) et le middleware
+  `App\Http\Middleware\LimitRequestBody:<octets>` (413 avant la validation). Le module Events
+  garde pour l'instant ses propres versions (`Events\Support\Moderation`, `EventLinks`).
+- `TrimStrings` ne rogne pas `body.blocks.*` (corps des articles : les espaces entre segments
+  comptent), voir `bootstrap/app.php`.
 - Langues : `App\Support\Locale` (`fr`, `en`). `Locale::fromRequest()` choisit la langue d'une réponse :
   paramètre `locale`, puis en-tête `Accept-Language`, puis `fr`. Une valeur inconnue est ignorée.
 - Pagination des listes : `App\Support\Pagination` (paramètres `page` et `per_page`, 20 par défaut,
@@ -159,6 +170,20 @@ utilitaires du module), `Console/Commands/` (commandes Artisan du module), `Noti
 - La recherche texte est un simple `LIKE` (`App\Support\Database\Like`, qui échappe `%`, `_` et `!`
   avec `ESCAPE '!'`, compatible SQLite et MariaDB 10.4). Une recherche plein texte (index FULLTEXT ou
   moteur dédié) pourra la remplacer plus tard si le volume l'exige.
+- **Statut premium** (`PremiumGrant`, table `premium_grants`, privé au module) : historique de
+  périodes (`source` `manual` aujourd'hui, `payment` plus tard avec `external_reference`),
+  `starts_at` en DATETIME, `ends_at` facultatif, `revoked_at`. Actif = période commencée, ni
+  terminée ni retirée (calculé à la lecture, sans tâche). Actions publiques `IsPremium` et
+  `GetPremiumStatus` (`active`, `source`, `starts_at`, `ends_at`, sans motif ni admin).
+  `GET /me` expose `premium` et `article_quota` (Action publique `Blog\Actions\GetArticleQuota` :
+  `premium`, `limit`, `used`, `remaining` pour un prestataire ou un entrepreneur, `null` sinon).
+  Administration : `/admin/premium-grants` (admin seul avec 2FA de session, `EnsureModerator`) :
+  `GET ?email=` (historique, 404 si compte inconnu), `POST` (`email`, `starts_at`, `ends_at`,
+  `reason` ; 201 ; 409 si une période est en cours ou à venir ; 422 pour l'équipe ou un compte
+  inconnu), `POST {uuid}/revoke` (`reason` ; 409 si terminée, retirée ou payée). Le compte est
+  désigné par son email (l'id interne n'est jamais exposé ; le journal n'en garde qu'une
+  empreinte). Journal d'audit (`accounts.premium.granted|revoked`, avec le motif), canal security
+  (`premium.granted|revoked`), limiteur `premium-admin`.
 - Données de référence (rôles, catégories) : `ReferenceDataSeeder`, seul seeder à lancer en production :
   `php artisan db:seed --class="Database\Seeders\ReferenceDataSeeder" --force`.
 - Comptes de démonstration créés par `DatabaseSeeder` **uniquement si** `SEED_DEMO_DATA=true`,
@@ -173,7 +198,10 @@ utilitaires du module), `Console/Commands/` (commandes Artisan du module), `Noti
   de l'entrepreneur vers le prestataire, refusé. Événements de démonstration (sans aucun email) :
   publiés (atelier en présentiel, webinaire, conférence hybride avec une révision en attente, salon
   payant publié par l'admin), un en attente, un refusé, un passé, et des inscriptions entre les
-  comptes.
+  comptes. Blog (`DatabaseSeeder::DEMO_ARTICLES`, sans aucun email) : deux articles publiés par la
+  rédaction (rédacteur, admin) ; prestataire **premium** (attribution manuelle) avec un article
+  publié et une révision en attente, et un article en attente ; entrepreneur au **quota gratuit
+  atteint** (un article publié, un refusé avec `DEMO_ARTICLE_REJECTION_REASON`) et un brouillon.
 - **Double authentification de `admin@example.com`** (démonstration uniquement) : activée et
   confirmée par le seeder avec un secret fixe, `DatabaseSeeder::DEMO_ADMIN_TWO_FACTOR_SECRET`
   (`LOOPARTNERDEMOAD`), pour tester la modération. Pour se connecter : ajouter un compte dans une
@@ -208,10 +236,12 @@ Usages (`App\Support\Media\MediaPurpose`, limites définies dans l'enum) :
 | `avatar` | 5 Mo | 128×128 | 512×512 | tous |
 | `provider_logo` | 5 Mo | 128×128 | 1024×1024 | prestataire |
 | `event_cover` | 5 Mo | 960×540 | 1920×1080 | prestataire, entrepreneur, rédacteur, admin |
-| `article_cover` | — | — | — | pas encore disponible (422) |
+| `article_cover` | 5 Mo | 1200×630 | 2400×1260 | prestataire, entrepreneur, rédacteur, admin |
+| `article_image` | 5 Mo | 320×200 | 1600×1600 | prestataire, entrepreneur, rédacteur, admin |
 
-Les limites et les rôles de `article_cover` seront définis avec le module Blog. Ils ne doivent pas
-être figés sur `redacteur`/`admin` : les prestataires pourront aussi écrire des articles.
+Plusieurs médias d'un même usage (images du corps d'un article) se rattachent avec
+`MediaLibrary::attachMany()` (revérifiés sous verrou) ; le module supprime ensuite avec `delete()`
+ceux qu'il ne garde plus.
 
 ### Utiliser la brique depuis un module
 
@@ -453,6 +483,91 @@ utilisateur n'apparaît dans l'agenda public sans la validation d'un admin.** R�
 - **Minimisation** (`events:prune`, `config/security.php`, `retention`) : inscriptions et annonces
   12 mois après la fin, révisions décidées 6 mois, événements annulés ou détachés 12 mois après la fin.
 
+## Module Blog
+
+Blog éditorial et articles d'auteurs extérieurs. **Principe central : aucun article d'un
+prestataire ou d'un entrepreneur (premium ou non) n'est public sans la validation de l'équipe ;
+une modification d'un article publié est une révision qui ne remplace la version publiée qu'après
+validation.** Réglages métier dans `config/blog.php`, limites et durées dans `config/security.php`.
+
+- **Auteurs** (`ArticlePolicy`, `Support/Authors`), email vérifié : rédacteurs et admins
+  (l'équipe, `author_kind = editorial`), prestataires avec un profil publié et au moins une
+  catégorie (`provider`), entrepreneurs (`entrepreneur`). Le type d'auteur est fixé à la
+  création. L'article d'un autre utilisateur donne **404**, modérateurs compris.
+- **Statuts** (`ArticleStatus`) : `draft` → `pending_review` → `published` ; `pending_review` →
+  `rejected` (motif) ou `draft` (retrait) ; `published` → `unpublished` (dépublication par la
+  modération, motif). Refusé ou dépublié : modifiable puis soumis de nouveau (au plus
+  `max_resubmissions` = 5 fois, 409). En attente : 409 sur modification. L'équipe publie et
+  modifie ses propres articles **directement**, avec la 2FA de session (403 sinon) et une trace
+  d'audit ; elle n'a ni quota ni révision.
+- **Quota gratuit** (`Support/ArticleQuota`) : `blog.free_articles_quota` (2) articles **soumis**
+  par prestataire ou entrepreneur, comptés **à la première soumission de chaque article** dans
+  `article_quota_entries` (une fois pour toutes : refus, retrait, suppression ne libèrent rien ;
+  les soumissions faites pendant une période premium comptent aussi). `free_quota_period_months`
+  (`null` : à vie). Au-delà, sans premium : **403 `{"message", "code": "premium_required",
+  "quota": {"limit", "used", "remaining"}}`** (`Exceptions\PremiumRequired`, code stable pour le
+  frontend). Premium : pas de quota. Pour tous les auteurs extérieurs : 3 articles en attente au
+  plus (`max_pending_per_author`, 409) ; pour tous : 20 brouillons (409). Fin du premium : les
+  articles publiés restent en ligne.
+- **Contenu** (`Support/ArticleRules`, `ArticleContent`) : `title` (10-160), `excerpt` (chapô,
+  50-300), `body`, `language` (liste `blog.languages`, `fr` et `en`), `categories` (0 à 3 slugs
+  `ServiceCategory` actifs), `cover` (média `article_cover`), `author_name` (entrepreneur seul,
+  `prohibited` sinon), `seo_title`, `seo_description`. Soumission : chapô, corps de 200 mots au
+  moins (`min_words`), une catégorie, nom d'auteur pour un entrepreneur (422 sinon). Champs fixés
+  par la plateforme : `prohibited` (422). Temps de lecture `ceil(mots / 230)`. Pas de mots-clés
+  ni de commentaires en v1.
+- **Corps** (`Support/ArticleBody`) : document JSON `{"version": 1, "blocks": [...]}` à liste
+  fermée, **jamais de HTML stocké ni renvoyé**. Blocs `paragraph`, `heading` (niveaux 2 et 3,
+  sans lien), `list` (`bullet`/`ordered`, sans imbrication), `quote` (`attribution`), `image`
+  (`media` = uuid d'un média `article_image` de l'auteur, `alt` obligatoire, `caption` ; jamais
+  d'URL), `divider`. Segment : `{"text", "marks": ["bold", "italic"], "link": "https://…"}`.
+  Clé, type ou marque inconnus : 422 avec l'emplacement (« Bloc 3, segment 2 : … »). Texte :
+  `NoHtml`, `NoInvisibleCharacters`, `SafeLinksInText` ; liens : `ExternalLink` (https, ni
+  `javascript:` ni `data:`). Plafonds `blog.body` (300 blocs, 40 000 caractères, 10 images,
+  30 liens…), requête limitée à 256 Ko (413). Le serveur enregistre le document qu'il a
+  **reconstruit**, jamais l'entrée brute. Images du corps : table `article_media` (article ou
+  révision), toujours supprimées par `MediaLibrary`.
+- **Liens et référencement** (`Support/ArticleBodyPresenter`) : chaque lien est renvoyé en
+  `{"href", "rel"}` ; le frontend reprend le `rel` tel quel (`target="_blank"`), sans
+  `dangerouslySetInnerHTML`. **Tout auteur extérieur à l'équipe, premium compris, reçoit
+  `rel="nofollow ugc noopener noreferrer"`** ; seule la rédaction a des liens suivis
+  (`noopener noreferrer`). **Ce n'est jamais un avantage premium possible** : un auteur premium
+  paie pour publier, ses liens sont des liens payants pour les moteurs de recherche, et un lien
+  payant suivi expose le site à une pénalité. Le `rel` ne dépend que de `author_kind`.
+- **Révisions** (`ArticleRevision`, `SubmitRevision`) : une seule en attente par article,
+  remplacée par chaque modification (version + 1), version complète proposée, images et
+  couverture proposées rattachées à la révision ; limite `article_revisions` (dans l'Action).
+- **Modération** (`/admin/…`, `ModerationController`) : **rédacteurs et admins** avec 2FA confirmée
+  et session ouverte avec un code (`EnsureModerator:admin,redacteur` ; 404 pour les autres rôles,
+  403 sans 2FA). **Personne ne modère son propre article ni sa propre révision** (403,
+  `blog.self_moderation_denied`). Dépublication d'un article de la rédaction : **admin
+  seulement**. File (`GET /admin/blog/queue`, `own`, `meta.counts`), détail avec contenu complet,
+  liens et domaines signalés (`ArticleLinks`), historique de l'auteur (`AuthorHistory` : premium,
+  articles par statut, signaux de la messagerie), décisions passées. Validation, refus (motif
+  10-1000), dépublication (motif), révisions ; `version` lue obligatoire (409). Journal d'audit
+  (`blog.article.*`, `blog.revision.*`), canal security, limiteur `blog-moderation`.
+- **Récapitulatif** (`blog:notify-moderators`, toutes les 5 minutes) : au plus un email toutes les
+  30 minutes aux rédacteurs et admins avec 2FA, seulement si du nouveau est arrivé, sans contenu.
+- **Lecture publique** : `GET /articles` (publiés, du plus récent ; filtres `category`
+  (sous-catégories comprises), `language`, `author` (slug de prestataire ou `editorial`), `q`
+  (`Like` sur titre et chapô)), `GET /articles/{slug}` (corps, `seo`, `related` ; 404 si non
+  publié, **410** si supprimé), `GET /providers/{slug}/articles`, `GET /articles/sitemap` (`slug`,
+  `language`, `updated_at`, pages de 1 000, `Cache-Control` 1 h). Slug calculé à la **première
+  publication** puis stable ; un slug retiré (`article_retired_slugs`) n'est jamais repris ;
+  `sitemap` est réservé. Auteur (`AuthorDirectory`) : profil public du prestataire
+  (`GetProviderSummaries`), nom d'auteur de l'entrepreneur, ou nom de la rédaction
+  (`blog.editorial_name`) ; jamais d'email, de nom d'utilisateur ni d'id.
+- **Emails** (`ArticleNotification`, textes dans `ArticleNotice`, file d'attente après commit,
+  langue de l'auteur) : validé, refusé (motif), dépublié (motif), révision validée ou refusée
+  (motif). Le titre de son propre article seulement ; jamais le contenu ni le nom d'un modérateur.
+- **Suppression de compte** (`ForgetUserArticles`, sur `AccountDeleting`) : articles des
+  prestataires et entrepreneurs **supprimés**, publiés compris (slug mis en retraite, 410) ;
+  articles de l'équipe **détachés** (`user_id` à null) et conservés (leurs images, propriété du
+  compte, disparaissent ; le corps présenté omet les images absentes).
+- **Minimisation** (`blog:prune`, 05:00, `config/security.php`, `retention`) : révisions décidées
+  6 mois, brouillons jamais soumis 12 mois sans modification, articles refusés ou dépubliés
+  12 mois sans modification, slugs retirés 24 mois.
+
 ## Catégories de services (noyau)
 
 Modèle partagé `App\Models\ServiceCategory` (table `service_categories`), utilisable par tous les
@@ -538,7 +653,9 @@ Aucune réponse ne révèle si une adresse email correspond à un compte.
   `messages` (10/min, 300/j), `reports` (10/j), `blocks` (20/j), `event-writes` (60/h, 300/j),
   `event-submissions` (5/h, 15/j), `event_revisions` (10/h, 30/j, compté par `SubmitRevision`),
   `event-registrations` (20/h, 60/j), `event-registrant-removals` (20/j), `event-announcements`
-  (3/j), `event-moderation` (60/h par admin).
+  (3/j), `event-moderation` (60/h par admin), `article-writes` (60/h, 300/j), `article-submissions`
+  (5/h, 10/j), `article_revisions` (10/h, 30/j, compté par `SubmitRevision`), `blog-moderation`
+  (60/h par modérateur), `premium-admin` (30/h par admin).
 - Règles de validation du texte saisi : `NoHtml` et `NoInvisibleCharacters` (caractères de contrôle
   sauf tabulation et retours à la ligne, contrôles de direction U+202A–202E et U+2066–2069, espace
   de largeur nulle U+200B, marques de direction U+200E et U+200F, U+2060–2064, BOM…), sur **tous**
@@ -561,10 +678,17 @@ Aucune réponse ne révèle si une adresse email correspond à un compte.
   `events.revision_submitted` (avec `changed_fields`), `events.revision_withdrawn`,
   `events.revision_approved`, `events.revision_rejected`, `events.cancelled` (avec `by`),
   `events.registration_blocked`, `events.registration_removed`, `events.announcement_submitted`,
-  `events.announcement_published`, `events.announcement_approved`, `events.announcement_rejected`.
+  `events.announcement_published`, `events.announcement_approved`, `events.announcement_rejected`,
+  `blog.article_submitted`, `blog.submission_withdrawn`, `blog.pending_limit_reached`,
+  `blog.quota_reached`, `blog.published_directly`, `blog.updated_directly` (avec
+  `changed_fields`), `blog.article_approved`, `blog.article_rejected`, `blog.article_unpublished`,
+  `blog.revision_submitted` (avec `changed_fields`), `blog.revision_withdrawn`,
+  `blog.revision_approved`, `blog.revision_rejected`, `blog.self_moderation_denied`,
+  `premium.granted`, `premium.revoked` (uuids et `subject_user_id`, jamais de motif).
   **Jamais le contenu d'un message, d'une demande, d'un commentaire de signalement, la description
-  d'un événement, son lien de connexion, le texte d'une annonce, un motif ni une donnée des inscrits**
-  (tests `MatchingPrivacyTest` et `EventsPrivacyTest`).
+  d'un événement, son lien de connexion, le texte d'une annonce, le contenu d'un article, un motif
+  ni une donnée des inscrits** (tests `MatchingPrivacyTest`, `EventsPrivacyTest` et
+  `BlogInputAndPrivacyTest`).
   Les événements Laravel et Fortify sont journalisés par `App\Listeners\LogSecurityEvents`
   (listeners découverts automatiquement dans `app/Listeners`). Les tests gardent ce journal en
   mémoire (`securityLog()` dans `tests/Pest.php`).
@@ -645,7 +769,11 @@ composer security            # composer audit : vulnérabilités connues des dé
   `projectPayload()`, `publishedProjectOf()`, `pendingProposal()`, `acceptedConversation()`,
   `postMessage()`, `expectNoPrivateFields()`, `userWithTwoFactor()`, `verificationUrlFor()`, `securityLog()`,
   `allowDemoSeeding()`, `eventOrganizer()`, `eventPayload()`, `publishedEventOf()`, `registerTo()`,
-  `moderator()`, `asModerator()`, `fromFrontend()`, images…) sont dans `tests/Pest.php`. Une donnée de
+  `moderator()`, `asModerator()`, `fromFrontend()`, `articleAuthor()`, `asAuthor()`,
+  `articlePayload()`, `articleOf()`, `blogCategory()`, `makePremium()`, images…) sont dans
+  `tests/Pest.php`. Les fonctions des fichiers de test sont globales : leur nom doit être unique
+  dans tout `tests/`. Un test qui fixe l'horloge (`Carbon::setTestNow`) y revient avec
+  `travelTo(<date fixe>)`, jamais `travelBack()` (qui revient à l'heure réelle). Une donnée de
   session (`withSession`) sur une route `/api/v1` hors Fortify exige `fromFrontend()` : Sanctum
   n'ouvre une session que pour une requête du frontend. Les requêtes de test envoient `Accept-Language: fr-FR` par défaut
   (`tests/TestCase.php`).

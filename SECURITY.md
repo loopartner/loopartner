@@ -157,6 +157,53 @@ par événement) et l'annulation.
 > **À faire avant l'ouverture au public** : reprendre ce tableau dans la **politique de
 > confidentialité** (inscriptions, nom visible par l'organisateur, durées de conservation).
 
+## Blog : modération, référencement, données personnelles et durées de conservation
+
+- **Validation obligatoire** : un article d'un prestataire ou d'un entrepreneur, premium ou non,
+  n'est jamais public sans la validation de l'équipe (rédacteurs et admins), et sa modification
+  après publication est une révision qui ne remplace la version publiée qu'après validation. Le
+  modérateur décide sur la version qu'il a lue (409 sinon).
+- **Modération** : rédacteurs et admins dont la double authentification est confirmée **et** dont
+  la session a été ouverte avec un code 2FA (403 sinon ; 404 pour les autres rôles). **Personne ne
+  modère son propre article** (403, journalisé). Seul un admin dépublie un article de la
+  rédaction. La publication directe d'un article de la rédaction exige aussi la 2FA de session.
+  Chaque décision est enregistrée dans le journal d'audit (24 mois) ; le canal security ne contient
+  que des identifiants, jamais le contenu d'un article ni un motif.
+- **Contenu** : le corps d'un article est un document JSON à liste fermée d'éléments, reconstruit
+  par le serveur ; aucun HTML n'est stocké ni renvoyé. Les images sont uniquement des médias de
+  la plateforme (réencodés en WebP, sans métadonnées) : aucune image externe ni pixel de suivi.
+  Les liens suivent les règles des liens externes (https, ni IP, ni raccourcisseur, ni domaine
+  refusé) et la modération voit les domaines nouveaux et les noms internationalisés.
+- **Liens payants** : les liens de tout auteur extérieur à l'équipe, **premium compris**, sont
+  marqués `rel="nofollow ugc"`. Le statut premium est payé pour publier : un lien suivi serait un
+  lien payant au sens des moteurs de recherche et exposerait le site à une pénalité. Ce marquage
+  n'est donc jamais un avantage premium possible.
+- **Statut premium** : attribué ou retiré uniquement par un admin avec 2FA de session, avec
+  motif dans le journal d'audit ; aucun endpoint ne permet à un utilisateur de se l'attribuer.
+
+| Données | Conservation | Ensuite |
+|---|---|---|
+| Révision validée, refusée, retirée ou remplacée | 6 mois après la décision | supprimée (la version publiée et le journal d'audit restent) |
+| Brouillon jamais soumis | 12 mois sans modification | supprimé avec ses images |
+| Article refusé ou dépublié | 12 mois sans modification | supprimé avec ses images |
+| Décompte du quota gratuit (première soumission de chaque article) | tant que le compte existe | supprimé avec le compte |
+| Slug d'un article supprimé (réponse 410, slug non réattribué) | 24 mois | supprimé |
+| Périodes premium | tant que le compte existe | supprimées avec le compte |
+
+- **Suppression de compte** : les articles d'un prestataire ou d'un entrepreneur sont
+  **supprimés**, publiés compris, avec leurs images (un article signé est une donnée personnelle,
+  et la suppression du compte vaut demande d'effacement, RGPD art. 17). Les articles de l'équipe,
+  signés « la rédaction » et écrits pour la plateforme, sont détachés du compte et conservés.
+  **Conserver un jour les articles publiés d'un auteur extérieur après la suppression de son
+  compte exigerait une clause de cession de droits (licence d'exploitation) dans les CGU**,
+  acceptée avant la publication, et une anonymisation réelle de l'article.
+- **Réglage** : durées dans `backend/config/security.php` (`retention`), appliquées chaque nuit par
+  `blog:prune`. Toute modification doit être reportée dans la politique de confidentialité.
+
+> **À faire avant l'ouverture au public** : reprendre ce tableau dans la **politique de
+> confidentialité**, et prévoir dans les CGU les règles de publication des articles (contenu
+> autorisé, liens, modération, retrait).
+
 ## Vérifications avant chaque mise en production
 
 Depuis `backend/`, sur le serveur de production :
@@ -187,8 +234,11 @@ Depuis `backend/`, sur le serveur de production :
 
 - Double authentification **obligatoire** pour les rôles `admin` et `redacteur` (avec le back-office).
   Elle est déjà exigée pour la modération des événements (compte et session).
-- Étendre le journal d'audit (`admin_audit_logs`, en place pour la modération des événements) aux
-  futures actions d'administration (back-office, Blog), et aux consultations de contenus signalés.
+- Étendre le journal d'audit (`admin_audit_logs`, en place pour la modération des événements et
+  du Blog et pour le statut premium) aux futures actions d'administration (back-office), et aux
+  consultations de contenus signalés.
+- Signalement d'un article publié par les lecteurs, et commentaires (non prévus en v1 : charge de
+  modération et spam).
 - Notification « nouvelle connexion » et liste des sessions actives, avec déconnexion à distance.
 - Alerte automatique (email ou outil de supervision) sur les avertissements du journal de sécurité
   (`projects.scraping_suspected`, `match_requests.limit_exceeded`, rafales de `auth.login_failed`).
