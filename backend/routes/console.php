@@ -61,6 +61,12 @@ Schedule::command('events:notify-moderators')
     ->everyFiveMinutes()
     ->withoutOverlapping(10);
 
+// Blog : récapitulatif des articles et modifications en attente de validation envoyé aux
+// rédacteurs et admins, au plus une fois toutes les 30 minutes (config/blog.php).
+Schedule::command('blog:notify-moderators')
+    ->everyFiveMinutes()
+    ->withoutOverlapping(10);
+
 // Journal d'audit des décisions d'administration (noyau) : entrées au-delà de leur durée de
 // conservation (config/security.php, retention.admin_audit_months) supprimées.
 Schedule::command('admin-audit:prune')

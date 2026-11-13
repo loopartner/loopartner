@@ -109,6 +109,11 @@ const API_ROUTES = [
     'GET api/v1/admin/event-announcements/{uuid}' => 'auth',
     'POST api/v1/admin/event-announcements/{uuid}/approve' => 'auth',
     'POST api/v1/admin/event-announcements/{uuid}/reject' => 'auth',
+    // Blog : lecture publique.
+    'GET api/v1/articles' => 'public',
+    'GET api/v1/articles/sitemap' => 'public',
+    'GET api/v1/articles/{slug}' => 'public',
+    'GET api/v1/providers/{slug}/articles' => 'public',
     // Blog : articles de l'auteur (voir BlogAuthorizationTest).
     'GET api/v1/me/articles' => 'auth',
     'POST api/v1/me/articles' => 'auth',
@@ -119,6 +124,15 @@ const API_ROUTES = [
     'POST api/v1/me/articles/{uuid}/submit' => 'auth',
     'POST api/v1/me/articles/{uuid}/withdraw' => 'auth',
     'DELETE api/v1/me/articles/{uuid}/revision' => 'auth',
+    // Blog : modération par les rédacteurs et les admins avec double authentification.
+    'GET api/v1/admin/blog/queue' => 'auth',
+    'GET api/v1/admin/articles/{uuid}' => 'auth',
+    'POST api/v1/admin/articles/{uuid}/approve' => 'auth',
+    'POST api/v1/admin/articles/{uuid}/reject' => 'auth',
+    'POST api/v1/admin/articles/{uuid}/unpublish' => 'auth',
+    'GET api/v1/admin/article-revisions/{uuid}' => 'auth',
+    'POST api/v1/admin/article-revisions/{uuid}/approve' => 'auth',
+    'POST api/v1/admin/article-revisions/{uuid}/reject' => 'auth',
     // Statut premium : admin avec double authentification (voir PremiumTest).
     'GET api/v1/admin/premium-grants' => 'auth',
     'POST api/v1/admin/premium-grants' => 'auth',
