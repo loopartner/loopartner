@@ -9,3 +9,6 @@
 /.github export-ignore
 CHANGELOG.md export-ignore
 .styleci.yml export-ignore
+
+# Fichiers calendrier de référence : fins de ligne CRLF exigées par la RFC 5545, gardées telles quelles.
+tests/Fixtures/ics/*.ics -text

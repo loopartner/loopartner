@@ -1,0 +1,22 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Loopartner//Agenda//FR
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:atelier-compta-tva-abc123@api.loopartner.test
+DTSTAMP:20261112T090000Z
+SEQUENCE:3
+DTSTART:20261122T160000Z
+DTEND:20261122T180000Z
+SUMMARY:Atelier \; compta\, TVA
+DESCRIPTION:Programme :\nBEGIN:VEVENT\\ fin long texte é long texte é lon
+ g texte é long texte é long texte é long texte é long texte é long te
+ xte é long texte é long texte é long texte é long texte é\n\nhttps://
+ www.loopartner.test/events/atelier-compta-tva-abc123\n\nLien de connexion 
+ : https://visio.exemple.fr/salle
+LOCATION:La Cordée\, 12 rue de la République\, 69001 Lyon\, FR
+URL:https://www.loopartner.test/events/atelier-compta-tva-abc123
+STATUS:CONFIRMED
+END:VEVENT
+END:VCALENDAR
