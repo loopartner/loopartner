@@ -61,6 +61,11 @@ Schedule::command('events:notify-moderators')
     ->everyFiveMinutes()
     ->withoutOverlapping(10);
 
+// Minimisation des données du Blog (durées dans config/security.php, retention).
+Schedule::command('blog:prune')
+    ->dailyAt('05:00')
+    ->withoutOverlapping();
+
 // Blog : récapitulatif des articles et modifications en attente de validation envoyé aux
 // rédacteurs et admins, au plus une fois toutes les 30 minutes (config/blog.php).
 Schedule::command('blog:notify-moderators')

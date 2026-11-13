@@ -50,6 +50,14 @@ it('planifie les tâches du module Events, sans chevauchement', function (string
     'purge' => ['events:prune', '0 4 * * *'],
 ]);
 
+it('purge les données du Blog chaque jour à 05:00, sans chevauchement', function (): void {
+    $event = scheduledEvent('blog:prune');
+
+    expect($event)->not->toBeNull()
+        ->and($event->expression)->toBe('0 5 * * *')
+        ->and($event->withoutOverlapping)->toBeTrue();
+});
+
 it('prévient les modérateurs du Blog des articles à valider toutes les 5 minutes, sans chevauchement', function (): void {
     $event = scheduledEvent('blog:notify-moderators');
 
