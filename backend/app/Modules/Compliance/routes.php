@@ -11,6 +11,7 @@ use App\Modules\Compliance\Http\Controllers\CatalogController;
 use App\Modules\Compliance\Http\Controllers\CompanyController;
 use App\Modules\Compliance\Http\Controllers\DeadlineController;
 use App\Modules\Compliance\Http\Controllers\JourneyController;
+use App\Modules\Compliance\Http\Controllers\RevenueController;
 use App\Modules\Compliance\Http\Controllers\RuleAdminController;
 use App\Modules\Compliance\Http\Controllers\TaskController;
 use Illuminate\Support\Facades\Route;
@@ -53,6 +54,17 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function (): void {
             Route::get('deadlines/{deadline}', [DeadlineController::class, 'show'])->whereUuid('deadline')->name('deadlines.show');
             Route::get('tasks', [TaskController::class, 'index'])->name('tasks.index');
             Route::get('journeys', [JourneyController::class, 'index'])->name('journeys.index');
+
+            // Chiffre d'affaires (centimes), seuils et estimation (premium).
+            Route::get('revenue', [RevenueController::class, 'index'])->name('revenue.index');
+            Route::get('thresholds', [RevenueController::class, 'thresholds'])->name('thresholds');
+            Route::get('estimate', [RevenueController::class, 'estimate'])->name('estimate');
+            Route::get('revenue.csv', [RevenueController::class, 'csv'])->middleware('throttle:compliance-exports')->name('revenue.csv');
+
+            Route::middleware('throttle:compliance-revenue')->group(function (): void {
+                Route::put('revenue/{period}', [RevenueController::class, 'save'])->where('period', '\d{4}-(0[1-9]|1[0-2])')->name('revenue.save');
+                Route::delete('revenue/{period}', [RevenueController::class, 'destroy'])->where('period', '\d{4}-(0[1-9]|1[0-2])')->name('revenue.destroy');
+            });
         });
 
         Route::middleware('throttle:compliance-writes')->group(function (): void {

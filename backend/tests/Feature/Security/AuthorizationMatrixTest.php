@@ -178,6 +178,12 @@ const API_ROUTES = [
     'GET api/v1/me/compliance/companies/{company}/journeys' => 'auth',
     'POST api/v1/me/compliance/companies/{company}/journeys' => 'auth',
     'DELETE api/v1/me/compliance/companies/{company}/journeys/{journey}' => 'auth',
+    'GET api/v1/me/compliance/companies/{company}/revenue' => 'auth',
+    'GET api/v1/me/compliance/companies/{company}/revenue.csv' => 'auth',
+    'PUT api/v1/me/compliance/companies/{company}/revenue/{period}' => 'auth',
+    'DELETE api/v1/me/compliance/companies/{company}/revenue/{period}' => 'auth',
+    'GET api/v1/me/compliance/companies/{company}/thresholds' => 'auth',
+    'GET api/v1/me/compliance/companies/{company}/estimate' => 'auth',
 ];
 
 /**
@@ -191,6 +197,7 @@ function concreteUri(string $uri): string
         '{deadline}' => '7c9e6679-7425-40de-944b-e07fc1f90ae7',
         '{task}' => '16fd2706-8baf-433b-82eb-8c7fada847da',
         '{journey}' => 'a8098c1a-f86e-11da-bd1a-00112444be1e',
+        '{period}' => '2026-10',
         '{country}' => 'FR',
         '{messageUuid}' => '1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed',
         '{registrationUuid}' => '6ec0bd7f-11c0-43da-975e-2a8ad9ebae0b',
