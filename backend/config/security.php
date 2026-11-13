@@ -186,6 +186,45 @@ return [
             'per_hour' => 30,
         ],
 
+        // Suivi administratif (module Compliance), par utilisateur.
+        // Administration des règles (création, modification, vérification, retrait), par admin.
+        'compliance_rules_admin' => [
+            'per_hour' => 60,
+        ],
+
+        // Écritures courantes : réglages, échéances, tâches, parcours.
+        'compliance_writes' => [
+            'per_hour' => 120,
+            'per_day' => 600,
+        ],
+
+        // Création et suppression d'entreprises (questionnaire de démarrage).
+        'compliance_companies' => [
+            'per_day' => 10,
+        ],
+
+        // Saisie du chiffre d'affaires (chaque saisie recalcule les seuils).
+        'compliance_revenue' => [
+            'per_hour' => 60,
+        ],
+
+        // Exports (JSON complet, CSV du chiffre d'affaires).
+        'compliance_exports' => [
+            'per_hour' => 10,
+        ],
+
+        // Création, remplacement et révocation de l'URL privée d'abonnement au calendrier.
+        'compliance_feed_manage' => [
+            'per_day' => 10,
+        ],
+
+        // Lecture de l'abonnement au calendrier (route publique à jeton) : par abonnement
+        // (Google Agenda et Outlook l'interrogent quelques fois par heure au plus) et par IP.
+        'compliance_feed' => [
+            'per_hour_per_feed' => 30,
+            'per_hour_per_ip' => 120,
+        ],
+
     ],
 
     /*
@@ -237,6 +276,20 @@ return [
         // Slugs d'articles supprimés : gardés pour répondre 410 et empêcher qu'un autre article
         // les reprenne, puis supprimés.
         'retired_article_slugs_months' => 24,
+
+        // Suivi administratif (module Compliance, purge quotidienne compliance:prune). Ces données
+        // ont une valeur pour l'utilisateur : la date de la prochaine purge est annoncée dans
+        // l'API, et l'export reste possible à tout moment.
+        // Échéances passées (et leurs tâches) : supprimées après cette durée.
+        'compliance_deadlines_months' => 36,
+
+        // Chiffre d'affaires : supprimé par années civiles entières, au-delà de ce nombre
+        // d'années complètes (les années N-1 et N-2 servent aux seuils).
+        'compliance_revenue_years' => 6,
+
+        // Alertes de seuil et parcours terminés : supprimés après cette durée.
+        'compliance_threshold_alerts_months' => 36,
+        'compliance_journeys_months' => 36,
 
         // Journal d'audit des décisions d'administration (table admin_audit_logs) : supprimé
         // après cette durée (admin-audit:prune).

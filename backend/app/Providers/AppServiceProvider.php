@@ -198,6 +198,24 @@ class AppServiceProvider extends ServiceProvider
 
         // Attribution et retrait du statut premium (module Accounts) : par admin.
         RateLimiter::for('premium-admin', fn (Request $request): Limit => Limit::perHour(self::limit('premium_admin.per_hour'))->by($this->userOrIp($request)));
+
+        // Suivi administratif (module Compliance).
+        RateLimiter::for('compliance-rules-admin', fn (Request $request): Limit => Limit::perHour(self::limit('compliance_rules_admin.per_hour'))->by($this->userOrIp($request)));
+        RateLimiter::for('compliance-writes', fn (Request $request): array => [
+            Limit::perHour(self::limit('compliance_writes.per_hour'))->by('hour:'.$this->userOrIp($request)),
+            Limit::perDay(self::limit('compliance_writes.per_day'))->by('day:'.$this->userOrIp($request)),
+        ]);
+        RateLimiter::for('compliance-companies', fn (Request $request): Limit => Limit::perDay(self::limit('compliance_companies.per_day'))->by($this->userOrIp($request)));
+        RateLimiter::for('compliance-revenue', fn (Request $request): Limit => Limit::perHour(self::limit('compliance_revenue.per_hour'))->by($this->userOrIp($request)));
+        RateLimiter::for('compliance-exports', fn (Request $request): Limit => Limit::perHour(self::limit('compliance_exports.per_hour'))->by($this->userOrIp($request)));
+        RateLimiter::for('compliance-feed-manage', fn (Request $request): Limit => Limit::perDay(self::limit('compliance_feed_manage.per_day'))->by($this->userOrIp($request)));
+
+        // Abonnement au calendrier (route publique) : par abonnement, compté sur le sélecteur du
+        // jeton (sa partie publique, jamais le secret), et par IP.
+        RateLimiter::for('compliance-feed', fn (Request $request): array => [
+            Limit::perHour(self::limit('compliance_feed.per_hour_per_feed'))->by('feed:'.substr((string) $request->route('token'), 0, 16)),
+            Limit::perHour(self::limit('compliance_feed.per_hour_per_ip'))->by('ip:'.$request->ip()),
+        ]);
     }
 
     /**

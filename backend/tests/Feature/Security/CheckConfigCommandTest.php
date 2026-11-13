@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Compliance\Models\ComplianceRule;
 use App\Support\Database\TimestampSchema;
 use App\Support\Security\ConfigAudit;
 
@@ -193,5 +194,66 @@ it('n\'affiche jamais la valeur des secrets', function (): void {
     $this->artisan('security:check-config')
         ->doesntExpectOutputToContain('secret-tres-confidentiel')
         ->doesntExpectOutputToContain(base64_encode(str_repeat('k', 32)))
+        ->assertFailed();
+});
+
+/**
+ * Remplace la lecture des règles administratives (module Compliance).
+ *
+ * @param  array{admins_with_two_factor: int, demo_rules: int}|null  $rules
+ */
+function fakeComplianceRules(?array $rules): void
+{
+    app()->bind(ConfigAudit::class, fn (): ConfigAudit => new ConfigAudit(
+        devDependenciesInstalled: fn (): bool => false,
+        ini: fn (string $key): string|false => ['zend.exception_ignore_args' => '1', 'expose_php' => '0'][$key] ?? false,
+        timestampSchema: fn (): array => ['explicit_defaults' => true, 'on_update_columns' => []],
+        complianceRules: fn (): ?array => $rules,
+    ));
+}
+
+it('échoue si la base de production contient des règles administratives de démonstration', function (): void {
+    safeProductionConfig();
+    fakeComplianceRules(['admins_with_two_factor' => 1, 'demo_rules' => 3]);
+
+    $this->artisan('security:check-config')
+        ->expectsOutputToContain('compliance_rules')
+        ->assertFailed();
+});
+
+it('avertit sans échouer quand les quatre yeux sont désactivés alors que deux admins ont la 2FA', function (): void {
+    safeProductionConfig();
+    config(['compliance.require_distinct_verifier' => false]);
+    fakeComplianceRules(['admins_with_two_factor' => 2, 'demo_rules' => 0]);
+
+    $this->artisan('security:check-config')
+        ->expectsOutputToContain('COMPLIANCE_REQUIRE_DISTINCT_VERIFIER')
+        ->assertSuccessful();
+});
+
+it('ne signale rien sur les règles avec un seul admin, ou avec les quatre yeux activés', function (int $admins, bool $distinct): void {
+    safeProductionConfig();
+    config(['compliance.require_distinct_verifier' => $distinct]);
+    fakeComplianceRules(['admins_with_two_factor' => $admins, 'demo_rules' => 0]);
+
+    $this->artisan('security:check-config')
+        ->expectsOutputToContain('Aucun problème')
+        ->assertSuccessful();
+})->with([
+    'un seul admin' => [1, false],
+    'quatre yeux activés' => [3, true],
+]);
+
+it('lit les règles administratives par défaut sur la base de test', function (): void {
+    safeProductionConfig();
+    app()->bind(ConfigAudit::class, fn (): ConfigAudit => new ConfigAudit(
+        devDependenciesInstalled: fn (): bool => false,
+        ini: fn (string $key): string|false => ['zend.exception_ignore_args' => '1', 'expose_php' => '0'][$key] ?? false,
+        timestampSchema: fn (): array => ['explicit_defaults' => true, 'on_update_columns' => []],
+    ));
+    ComplianceRule::factory()->demo()->create();
+
+    $this->artisan('security:check-config')
+        ->expectsOutputToContain('compliance_rules')
         ->assertFailed();
 });

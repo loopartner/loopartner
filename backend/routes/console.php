@@ -78,6 +78,13 @@ Schedule::command('admin-audit:prune')
     ->dailyAt('04:30')
     ->withoutOverlapping();
 
+// Suivi administratif (module Compliance) : mise à jour annuelle des règles. Du 1er octobre au
+// 30 novembre seulement, les admins sont prévenus des règles à vérifier pour l'année suivante
+// (au plus un email par semaine). Hors de cette période, la commande ne fait rien.
+Schedule::command('compliance:check-rule-coverage')
+    ->dailyAt('06:30')
+    ->withoutOverlapping();
+
 // File d'attente (driver database) : traitée chaque minute, sans worker permanent.
 // Le worker s'arrête dès que la file est vide, et au plus tard après 50 secondes pour ne pas
 // déborder sur le schedule:run suivant. Le verrou anti-chevauchement expire après 5 minutes

@@ -50,6 +50,16 @@ it('planifie les tâches du module Events, sans chevauchement', function (string
     'purge' => ['events:prune', '0 4 * * *'],
 ]);
 
+it('planifie les tâches du module Compliance, sans chevauchement', function (string $command, string $expression): void {
+    $event = scheduledEvent($command);
+
+    expect($event)->not->toBeNull()
+        ->and($event->expression)->toBe($expression)
+        ->and($event->withoutOverlapping)->toBeTrue();
+})->with([
+    'couverture annuelle des règles' => ['compliance:check-rule-coverage', '30 6 * * *'],
+]);
+
 it('purge les données du Blog chaque jour à 05:00, sans chevauchement', function (): void {
     $event = scheduledEvent('blog:prune');
 

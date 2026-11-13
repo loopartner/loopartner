@@ -2,12 +2,15 @@
 
 namespace App\Support\Security;
 
+use App\Http\Middleware\EnsureModerator;
+use App\Models\User;
 use App\Support\Database\TimestampSchema;
 use App\Support\Links\ExternalLink;
 use App\Support\LocalHost;
 use Closure;
 use Composer\InstalledVersions;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Throwable;
 
 /**
@@ -30,6 +33,9 @@ class ConfigAudit
     /** @var Closure(): (array{explicit_defaults: bool, on_update_columns: list<string>}|null) */
     private Closure $timestampSchema;
 
+    /** @var Closure(): (array{admins_with_two_factor: int, demo_rules: int}|null) */
+    private Closure $complianceRules;
+
     /** @var list<ConfigFinding> */
     private array $findings = [];
 
@@ -37,13 +43,19 @@ class ConfigAudit
      * @param  (Closure(): bool)|null  $devDependenciesInstalled  dépendances "require-dev" installées ?
      * @param  (Closure(string): (string|false))|null  $ini  lecture d'un réglage php.ini
      * @param  (Closure(): (array{explicit_defaults: bool, on_update_columns: list<string>}|null))|null  $timestampSchema  schéma MySQL/MariaDB (TimestampSchema::inspect)
+     * @param  (Closure(): (array{admins_with_two_factor: int, demo_rules: int}|null))|null  $complianceRules  règles administratives en base (null : table absente)
      */
-    public function __construct(?Closure $devDependenciesInstalled = null, ?Closure $ini = null, ?Closure $timestampSchema = null)
+    public function __construct(?Closure $devDependenciesInstalled = null, ?Closure $ini = null, ?Closure $timestampSchema = null, ?Closure $complianceRules = null)
     {
         $this->devDependenciesInstalled = $devDependenciesInstalled
             ?? fn (): bool => collect(InstalledVersions::getAllRawData())->contains(fn (array $data): bool => $data['root']['dev']);
         $this->ini = $ini ?? fn (string $key): string|false => ini_get($key);
         $this->timestampSchema = $timestampSchema ?? fn (): ?array => TimestampSchema::inspect(DB::connection());
+        $this->complianceRules = $complianceRules ?? fn (): ?array => Schema::hasTable('compliance_rules') ? [
+            'admins_with_two_factor' => User::role(EnsureModerator::ADMIN_ROLE)->whereNotNull('two_factor_confirmed_at')->count(),
+            // Lecture par nom de table : le noyau ne dépend d'aucun module.
+            'demo_rules' => DB::table('compliance_rules')->where('is_demo', true)->count(),
+        ] : null;
     }
 
     /**
@@ -63,6 +75,7 @@ class ConfigAudit
         $this->checkLinks();
         $this->checkPhp();
         $this->checkTimestampColumns();
+        $this->checkComplianceRules();
 
         return $this->findings;
     }
@@ -268,6 +281,34 @@ class ConfigAudit
 
         foreach ($schema['on_update_columns'] as $column) {
             $this->error($column, 'a ON UPDATE CURRENT_TIMESTAMP : sa valeur est réécrite à chaque modification de la ligne. La passer en DATETIME par une nouvelle migration, puis vérifier les données déjà enregistrées.');
+        }
+    }
+
+    /**
+     * Règles administratives (module Compliance) :
+     * - une règle de démonstration (valeurs fictives) en production est une erreur : la base de
+     *   démonstration a été copiée, ou le seeder de démonstration a tourné ;
+     * - le principe des quatre yeux désactivé alors que deux admins au moins ont la 2FA : un
+     *   avertissement invite à l'activer (COMPLIANCE_REQUIRE_DISTINCT_VERIFIER).
+     */
+    private function checkComplianceRules(): void
+    {
+        try {
+            $rules = ($this->complianceRules)();
+        } catch (Throwable) {
+            return; // Base injoignable : déjà signalé par checkTimestampColumns().
+        }
+
+        if ($rules === null) {
+            return;
+        }
+
+        if ($rules['demo_rules'] > 0) {
+            $this->error('compliance_rules', 'contient '.$rules['demo_rules'].' règle(s) de démonstration (valeurs fictives) : une base de démonstration ne doit jamais être copiée en production. Les supprimer avant l\'ouverture.');
+        }
+
+        if (config('compliance.require_distinct_verifier') !== true && $rules['admins_with_two_factor'] >= 2) {
+            $this->warning('COMPLIANCE_REQUIRE_DISTINCT_VERIFIER', 'vaut false alors que '.$rules['admins_with_two_factor'].' admins ont la double authentification : l\'activer pour qu\'une règle administrative soit toujours vérifiée par un autre admin que son dernier auteur.');
         }
     }
 

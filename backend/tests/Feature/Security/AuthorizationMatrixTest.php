@@ -137,6 +137,17 @@ const API_ROUTES = [
     'GET api/v1/admin/premium-grants' => 'auth',
     'POST api/v1/admin/premium-grants' => 'auth',
     'POST api/v1/admin/premium-grants/{uuid}/revoke' => 'auth',
+    // Compliance : administration des règles, admin avec double authentification
+    // (voir RuleAdministrationTest).
+    'GET api/v1/admin/compliance/rules' => 'auth',
+    'POST api/v1/admin/compliance/rules' => 'auth',
+    'GET api/v1/admin/compliance/rules/{uuid}' => 'auth',
+    'PATCH api/v1/admin/compliance/rules/{uuid}' => 'auth',
+    'DELETE api/v1/admin/compliance/rules/{uuid}' => 'auth',
+    'POST api/v1/admin/compliance/rules/{uuid}/revise' => 'auth',
+    'POST api/v1/admin/compliance/rules/{uuid}/verify' => 'auth',
+    'POST api/v1/admin/compliance/rules/{uuid}/retire' => 'auth',
+    'GET api/v1/admin/compliance/coverage' => 'auth',
 ];
 
 /**
