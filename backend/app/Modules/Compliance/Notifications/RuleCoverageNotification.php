@@ -4,6 +4,7 @@ namespace App\Modules\Compliance\Notifications;
 
 use App\Models\User;
 use App\Support\Locale;
+use App\Support\Notifications\CategorizedNotification;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -14,9 +15,14 @@ use Illuminate\Notifications\Notification;
  * de règles à vérifier pour l'année suivante. Aucun contenu de règle : le détail se lit dans
  * l'administration (GET /admin/compliance/coverage), avec la double authentification.
  */
-class RuleCoverageNotification extends Notification implements ShouldQueue
+class RuleCoverageNotification extends Notification implements CategorizedNotification, ShouldQueue
 {
     use Queueable;
+
+    public function notificationCategory(): string
+    {
+        return 'compliance.rule_coverage';
+    }
 
     /**
      * @var array<string, array{subject: string, intro: string, line: string, unavailable: string, action: string}>

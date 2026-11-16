@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Modules\Blog\Enums\ArticleNotice;
 use App\Modules\Blog\Models\Article;
 use App\Support\Locale;
+use App\Support\Notifications\CategorizedNotification;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -23,9 +24,14 @@ use Illuminate\Notifications\Notification;
  * L'article passe dans la file d'attente par son seul identifiant (SerializesModels) : s'il a
  * disparu, l'email est abandonné.
  */
-class ArticleNotification extends Notification implements ShouldQueueAfterCommit
+class ArticleNotification extends Notification implements CategorizedNotification, ShouldQueueAfterCommit
 {
     use Queueable;
+
+    public function notificationCategory(): string
+    {
+        return 'blog.author';
+    }
 
     public bool $deleteWhenMissingModels = true;
 

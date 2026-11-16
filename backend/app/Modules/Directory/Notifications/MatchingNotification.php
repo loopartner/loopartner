@@ -4,6 +4,7 @@ namespace App\Modules\Directory\Notifications;
 
 use App\Models\User;
 use App\Support\Locale;
+use App\Support\Notifications\CategorizedNotification;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -19,9 +20,17 @@ use Illuminate\Notifications\Notification;
  * file d'attente par leur seul identifiant (SerializesModels) : le texte des messages n'est
  * jamais copié dans la table jobs. Si le modèle a disparu entre-temps, l'email est abandonné.
  */
-abstract class MatchingNotification extends Notification implements ShouldQueueAfterCommit
+abstract class MatchingNotification extends Notification implements CategorizedNotification, ShouldQueueAfterCommit
 {
     use Queueable;
+
+    /**
+     * Demandes reçues, acceptées ou refusées ; NewMessageNotification a sa propre catégorie.
+     */
+    public function notificationCategory(): string
+    {
+        return 'directory.match_requests';
+    }
 
     public bool $deleteWhenMissingModels = true;
 

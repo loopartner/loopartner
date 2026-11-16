@@ -4,6 +4,7 @@ namespace App\Modules\Blog\Notifications;
 
 use App\Models\User;
 use App\Support\Locale;
+use App\Support\Notifications\CategorizedNotification;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -15,9 +16,14 @@ use Illuminate\Notifications\Notification;
  * NotifyModerators). Aucun contenu, aucun titre : le détail se lit dans la modération, avec la
  * double authentification.
  */
-class ModerationDigestNotification extends Notification implements ShouldQueue
+class ModerationDigestNotification extends Notification implements CategorizedNotification, ShouldQueue
 {
     use Queueable;
+
+    public function notificationCategory(): string
+    {
+        return 'blog.moderation_digest';
+    }
 
     /**
      * @var array<string, array{subject: string, intro: string, action: string, salutation: string}>

@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Modules\Compliance\Models\ThresholdAlert;
 use App\Modules\Compliance\Support\Disclaimer;
 use App\Support\Locale;
+use App\Support\Notifications\CategorizedNotification;
 use Carbon\CarbonImmutable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeEncrypted;
@@ -20,9 +21,14 @@ use Illuminate\Notifications\Notification;
  * puisqu'il contient des titres saisis par l'utilisateur. Chaque email rappelle que l'outil ne
  * remplace pas un expert-comptable.
  */
-class ComplianceDigestNotification extends Notification implements ShouldBeEncrypted, ShouldQueue
+class ComplianceDigestNotification extends Notification implements CategorizedNotification, ShouldBeEncrypted, ShouldQueue
 {
     use Queueable;
+
+    public function notificationCategory(): string
+    {
+        return 'compliance.reminders';
+    }
 
     /**
      * @var array<string, array<string, string>>

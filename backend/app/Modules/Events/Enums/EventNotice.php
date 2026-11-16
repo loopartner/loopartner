@@ -38,6 +38,21 @@ enum EventNotice: string
     }
 
     /**
+     * Catégorie de notifications (config/notifications.php) : le participant peut couper les
+     * rappels et les annonces ; la confirmation, les changements importants, l'annulation, le
+     * retrait et les décisions de modération (organisateur) partent toujours.
+     */
+    public function notificationCategory(): string
+    {
+        return match (true) {
+            $this->isForOrganizer() => 'events.organizer',
+            $this === self::Reminder => 'events.reminders',
+            $this === self::AnnouncementPublished => 'events.announcements',
+            default => 'events.participation',
+        };
+    }
+
+    /**
      * Email abandonné si le destinataire n'est plus inscrit au moment de l'envoi.
      */
     public function requiresActiveRegistration(): bool

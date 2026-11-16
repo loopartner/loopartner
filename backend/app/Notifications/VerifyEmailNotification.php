@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Support\Notifications\CategorizedNotification;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -14,7 +15,12 @@ use Illuminate\Contracts\Queue\ShouldQueue;
  * expire après auth.verification.expire minutes (60 par défaut) et pointe vers la route
  * verification.verify du module Accounts, utilisable sans être connecté.
  */
-class VerifyEmailNotification extends VerifyEmail implements ShouldQueue
+class VerifyEmailNotification extends VerifyEmail implements CategorizedNotification, ShouldQueue
 {
     use Queueable;
+
+    public function notificationCategory(): string
+    {
+        return 'account.security';
+    }
 }

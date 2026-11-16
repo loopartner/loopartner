@@ -16,6 +16,11 @@ use App\Modules\Directory\Models\Message;
  */
 class NewMessageNotification extends MatchingNotification
 {
+    public function notificationCategory(): string
+    {
+        return 'directory.messages';
+    }
+
     /**
      * @var array<string, array{subject: string, intro: string, action: string}>
      */

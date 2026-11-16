@@ -8,6 +8,7 @@ use App\Modules\Events\Enums\RegistrationStatus;
 use App\Modules\Events\Models\Event;
 use App\Modules\Events\Models\EventRegistration;
 use App\Support\Locale;
+use App\Support\Notifications\CategorizedNotification;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -28,9 +29,14 @@ use Illuminate\Notifications\Notification;
  * L'événement passe dans la file d'attente par son seul identifiant (SerializesModels) : s'il a
  * disparu, l'email est abandonné.
  */
-class EventNotification extends Notification implements ShouldQueueAfterCommit
+class EventNotification extends Notification implements CategorizedNotification, ShouldQueueAfterCommit
 {
     use Queueable;
+
+    public function notificationCategory(): string
+    {
+        return $this->notice->notificationCategory();
+    }
 
     public bool $deleteWhenMissingModels = true;
 

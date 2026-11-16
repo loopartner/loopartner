@@ -3,6 +3,7 @@
 namespace App\Modules\Accounts\Notifications;
 
 use App\Models\User;
+use App\Support\Notifications\CategorizedNotification;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -15,9 +16,14 @@ use Illuminate\Notifications\Notification;
  * des comptes) : c'est cet email, envoyé par la file d'attente, qui informe le vrai titulaire.
  * Il ne contient aucune donnée saisie lors de la tentative.
  */
-class RegistrationAttemptNotification extends Notification implements ShouldQueue
+class RegistrationAttemptNotification extends Notification implements CategorizedNotification, ShouldQueue
 {
     use Queueable;
+
+    public function notificationCategory(): string
+    {
+        return 'account.security';
+    }
 
     /**
      * @var array<string, array{subject: string, greeting: string, intro: string, action: string, reset: string, ignore: string}>
