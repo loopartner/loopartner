@@ -84,7 +84,8 @@ entrepreneurs.
   `events:prune` (04:00), `events:notify-moderators` (toutes les 5 minutes), `blog:prune`
   (05:00), `blog:notify-moderators` (toutes les 5 minutes), `admin-audit:prune` (04:30),
   `compliance:extend-calendars` (01:30), `compliance:prune` (05:30), `compliance:send-reminders`
-  (06:00), `compliance:check-rule-coverage` (06:30, actif du 1er octobre au 30 novembre), puis le
+  (06:00), `compliance:check-rule-coverage` (06:30, actif du 1er octobre au 30 novembre),
+  `moderation:prune` (05:45), `moderation:notify-moderators` (toutes les 5 minutes), puis le
   worker.
 - Toutes les dates sont stockées en **UTC** (`app.timezone = UTC`, connexion MySQL en `+00:00`).
   La conversion vers le fuseau de l'utilisateur se fait à l'affichage, côté frontend.
@@ -92,7 +93,7 @@ entrepreneurs.
 ## Architecture modulaire
 
 Le code métier vit dans `backend/app/Modules/<Module>/`. Les modules sont : `Accounts`, `Directory`,
-`Events`, `Blog` et `Compliance`.
+`Events`, `Blog`, `Compliance` et `Moderation`.
 
 Chaque module contient :
 
@@ -141,8 +142,15 @@ utilitaires du module), `Console/Commands/` (commandes Artisan du module), `Noti
   modérateur, 409 sinon), `App\Support\Links\LinkInspection` (liens regroupés par domaine,
   `punycode`, `previously_approved`), `App\Support\RateLimit\ActionThrottle` (limite de débit
   comptée dans une Action, sur plusieurs fenêtres) et le middleware
-  `App\Http\Middleware\LimitRequestBody:<octets>` (413 avant la validation). Le module Events
-  garde pour l'instant ses propres versions (`Events\Support\Moderation`, `EventLinks`).
+  `App\Http\Middleware\LimitRequestBody:<octets>` (413 avant la validation). Events et Blog les
+  utilisent tous les deux (`Events\Support\Moderation` ne garde que l'éligibilité de
+  l'organisateur). `VersionGuard::assertSameFingerprint()` contrôle l'empreinte d'un contenu sans
+  colonne de version.
+- Contenus signalables (noyau, DSA) : contrat `App\Support\Moderation\ModerationTarget`, un
+  adaptateur par type de contenu déclaré dans `config/moderation.php` (`targets`), registre
+  `ModerationTargets`, données `TargetContent`, restriction `Restriction` (colonnes
+  `moderation_restricted_at` et `moderation_decision_uuid`) et événement `ContentModerated`
+  (décision restrictive d'Events ou du Blog). Voir « Module Moderation ».
 - Calendrier iCalendar du noyau : `App\Support\Calendar\Ics` (échappement, repli des lignes à
   75 octets, dates UTC et journées entières, enveloppe `VCALENDAR`), utilisé par Events (fichier
   d'un événement, sortie figée par `tests/Fixtures/ics`) et Compliance (abonnement aux échéances).
@@ -183,7 +191,8 @@ utilitaires du module), `Console/Commands/` (commandes Artisan du module), `Noti
   `slug` (null si dépublié), `headline`, `city`, `country`, `logo_url`).
 - Événement public `Accounts\Events\AccountDeleting` : envoyé de façon synchrone par `DeleteAccount`,
   dans sa transaction et avant la suppression de la ligne `users`. Les autres modules y traitent les
-  données de l'utilisateur (Directory : `ForgetUserMatching` ; Events : `ForgetUserEvents`). Un écouteur ne doit pas être mis en file
+  données de l'utilisateur (Directory : `ForgetUserMatching` ; Events : `ForgetUserEvents` ;
+  Moderation : `ForgetUserModeration`). Un écouteur ne doit pas être mis en file
   d'attente ; une exception annule toute la suppression.
 - Le slug d'un profil prestataire est calculé à la création puis ne change plus (URL stables).
 - Les champs texte saisis par les utilisateurs refusent le HTML (règle `NoHtml`) plutôt que de le
@@ -433,11 +442,15 @@ validation). Un participant qui tente l'action de l'autre reçoit 403 ; un état
   toutes nouvelles demandes (403). `POST|DELETE /me/conversations/{uuid}/block` (seul celui qui a
   bloqué débloque) et `POST /me/match-requests/{uuid}/block` (le destinataire bloque l'auteur ; une
   demande en attente est refusée sans email). L'historique reste lisible.
-- **Signalements** (`AbuseReport`) : `POST /me/match-requests/{uuid}/report` (destinataire) et
+- **Signalements** : `POST /me/match-requests/{uuid}/report` (destinataire) et
   `POST /me/conversations/{uuid}/messages/{messageUuid}/report` (message de l'interlocuteur, 422 pour
   le sien), motif `ReportReason` (`spam`, `harassment`, `scam`, `inappropriate`, `off_platform`,
-  `other`) et `comment` facultatif (1000 caractères). Copie du contenu (`content_snapshot`) pour la
-  modération ; une fois par contenu et par utilisateur (409). Pas encore d'endpoint d'administration.
+  `other`, rattaché à une catégorie par `ReportReason::category()`) et `comment` facultatif
+  (1000 caractères). `ReportContent` délègue à l'Action publique `Moderation\Actions\SubmitNotice`
+  (table `moderation_notices` ; l'ancienne table `abuse_reports` a été reprise par une migration) :
+  copie du contenu, une fois par contenu en cours d'examen et par utilisateur (409). Le traitement
+  se fait dans `/admin/moderation`. Un message ou une demande masqués gardent leur place avec
+  `body` ou `message` à null.
 - **Emails** (`Notifications/`, file d'attente après commit, langue `users.locale`) : demande reçue,
   acceptée, refusée ; nouveau message au plus une fois toutes les 15 minutes par conversation et par
   destinataire (`last_notified_at`, UPDATE conditionnel), abandonné s'il a été lu entre-temps. **Ni
@@ -446,13 +459,16 @@ validation). Un participant qui tente l'action de l'autre reçoit 403 ; un état
 - **Suppression de compte** (`ForgetUserMatching`, sur `AccountDeleting`) : demandes non acceptées
   supprimées ; conversations conservées pour l'autre participant (identifiants à null, lecture seule,
   `orphaned_at`), supprimées tout de suite si les deux comptes sont supprimés ; blocages supprimés ;
-  signalements conservés et anonymisés.
+  signalements conservés et anonymisés (module Moderation).
 - **Minimisation** (`matching:prune`, 03:30, durées en mois dans `config/security.php`, `retention`) :
-  conversations orphelines (12), demandes refusées, retirées ou expirées (12), copie du contenu et
-  commentaire des signalements, puis signalements clos (12).
+  conversations orphelines (12), demandes refusées, retirées ou expirées (12). Les signalements
+  relèvent de `moderation:prune`.
 - **Actions publiques** (lecture seule, pour d'autres modules) : `IsBlockedBetween` (blocage dans un
-  sens ou dans l'autre) et `GetUserModerationSignals` (nombre de signalements reçus et de blocages
-  subis, sans aucun détail).
+  sens ou dans l'autre) et `GetUserModerationSignals` (nombre de signalements reçus par ses contenus,
+  via `Moderation\Actions\CountNoticesAgainst`, et de blocages subis, sans aucun détail).
+- **Projets masqués par la modération** : scope `browsable()` (en ligne et non masqué) pour la
+  consultation et les propositions ; un projet masqué compte toujours dans le plafond de
+  publication et ses propositions en attente expirent (`match-requests:expire`).
 
 ## Module Events (agenda d'événements)
 
@@ -750,6 +766,92 @@ et durées dans `config/security.php`.
   `expects_document` est déjà dans le contenu des règles d'échéance), la même `CompanyPolicy`, la
   suppression dans `ForgetUserCompliance` et la section `documents` de l'export.
 
+## Module Moderation (signalements, DSA)
+
+Signalement des contenus, décisions motivées et recours, selon le règlement (UE) 2022/2065 (DSA)
+pour une petite entreprise (art. 16, 17 et 18 ; recours interne de l'art. 20 appliqué
+volontairement). Décisions 21 à 31 de `docs/v1/DECISIONS.md` ; règles, textes et procédure
+art. 18 : `docs/v1/moderation-rules.md` (**à faire valider par le juriste**). Réglages dans
+`config/moderation.php`, limites et durées dans `config/security.php`.
+
+- **Contenus signalables** (contrat du noyau `ModerationTarget`, `config/moderation.php`,
+  `targets`) : `provider_profile` (slug), `project` (uuid, visible des seuls prestataires qui
+  consultent les projets), `event` (slug), `event_announcement` (uuid, visible des inscrits),
+  `article` (slug), `message` et `match_request` (messagerie seulement). Chaque adaptateur vit dans
+  son module (`Support/…ModerationTarget`) : `findVisible()` (404 si le visiteur ne le voit pas),
+  `inspect()`, `restrict()`, `lift()`. **Toute nouvelle page publique de contenu (offres, avis…)
+  doit avoir son adaptateur** (`tests/Feature/Moderation/RestrictionSurfacesTest.php`).
+- **Restriction** : réversible, sans toucher au statut ni à `updated_at` ; le contenu disparaît de
+  toutes ses surfaces publiques. Profil : traité comme non publié partout (scope `published()`,
+  décision 23). Projet : scope `browsable()`. Événement : agenda, fiche, `.ics`, inscriptions,
+  rappels et annonces fermés, inscrits prévenus par un email neutre
+  (`EventNotice::HiddenByModeration`, décision 24). Article : scope `published()`. Le propriétaire
+  voit `moderation` `{restricted, decision}` dans ses propres réponses.
+- **Signalement** (`POST /moderation/notices`, public, avec ou sans compte ; `SubmitNotice`) :
+  type et identifiant du contenu, catégorie (liste fermée, `categories`), explication (20 à 5000),
+  précision facultative, nom et email sans compte (facultatifs pour `child_sexual_abuse`, interdits
+  avec un compte), `good_faith` obligatoire, champ piège `homepage`. Son propre contenu : 422 ;
+  déjà en cours : 409 (`active_key`). Copie **textuelle** du contenu et empreinte de version.
+  Identité, explication et copie **chiffrées** en base. Sans compte : jeton de suivi de
+  48 caractères remis une fois (empreinte HMAC seulement, `TrackingToken`), renouvelé à chaque
+  email, porté dans le fragment de l'URL du frontend ; accusé de réception par email.
+  `POST /moderation/notices/{uuid}/lookup` (jeton dans le corps, 404 sinon). Avec un compte :
+  `GET /me/moderation/notices` et `/{uuid}`.
+- **Urgences** (décision 31) : `child_sexual_abuse` et `violence_terrorism` : objectif 24 h
+  (`processing_hours`, 7 jours pour les autres), en tête de file, **alerte immédiate**
+  (`UrgentNoticeAlert`) aux admins avec 2FA, sans aucun contenu, une fois par contenu en cours
+  d'examen. **Aucune image** d'un contenu signalé comme abus sexuels sur mineurs n'est réaffichée
+  dans l'administration (`images_withheld`).
+- **Administration** (`/admin/moderation`, **admins seulement**, `EnsureModerator`, 2FA de
+  session ; rédacteurs : 404) : `GET queue` (contenus signalés, urgents puis objectif le plus
+  proche, `overdue`, `meta.counts`), `GET targets/{type}/{ref}` (contenu actuel et `version`,
+  signalements avec leur copie, signalant `account`/`guest` et nom sans compte, **jamais l'email** ;
+  auteur : rôles, ancienneté, signalements et restrictions ; consultation inscrite au journal
+  d'audit), `POST targets/{type}/{ref}/decisions`, `GET decisions/{uuid}`,
+  `POST decisions/{uuid}/lift` (motif), `POST notices/{uuid}/referral` (trace d'une transmission
+  aux autorités, art. 18 : `pharos`, `police`, `gendarmerie`, `europol`, `other` ; rien n'est
+  envoyé automatiquement), `GET appeals`, `GET appeals/{uuid}`, `POST appeals/{uuid}/decide`.
+  Limiteur `moderation-admin`.
+- **Décision** (`DecideOnContent`, exposé des motifs art. 17 §3) : `measure`
+  (`restrict_visibility` ou `no_action`), `ground` (`illegal` + `legal_reference`, ou `terms` +
+  `terms_clause`), `category`, `facts` (30 à 3000), `correction_hint` (ce que l'auteur peut
+  corriger, décision 23), `version` (empreinte lue, 409 sinon). Traite tous les signalements en
+  cours du contenu. Jamais sur son propre contenu (403). « Aucune mesure » seulement sur
+  signalement (`manifestly_unfounded` facultatif). Aucun moyen automatisé (`automated` false).
+  Délai de recours : `appeal_window_months` (6).
+- **Emails** (`ModerationNotification`, file après commit, **chiffrés dans la file**, textes dans
+  `ModerationMail`) : accusé de réception et décision au signalant (sans les faits ni le titre du
+  contenu), exposé des motifs et levée à l'auteur, issue d'un recours. Catégories obligatoires
+  `moderation.notices` et `moderation.decisions` ; admins : `moderation.urgent_alerts`
+  (obligatoire), `moderation.digest` (`moderation:notify-moderators`, au plus toutes les 30 min).
+  **L'identité du signalant n'est jamais communiquée à l'auteur** (décision 29).
+- **Exposés des motifs pour l'auteur** : `GET /me/moderation/decisions` et `/{uuid}` (404 pour
+  tout autre utilisateur, admin compris).
+- **Recours** (`SubmitAppeal`, `DecideAppeal`, décision 21) : l'auteur contre une restriction en
+  vigueur (`POST /me/moderation/decisions/{uuid}/appeal`, aussi la voie du réexamen après
+  correction), le signalant contre une absence de mesure (`POST /me/moderation/notices/{uuid}/appeal`
+  ou `POST /moderation/notices/{uuid}/appeal` avec le jeton). Texte 30 à 5000 ; un en attente à la
+  fois, `max_appeals_per_decision` (3), délai : 409. Accepté : restriction levée, ou signalement
+  rouvert. Quatre yeux facultatif (`MODERATION_REQUIRE_DISTINCT_APPEAL_REVIEWER`, false par défaut).
+  Limiteur `moderation-appeals`.
+- **Events et Blog** : leurs décisions restrictives (refus, annulation, dépublication, refus de
+  révision ou d'annonce) envoient `ContentModerated` ; `RecordModuleDecision` en tire un exposé des
+  motifs non réversible (`source` `pre_publication_review` ou `own_initiative`, clause
+  `pre_publication_clause`) que l'auteur conteste comme les autres. Leurs emails ajoutent le lien
+  vers l'exposé des motifs (décision 26) ; rien d'autre ne change dans ces modules.
+- **Points de contact** (art. 11 et 12, décision 30) : `GET /moderation/info` (public) publie
+  `MODERATION_CONTACT_EMAIL`, `MODERATION_AUTHORITIES_EMAIL` (français et anglais), les catégories,
+  les clauses des CGU et le délai de recours. `security:check-config` exige les deux adresses et
+  une référence pour chaque clause des CGU (`terms_clauses.*.reference`) en production.
+- **Suppression de compte** (`ForgetUserModeration`) : signalements et décisions conservés sans
+  lien avec le compte, recours supprimés.
+- **Minimisation** (`moderation:prune`, 05:45, décision 27) : identité, explication et copie
+  effacées 12 mois après la clôture du signalement (`moderation_notices_months`) ; décisions,
+  recours et signalements supprimés 24 mois après la fin du délai de recours ou la levée
+  (`moderation_records_months`) ; une restriction en vigueur garde son exposé des motifs.
+- **Non prévu en V1** : suspension de compte (lot 8, décision 28), rapports de transparence et
+  base de données de la Commission (non obligatoires pour une petite entreprise).
+
 ## Catégories de services (noyau)
 
 Modèle partagé `App\Models\ServiceCategory` (table `service_categories`), utilisable par tous les
@@ -868,7 +970,9 @@ CGU (`terms`) et politique de confidentialité (`privacy`) versionnées (décisi
   annulation, retrait), `events.organizer` et `blog.author` (décisions de modération motivées).
   Facultatives : `directory.match_requests`, `directory.messages`, `events.reminders`,
   `events.announcements`, `events.moderation_digest`, `blog.moderation_digest`,
-  `compliance.reminders` (en plus de `emails_enabled` du module), `compliance.rule_coverage`.
+  `compliance.reminders` (en plus de `emails_enabled` du module), `compliance.rule_coverage`,
+  `moderation.digest`. Obligatoires aussi : `moderation.notices`, `moderation.decisions`,
+  `moderation.urgent_alerts`.
 - L'écouteur `App\Listeners\ApplyNotificationPreferences` (événement `NotificationSending`)
   abandonne l'envoi d'une catégorie facultative désactivée, **au moment de l'envoi** (après la
   file d'attente). Tout est activé par défaut : les modules n'ont rien changé à leur `via()`.
@@ -886,8 +990,8 @@ Obligatoire pour `admin` et `redacteur` (décision 17, `App\Support\TeamTwoFacto
 
 - Toute fonction d'équipe exige une 2FA confirmée **et** une session ouverte avec un code :
   `/admin/…` (`EnsureModerator`, vérifié sur chaque route par
-  `tests/Feature/Security/TeamTwoFactorTest.php`), publication directe d'un événement (admin) ou
-  d'un article (équipe).
+  `tests/Feature/Security/TeamTwoFactorTest.php`, `/admin/moderation` compris), publication directe
+  d'un événement (admin) ou d'un article (équipe).
 - `ProtectTeamTwoFactor` (dans `fortify.middleware`) : l'équipe ne peut pas désactiver sa 2FA
   (403 `two_factor_required`, journal `auth.two_factor_disable_denied`).
 - Un membre de l'équipe sans 2FA garde l'usage des fonctions ouvertes à tout compte : un blocage
@@ -916,7 +1020,10 @@ Obligatoire pour `admin` et `redacteur` (décision 17, `App\Support\TeamTwoFacto
   (60/h par modérateur), `premium-admin` (30/h par admin), `compliance-rules-admin` (60/h par
   admin), `compliance-writes` (120/h, 600/j), `compliance-companies` (10/j),
   `compliance-revenue` (60/h), `compliance-exports` (10/h), `compliance-feed-manage` (10/j),
-  `compliance-feed` (30/h par abonnement, 120/h par IP, route publique à jeton).
+  `compliance-feed` (30/h par abonnement, 120/h par IP, route publique à jeton),
+  `moderation-notices` (5/h et 20/j par IP, 10/j par compte, 5/j par email compté dans
+  `SubmitNotice`), `moderation-lookups` (30/h par IP), `moderation-appeals` (5/j),
+  `moderation-admin` (60/h par admin).
 - Règles de validation du texte saisi : `NoHtml` et `NoInvisibleCharacters` (caractères de contrôle
   sauf tabulation et retours à la ligne, contrôles de direction U+202A–202E et U+2066–2069, espace
   de largeur nulle U+200B, marques de direction U+200E et U+200F, U+2060–2064, BOM…), sur **tous**
@@ -952,7 +1059,13 @@ Obligatoire pour `admin` et `redacteur` (décision 17, `App\Support\TeamTwoFacto
   `compliance.calendar_feed_created|regenerated|revoked|invalid` (jamais le jeton ;
   `invalid` au plus une fois par heure et par IP), `compliance.export_downloaded`,
   `legal.document_published` (type, version, date d'entrée en vigueur), `legal.accepted` (type et
-  version), `auth.two_factor_disable_denied`.
+  version), `auth.two_factor_disable_denied`, `moderation.notice_submitted` (catégorie, priorité,
+  source), `moderation.notice_limit_exceeded`, `moderation.decision_taken` (mesure, fondement,
+  catégorie, nombre de signalements), `moderation.restriction_lifted`,
+  `moderation.self_moderation_denied`, `moderation.law_enforcement_referred` (autorité),
+  `moderation.appeal_submitted`, `moderation.appeal_decided` (issue),
+  `moderation.appeal_self_review_denied` (uuids seulement : jamais l'identité ni l'email du
+  signalant, son explication, la copie du contenu, les faits, ni le texte d'un recours).
   **Jamais le contenu d'un message, d'une demande, d'un commentaire de signalement, la description
   d'un événement, son lien de connexion, le texte d'une annonce, le contenu d'un article, un motif,
   une donnée des inscrits, ni un numéro d'entreprise, un nom d'entreprise, un montant, une note ou
@@ -970,8 +1083,10 @@ Obligatoire pour `admin` et `redacteur` (décision 17, `App\Support\TeamTwoFacto
   Compliance ou document légal `is_demo`, **aucune version en vigueur des CGU ou de la politique de
   confidentialité**…). Les avertissements (`TRUSTED_PROXIES` vide, réglages php.ini,
   `explicit_defaults_for_timestamp` à OFF, base qui ne répond pas,
-  `COMPLIANCE_REQUIRE_DISTINCT_VERIFIER` à false alors que deux admins ont la 2FA) ne bloquent
-  pas. Le schéma est lu par `App\Support\Database\TimestampSchema` (MySQL et MariaDB seulement) ;
+  `COMPLIANCE_REQUIRE_DISTINCT_VERIFIER` ou `MODERATION_REQUIRE_DISTINCT_APPEAL_REVIEWER` à false
+  alors que deux admins ont la 2FA) ne bloquent pas. Modération : erreur sans
+  `MODERATION_CONTACT_EMAIL` ou `MODERATION_AUTHORITIES_EMAIL` valides, ou sans référence pour une
+  clause des CGU (`config/moderation.php`, `terms_clauses`). Le schéma est lu par `App\Support\Database\TimestampSchema` (MySQL et MariaDB seulement) ;
   relancer la commande après `migrate`. Toute nouvelle variable de sécurité doit y être ajoutée,
   avec son test dans `tests/Feature/Security/CheckConfigCommandTest.php`.
 - URL générées : `AppServiceProvider` force la racine et le schéma de `APP_URL` (jamais l'en-tête
@@ -1057,7 +1172,7 @@ composer security            # composer audit : vulnérabilités connues des dé
   `moderator()`, `asModerator()`, `fromFrontend()`, `articleAuthor()`, `asAuthor()`,
   `articlePayload()`, `articleOf()`, `blogCategory()`, `makePremium()`, `complianceUser()`,
   `verifiedLegalForm()`, `verifiedDeadlineRule()`, `companyPayload()`, `complianceCompanyOf()`,
-  `legalDocumentsInForce()`, images…) sont dans
+  `legalDocumentsInForce()`, `restrictContent()`, `restrictContentWith()`, images…) sont dans
   `tests/Pest.php`. Les fonctions des fichiers de test sont globales : leur nom doit être unique
   dans tout `tests/`. Un test qui fixe l'horloge (`Carbon::setTestNow`) y revient avec
   `travelTo(<date fixe>)`, jamais `travelBack()` (qui revient à l'heure réelle). Une donnée de

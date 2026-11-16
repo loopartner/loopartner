@@ -30,8 +30,8 @@ de nouveaux paquets et ce que les utilisateurs voient ou subissent attendent une
 |---|---|
 | 0. Stabiliser Compliance | **terminé et fusionné dans `main`** le 2026-11-16 (avec la correction des noms d'index, `8e12edb`) |
 | 1. Socle transverse | **terminé et fusionné dans `main`** le 2026-11-16 |
-| 2. Signalements et modération (DSA) | **prochain lot**, à planifier |
-| 3 à 9 | à planifier |
+| 2. Signalements et modération (DSA) | plan validé le 2026-11-16 (décisions 21 à 31) ; **développé sur la branche `feature/moderation-dsa`, en attente de fusion** (après le résultat vert de l'intégration continue) |
+| 3 à 9 | à planifier ; le lot 3 est le prochain |
 | 10. Billing | plan validé dans son principe le 2026-11-16 ; développé à la fin du backend, juste avant le durcissement |
 | 11. Durcissement avant la bêta | à planifier |
 
@@ -79,6 +79,22 @@ recours ; journal d'audit ; alignement d'Events sur les briques de modération d
 - Chaque décision est motivée, notifiée à l'auteur, auditée, et peut faire l'objet d'un recours.
 - 401, 403 et 404 testés sur chaque route ; aucune donnée personnelle dans le canal security.
 
+**Réalisé** (décisions 21 à 31 ; règles et textes : `docs/v1/moderation-rules.md`)
+- Module `Moderation` : signalement de tout contenu public avec ou sans compte (profil, projet,
+  événement, annonce, article ; messages et demandes depuis la messagerie), accusé de réception,
+  suivi par jeton, signalements urgents (alerte immédiate, 24 h), file d'administration,
+  décisions motivées (exposé des motifs complet), levée, trace d'une transmission aux autorités,
+  recours de l'auteur et du signalant, purge, récapitulatif aux admins.
+- Contrat du noyau `ModerationTarget` : offres et avis n'existent pas encore ; un test exige un
+  adaptateur pour chaque nouvelle page publique de contenu (lots 3 et 6).
+- Events et Blog : décisions existantes reprises en exposés des motifs, comportement inchangé
+  (tests existants inchangés) ; Events aligné sur `VersionGuard`, `LinkInspection` et
+  `ActionThrottle`.
+
+**Reste hors du code** : validation par le juriste (`moderation-rules.md`, sections marquées) ;
+rédaction des clauses de modération des CGU (art. 14) et report de leurs numéros dans
+`config/moderation.php` (`security:check-config` l'exige en production).
+
 ## Lot 3 — Marketplace
 
 Offres des prestataires ; traçabilité des professionnels de la place de marché (DSA art. 30) ;
@@ -86,6 +102,10 @@ devis structurés (lignes, quantités, prix en centimes, validité, acceptation,
 des règles en base.
 
 **Critères d'acceptation**
+- Les offres sont signalables : adaptateur `ModerationTarget` déclaré dans `config/moderation.php`
+  et page publique ajoutée à `tests/Feature/Moderation/RestrictionSurfacesTest.php` (lot 2).
+- Traçabilité des professionnels (art. 30 à 32) : non obligatoire pour une petite entreprise
+  (art. 29) ; à trancher au plan du lot avec le juriste.
 - Devis calculé en entiers ; taux de TVA issu d'une règle vérifiée, jamais du code.
 - Le PDF d'un devis ne contient aucune donnée d'un autre utilisateur ; 404 sur le devis d'autrui.
 
@@ -115,6 +135,8 @@ privé du module Compliance (disque privé, URL signées).
 
 **Critères d'acceptation**
 - Un avis est impossible sans interaction vérifiable ; la méthode de vérification est affichée.
+- Les avis sont signalables (adaptateur `ModerationTarget`, lot 2) ; obligations d'information
+  du Code de la consommation sur les avis en ligne à valider avec le juriste.
 - Un document du coffre-fort n'est accessible qu'à son propriétaire (404 sinon), jamais par une
   URL publique, et il est supprimé avec le compte.
 

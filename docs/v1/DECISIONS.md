@@ -128,6 +128,33 @@ est gardé dans `docs/v1/ROADMAP.md`.
 | 19 | Plan Billing | **Paquet** : `stripe/stripe-php` seul, derrière une interface `StripeGateway` simulée dans les tests, installé seulement au lot Billing. **Premium payé** : alimente `premium_grants` par une Action publique d'Accounts (sources `trial` et `payment`). **Carte déjà utilisée pour un essai** : abonnement annulé juste après Checkout, rien n'est prélevé, email proposant de souscrire sans essai. **Avantages Premium des particuliers** : 25 projets publiés en même temps (10 en gratuit), 60 demandes en attente (30), 50 demandes par jour (20). **Délai de grâce** après un échec de paiement : 3 jours (configurable). **Stripe Tax** activé, prix TTC identique dans toute l'UE, à confirmer avec l'expert-comptable. |
 | 20 | Règle de travail | Un plan est toujours présenté avant de coder un lot. Les **décisions purement techniques** (structure du code, noms, index, découpage des commits, limites de débit cohérentes avec l'existant) sont tranchées par l'assistant et notées dans le plan. Sont soumis à l'utilisateur uniquement : **l'argent et la facturation**, **le droit** (CGU, CGV, RGPD, DSA, consommation), **les durées de conservation des données personnelles**, **les nouveaux paquets**, et **ce que les utilisateurs voient ou subissent** (règles métier, limites, emails, refus). |
 
+## Décisions du lot 2 : signalements et modération (validées le 2026-11-16)
+
+Plan validé avec les recommandations A à K et les précisions de l'utilisateur. Analyse du
+règlement (UE) 2022/2065 et sources : `docs/v1/moderation-rules.md`. Loopartner est traité comme
+une petite entreprise (art. 15 §2, 19 et 29 : à faire valider par le juriste).
+
+| # | Sujet | Décision |
+|---|---|---|
+| 21 | Recours interne | Appliqué **volontairement** (l'art. 20 ne s'impose pas à une petite entreprise) et aligné sur lui : **gratuit, en ligne, 6 mois** après la décision, examiné par un humain ; ouvert à l'auteur du contenu (contre une restriction) et au signalant (contre une absence de mesure). Un recours en attente à la fois, trois au plus par personne et par décision. |
+| 22 | Catégories de signalement | Arnaque ou fraude ; contenu haineux ou harcèlement ; vie privée ou données personnelles ; contrefaçon ou propriété intellectuelle ; activité ou profession illégale ; abus sexuels sur mineurs ; incitation à la violence ou terrorisme ; pratique commerciale trompeuse ; contraire aux CGU ; autre. Libellés à faire valider par le juriste. |
+| 23 | Profil prestataire masqué | Traité comme **non publié partout** (recherche, page publique, consultation des projets, événements et articles). L'exposé des motifs indique **ce que le prestataire doit corriger** quand c'est possible ; après correction, il demande le **réexamen par la voie du recours** (mesure proportionnée, art. 14 §4). |
+| 24 | Événement masqué | Retiré de l'agenda, inscriptions, rappels et annonces fermés ; les inscrits d'un événement à venir reçoivent un **email neutre** et gardent leur inscription. L'annulation définitive reste l'outil existant d'Events. |
+| 25 | Signalement sans compte | Ouvert à toute personne (art. 16) ; **pas de captcha** (nouveau service) : limites par IP, par compte et par email, champ piège, accusé de réception neutre. |
+| 26 | Emails d'Events et du Blog | Leurs emails de décision restrictive gagnent une ligne vers **l'exposé des motifs et le recours** ; c'est le seul changement visible dans ces modules (tests existants inchangés). |
+| 27 | Durées de conservation | Identité du signalant, explication et copie du contenu : **12 mois** après la clôture du signalement. Exposés des motifs, recours et signalements traités : **24 mois** après la fin du délai de recours ou la levée. |
+| 28 | Suspension de compte | **Reportée au lot 8** (back-office) : l'art. 23 ne s'impose pas à une petite entreprise ; le lot 2 agit contenu par contenu, plus le blocage existant. Toute suspension future aura son exposé des motifs (art. 17 §1 d). |
+| 29 | Identité du signalant | **Jamais révélée** à l'auteur du contenu en V1 ; l'admin voit « compte » ou « sans compte » et le nom donné sans compte, jamais l'email. |
+| 30 | Points de contact | `contact@loopartner.com` (utilisateurs, art. 12) et `legal@loopartner.com` (autorités, art. 11), en **français et anglais**, en variables d'environnement (`MODERATION_CONTACT_EMAIL`, `MODERATION_AUTHORITIES_EMAIL`), vérifiés par `security:check-config` en production. |
+| 31 | Signalements graves | « Abus sexuels sur mineurs » et « incitation à la violence ou terrorisme » : **alerte email immédiate** aux admins avec 2FA, **sans aucun contenu**, et tête de file. Objectifs de traitement en configuration : **24 heures** pour ces catégories, **7 jours** pour les autres ; la file affiche les retards. Procédure art. 18 (PHAROS) documentée dans `moderation-rules.md`, à faire valider par le juriste ; **aucun envoi automatique** aux autorités. Pour les abus sexuels sur mineurs, la copie conservée reste **textuelle** et aucune image n'est copiée ni réaffichée dans l'administration. |
+
+Décisions techniques du plan (décision 20) : module `Moderation` et contrat du noyau
+`ModerationTarget` (un adaptateur par type de contenu, déclaré dans `config/moderation.php`) ;
+restriction réversible par colonne (`moderation_restricted_at`) sans toucher au statut du contenu ;
+reprise de `abuse_reports` dans `moderation_notices` par une migration ; décisions d'Events et du
+Blog transmises par l'événement du noyau `ContentModerated` ; modération réservée aux admins
+(les rédacteurs gardent leurs flux du Blog).
+
 ## Décisions antérieures toujours en vigueur (rappel)
 
 - Compliance, quatre yeux : `compliance.require_distinct_verifier` à **false par défaut** tant que

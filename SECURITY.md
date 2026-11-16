@@ -75,8 +75,9 @@ signalement n'y est jamais écrit.**
 ## Mise en relation et messagerie : données personnelles et durées de conservation
 
 Les demandes de mise en relation et les messages sont des données personnelles. Ils ne sont visibles
-que des deux participants (tout autre utilisateur, administrateurs compris, reçoit une erreur 404 :
-il n'existe pas encore d'accès de modération). L'API n'expose jamais d'email, de téléphone ni
+que des deux participants (tout autre utilisateur, administrateurs compris, reçoit une erreur 404).
+Un message ou une demande signalés sont copiés pour la modération (module Moderation, voir plus
+bas) ; c'est le seul accès de l'équipe à leur contenu. L'API n'expose jamais d'email, de téléphone ni
 d'identifiant interne ; le nom d'un porteur de projet n'est révélé au prestataire qu'après
 l'acceptation de la demande. Les emails de notification ne contiennent ni le contenu des messages, ni
 de nom, ni le titre du projet d'un autre utilisateur.
@@ -87,8 +88,7 @@ de nom, ni le titre du projet d'un autre utilisateur.
 | Demande refusée, retirée ou expirée | 12 mois après ce changement de statut | supprimée |
 | Demande acceptée et sa conversation | tant que les deux comptes existent | voir ligne suivante |
 | Conversation dont un participant a supprimé son compte | 12 mois après la suppression du compte, pour l'autre participant (lecture seule, sans lien avec le compte supprimé) | supprimée avec tous ses messages |
-| Copie du contenu signalé et commentaire d'un signalement | 12 mois après le signalement | effacés |
-| Signalement clos par la modération | 12 mois après sa clôture | supprimé |
+| Signalement d'un message ou d'une demande | voir « Signalements et modération (DSA) » | — |
 
 - **Suppression de compte** : les demandes non acceptées de l'utilisateur sont supprimées tout de
   suite ; ses conversations restent lisibles par l'autre participant (intérêt légitime : historique
@@ -103,7 +103,7 @@ de nom, ni le titre du projet d'un autre utilisateur.
   politique de confidentialité.
 
 > **À faire avant l'ouverture au public** : reprendre ce tableau dans la **politique de
-> confidentialité**, et prévoir l'outil de modération des signalements (back-office).
+> confidentialité**.
 
 ## Événements : modération, données personnelles et durées de conservation
 
@@ -305,6 +305,58 @@ illisibles.**
 > `php artisan legal:publish`. Sans elles, l'inscription est fermée (503) et
 > `security:check-config` échoue.
 
+## Signalements et modération (DSA) : données personnelles et durées de conservation
+
+Module Moderation (lot 2, décisions 21 à 31 ; règles et textes à faire valider par le juriste :
+`docs/v1/moderation-rules.md`).
+
+- **Signalement ouvert à tous** (règlement sur les services numériques, art. 16), avec ou sans
+  compte. Sans compte, le signalant donne son nom et son email (facultatifs pour les abus sexuels
+  sur mineurs) ; il suit son signalement avec un **jeton secret** de 48 caractères, remis une
+  fois et renouvelé à chaque email, dont seule l'empreinte HMAC est stockée, et que le frontend
+  porte dans le fragment de l'URL (jamais envoyé aux serveurs ni écrit dans un journal).
+- **Abus** : limites par IP, par compte et par email (`moderation-notices`), champ piège, pas de
+  captcha (décision 25) ; corps des requêtes limité à 32 Ko.
+- **Chiffrement en base** : nom et email du signalant, explication, précision sur l'emplacement,
+  copie du contenu signalé, faits d'une décision, texte d'un recours. Les emails du module sont
+  aussi chiffrés dans la file d'attente.
+- **Copie du contenu** : uniquement textuelle. Pour un signalement d'abus sexuels sur mineurs,
+  aucune image n'est copiée ni réaffichée dans l'administration (décision 31).
+- **Confidentialité du signalant** : son identité n'est jamais communiquée à l'auteur du contenu
+  (décision 29) ; l'administration voit « compte » ou « sans compte » et le nom donné, jamais
+  l'email. Les emails au signalant ne contiennent ni les faits ni le titre du contenu.
+- **Accès** : traitement réservé aux admins avec double authentification et session ouverte avec
+  un code (404 pour les autres rôles, rédacteurs compris) ; un admin ne décide jamais sur son
+  propre contenu ; chaque décision, levée, recours, transmission aux autorités **et chaque
+  consultation d'un contenu signalé** est inscrite au journal d'audit. Le canal security ne
+  contient que des identifiants (jamais l'identité, l'explication, la copie, les faits ni le
+  texte d'un recours).
+- **Signalements urgents** (abus sexuels sur mineurs, violence ou terrorisme) : alerte immédiate
+  aux admins, sans aucun contenu ; objectif de traitement de 24 heures. La transmission aux
+  autorités (art. 18) est faite par un admin selon la procédure de `moderation-rules.md` ; rien
+  n'est envoyé automatiquement.
+
+| Données | Conservation | Ensuite |
+|---|---|---|
+| Identité et email du signalant, explication, précision, copie du contenu, jeton de suivi | 12 mois après la clôture du signalement (ou sa réception s'il est encore ouvert) | effacés |
+| Exposé des motifs, recours, signalements traités | 24 mois après la fin du délai de recours (6 mois) ou la levée, la plus tardive | supprimés ; une restriction en vigueur garde son exposé des motifs |
+| Signalement classé sans décision | 24 mois après sa clôture | supprimé |
+| Journal d'audit des décisions et des consultations | 24 mois | supprimé |
+
+- **Suppression de compte** : les signalements envoyés et ceux qui visent ses contenus sont
+  conservés pour la modération, sans lien avec le compte ; ses recours sont supprimés.
+- **Base légale proposée** (à faire valider par le juriste) : obligation légale (RGPD art. 6.1.c)
+  pour le traitement des signalements et l'exposé des motifs ; intérêt légitime (art. 6.1.f) pour
+  leur conservation et le recours interne volontaire.
+- **Réglage** : durées dans `backend/config/security.php` (`retention.moderation_*`), appliquées
+  chaque nuit par `moderation:prune`.
+
+> **À faire avant l'ouverture au public** : faire valider `docs/v1/moderation-rules.md` par le
+> juriste ; rédiger les clauses de modération des CGU (art. 14) et reporter leur numéro dans
+> `config/moderation.php` (`terms_clauses`, sinon `security:check-config` échoue) ; renseigner
+> `MODERATION_CONTACT_EMAIL` et `MODERATION_AUTHORITIES_EMAIL` ; reprendre ce tableau dans la
+> politique de confidentialité.
+
 ## Vérifications avant chaque mise en production
 
 Depuis `backend/`, sur le serveur de production :
@@ -343,15 +395,13 @@ Depuis `backend/`, sur le serveur de production :
 - Double authentification de l'équipe : obligatoire depuis le lot 1 pour les fonctions
   d'équipe ; reste à prévoir avec le back-office la création des comptes d'équipe avec 2FA
   imposée dès la première connexion.
-- Étendre le journal d'audit (`admin_audit_logs`, en place pour la modération des événements et
-  du Blog et pour le statut premium) aux futures actions d'administration (back-office), et aux
-  consultations de contenus signalés.
-- Signalement d'un article publié par les lecteurs, et commentaires (non prévus en v1 : charge de
-  modération et spam).
+- Étendre le journal d'audit (`admin_audit_logs`, en place pour la modération des événements, du
+  Blog et des signalements, consultations comprises, et pour le statut premium) aux futures actions
+  d'administration (back-office).
+- Commentaires sur les articles (non prévus en v1 : charge de modération et spam).
+- Suspension de compte, avec exposé des motifs (lot 8, décision 28).
 - Notification « nouvelle connexion » et liste des sessions actives, avec déconnexion à distance.
 - Alerte automatique (email ou outil de supervision) sur les avertissements du journal de sécurité
   (`projects.scraping_suspected`, `match_requests.limit_exceeded`, rafales de `auth.login_failed`).
-- Back-office de modération des signalements (avec journal d'audit des consultations de contenus
-  signalés).
 - Détection des coordonnées (email, téléphone, IBAN) partagées dans les messages, pour avertir
   l'utilisateur avant l'envoi.
