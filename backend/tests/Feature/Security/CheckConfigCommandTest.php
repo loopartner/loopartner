@@ -56,6 +56,11 @@ function safeProductionConfig(bool $devDependencies = false, array $ini = []): v
         'filesystems.disks.r2.endpoint' => 'https://compte.r2.cloudflarestorage.com',
         'filesystems.disks.r2.url' => 'https://media.loopartner.fr',
         'security.trusted_proxies' => '173.245.48.0/20',
+        'moderation.contact.users_email' => 'contact@loopartner.com',
+        'moderation.contact.authorities_email' => 'legal@loopartner.com',
+        ...collect(array_keys((array) config('moderation.terms_clauses')))
+            ->mapWithKeys(fn (string $key): array => ["moderation.terms_clauses.{$key}.reference" => 'Article 7'])
+            ->all(),
     ]);
 
     $ini = [...['zend.exception_ignore_args' => '1', 'expose_php' => '0'], ...$ini];
@@ -338,4 +343,38 @@ it('lit les documents légaux par défaut sur la base de test (démonstration et
     $this->artisan('security:check-config')
         ->expectsOutputToContain('legal_documents')
         ->assertFailed();
+});
+
+describe('modération (DSA)', function (): void {
+    it('échoue sans point de contact valide pour les utilisateurs ou les autorités', function (string $key, ?string $value, string $variable): void {
+        safeProductionConfig();
+        config(["moderation.contact.{$key}" => $value]);
+
+        $this->artisan('security:check-config')
+            ->expectsOutputToContain($variable)
+            ->assertFailed();
+    })->with([
+        'utilisateurs absent' => ['users_email', null, 'MODERATION_CONTACT_EMAIL'],
+        'utilisateurs invalide' => ['users_email', 'contact-loopartner', 'MODERATION_CONTACT_EMAIL'],
+        'autorités absent' => ['authorities_email', '', 'MODERATION_AUTHORITIES_EMAIL'],
+    ]);
+
+    it('échoue tant qu\'une clause des CGU citée par les décisions n\'a pas de référence', function (): void {
+        safeProductionConfig();
+        config(['moderation.terms_clauses.prohibited_content.reference' => null]);
+
+        $this->artisan('security:check-config')
+            ->expectsOutputToContain('moderation.terms_clauses.prohibited_content')
+            ->assertFailed();
+    });
+
+    it('avertit sans échouer quand un admin peut trancher le recours contre sa propre décision', function (): void {
+        safeProductionConfig();
+        config(['moderation.require_distinct_appeal_reviewer' => false, 'compliance.require_distinct_verifier' => true]);
+        fakeComplianceRules(['admins_with_two_factor' => 2, 'demo_rules' => 0]);
+
+        $this->artisan('security:check-config')
+            ->expectsOutputToContain('MODERATION_REQUIRE_DISTINCT_APPEAL_REVIEWER')
+            ->assertSuccessful();
+    });
 });

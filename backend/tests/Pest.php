@@ -753,3 +753,11 @@ function restrictContent(string $type, string $ref): string
 
     return $decision;
 }
+
+/**
+ * Masque un contenu par son adaptateur au nom d'une décision existante.
+ */
+function restrictContentWith(string $type, string $ref, string $decisionUuid): void
+{
+    ModerationTargets::get($type)->restrict($ref, $decisionUuid);
+}

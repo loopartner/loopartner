@@ -111,6 +111,7 @@ class ConfigAudit
         $this->checkDemoAccounts();
         $this->checkComplianceRules();
         $this->checkLegalDocuments();
+        $this->checkModeration();
 
         return $this->findings;
     }
@@ -363,6 +364,41 @@ class ConfigAudit
 
         if (config('compliance.require_distinct_verifier') !== true && $rules['admins_with_two_factor'] >= 2) {
             $this->warning('COMPLIANCE_REQUIRE_DISTINCT_VERIFIER', 'vaut false alors que '.$rules['admins_with_two_factor'].' admins ont la double authentification : l\'activer pour qu\'une règle administrative soit toujours vérifiée par un autre admin que son dernier auteur.');
+        }
+    }
+
+    /**
+     * Modération (DSA) : points de contact publiés (art. 11 pour les autorités, art. 12 pour les
+     * utilisateurs) et référence de chaque clause des CGU citée par les décisions (art. 17 §3 e)
+     * obligatoires ; recours contre sa propre décision possible alors que deux admins au moins ont
+     * la 2FA : avertissement (MODERATION_REQUIRE_DISTINCT_APPEAL_REVIEWER).
+     */
+    private function checkModeration(): void
+    {
+        foreach (['MODERATION_CONTACT_EMAIL' => 'users_email', 'MODERATION_AUTHORITIES_EMAIL' => 'authorities_email'] as $variable => $key) {
+            $email = config('moderation.contact.'.$key);
+
+            if (! is_string($email) || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+                $this->error($variable, 'doit contenir l\'adresse du point de contact publiée par GET /moderation/info (règlement sur les services numériques, art. 11 et 12).');
+            }
+        }
+
+        foreach ((array) config('moderation.terms_clauses') as $key => $clause) {
+            $reference = is_array($clause) ? ($clause['reference'] ?? null) : null;
+
+            if (! is_string($reference) || trim($reference) === '') {
+                $this->error('moderation.terms_clauses.'.$key, 'n\'a pas de référence : indiquer l\'article des CGU en vigueur (config/moderation.php) avant d\'ouvrir le service.');
+            }
+        }
+
+        try {
+            $admins = ($this->complianceRules)()['admins_with_two_factor'] ?? 0;
+        } catch (Throwable) {
+            return;
+        }
+
+        if (config('moderation.require_distinct_appeal_reviewer') !== true && $admins >= 2) {
+            $this->warning('MODERATION_REQUIRE_DISTINCT_APPEAL_REVIEWER', 'vaut false alors que '.$admins.' admins ont la double authentification : l\'activer pour qu\'un recours soit toujours examiné par un autre admin que l\'auteur de la décision.');
         }
     }
 

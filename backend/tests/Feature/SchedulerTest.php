@@ -116,3 +116,14 @@ it('traite la file d\'attente chaque minute, sans worker permanent ni chevauchem
     expect($matches)->toHaveKey(1)
         ->and((int) $matches[1])->toBeGreaterThan(0)->toBeLessThan(60);
 });
+
+it('planifie les tâches du module Moderation, sans chevauchement', function (string $command, string $expression): void {
+    $event = scheduledEvent($command);
+
+    expect($event)->not->toBeNull()
+        ->and($event->expression)->toBe($expression)
+        ->and($event->withoutOverlapping)->toBeTrue();
+})->with([
+    'purge' => ['moderation:prune', '45 5 * * *'],
+    'récapitulatif' => ['moderation:notify-moderators', '*/5 * * * *'],
+]);

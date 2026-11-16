@@ -102,6 +102,19 @@ Schedule::command('compliance:extend-calendars')
     ->dailyAt('01:30')
     ->withoutOverlapping();
 
+// Signalements et modération (module Moderation) : minimisation (durées dans
+// config/security.php, retention : moderation_notices_months, moderation_records_months).
+Schedule::command('moderation:prune')
+    ->dailyAt('05:45')
+    ->withoutOverlapping();
+
+// Modération : récapitulatif des signalements et recours en attente envoyé aux admins avec 2FA,
+// au plus une fois toutes les 30 minutes (config/moderation.php). Les signalements urgents ont
+// en plus leur alerte immédiate.
+Schedule::command('moderation:notify-moderators')
+    ->everyFiveMinutes()
+    ->withoutOverlapping(10);
+
 // File d'attente (driver database) : traitée chaque minute, sans worker permanent.
 // Le worker s'arrête dès que la file est vide, et au plus tard après 50 secondes pour ne pas
 // déborder sur le schedule:run suivant. Le verrou anti-chevauchement expire après 5 minutes
