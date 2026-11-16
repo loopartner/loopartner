@@ -277,6 +277,34 @@ illisibles.**
 > faire vérifier les règles françaises 2027 par un expert-comptable (aucune n'est vérifiée
 > aujourd'hui : le module n'est proposé à aucun utilisateur tant que ce n'est pas fait).
 
+## Consentements, notifications et double authentification de l'équipe
+
+- **CGU et politique de confidentialité versionnées** : chaque version est immuable (empreinte
+  SHA-256 du texte) ; l'inscription exige l'acceptation des versions en vigueur, et une nouvelle
+  version bloque l'utilisation (403 `consent_required`) jusqu'à son acceptation, sauf lecture des
+  documents, acceptation, déconnexion et suppression du compte. Une version peut être publiée à
+  l'avance pour informer les utilisateurs avant son entrée en vigueur.
+- **Preuve du consentement** : date (UTC) et adresse IP de chaque acceptation, conservées tant que
+  le compte existe, supprimées avec lui. Base légale : exécution du contrat (art. 6.1.b) et
+  obligation de pouvoir démontrer le consentement à la politique.
+- **Préférences de notifications** : l'utilisateur coupe les emails facultatifs ; les emails de
+  sécurité du compte, d'information sur un engagement (inscription à un événement) et les
+  décisions de modération motivées partent toujours.
+- **Équipe** : la double authentification est obligatoire pour les rôles `admin` et `redacteur`
+  (fonctions d'administration refusées sans 2FA confirmée et session ouverte avec un code ;
+  désactivation refusée et journalisée).
+
+| Données | Conservation | Ensuite |
+|---|---|---|
+| Acceptation d'une version des CGU ou de la politique (date, IP) | tant que le compte existe | supprimée avec le compte |
+| Versions des documents légaux | toujours (preuve du texte accepté) | jamais supprimées |
+| Préférences de notifications | tant que le compte existe | supprimées avec le compte |
+
+> **À faire avant l'ouverture au public** : faire rédiger les CGU et la politique de
+> confidentialité (reprenant les tableaux de ce fichier), puis les publier avec
+> `php artisan legal:publish`. Sans elles, l'inscription est fermée (503) et
+> `security:check-config` échoue.
+
 ## Vérifications avant chaque mise en production
 
 Depuis `backend/`, sur le serveur de production :
@@ -292,6 +320,8 @@ Depuis `backend/`, sur le serveur de production :
    colonne `ON UPDATE CURRENT_TIMESTAMP` hors `updated_at`) et l'absence de **données de
    démonstration** (comptes `<rôle>@example.com` vérifiés, règles administratives fictives) : une
    base de démonstration ne doit jamais être copiée en production.
+   Publier les documents légaux s'il n'y en a encore aucun (`php artisan legal:publish
+   <fichier.json>` pour les CGU, puis pour la politique de confidentialité).
    Les brouillons de règles administratives s'importent volontairement, jamais par un seeder :
    `php artisan compliance:import-rules database/data/compliance/fr-2027.draft.json`.
    Ne jamais lancer `db:seed` sans `--class` en production, ni définir `SEED_DEMO_DATA`.
@@ -310,8 +340,9 @@ Depuis `backend/`, sur le serveur de production :
 
 ## Chantiers de sécurité à venir
 
-- Double authentification **obligatoire** pour les rôles `admin` et `redacteur` (avec le back-office).
-  Elle est déjà exigée pour la modération des événements (compte et session).
+- Double authentification de l'équipe : obligatoire depuis le lot 1 pour les fonctions
+  d'équipe ; reste à prévoir avec le back-office la création des comptes d'équipe avec 2FA
+  imposée dès la première connexion.
 - Étendre le journal d'audit (`admin_audit_logs`, en place pour la modération des événements et
   du Blog et pour le statut premium) aux futures actions d'administration (back-office), et aux
   consultations de contenus signalés.

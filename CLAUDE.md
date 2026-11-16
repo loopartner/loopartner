@@ -24,6 +24,7 @@ entrepreneurs.
 - `frontend/` (à venir, après le lot 1) : Next.js et TypeScript, servi sur un autre sous-domaine.
   Il consomme l'API avec des cookies de session.
 - `docs/v1/` : feuille de route et décisions de la V1 (voir ci-dessus).
+- `.github/workflows/ci.yml` : intégration continue (voir « Qualité »).
 - `SECURITY.md` : signalement des vulnérabilités, principes de sécurité, journal de sécurité et
   vérifications avant chaque mise en production. La liste de contrôle de chaque tâche est la section
   « Sécurité : liste de contrôle obligatoire » ci-dessous.
@@ -216,6 +217,15 @@ utilitaires du module), `Console/Commands/` (commandes Artisan du module), `Noti
   désigné par son email (l'id interne n'est jamais exposé ; le journal n'en garde qu'une
   empreinte). Journal d'audit (`accounts.premium.granted|revoked`, avec le motif), canal security
   (`premium.granted|revoked`), limiteur `premium-admin`.
+- **Droits par fonctionnalité** (décision 5 révisée : Gratuit et un seul Premium, avantages selon
+  le rôle) : Action publique `GetEntitlements` (`EntitlementSet` : `plan` `free`/`premium` via
+  `IsPremium`, `role`, `features`) et `GET /me/entitlements`. Grille dans
+  `config/entitlements.php` (par rôle puis par plan) : entier = limite, `null` = illimité,
+  booléen, liste de choix, ou `['config' => 'cle']` (valeur lue à l'appel dans
+  `config/blog.php` ou `config/compliance.php` ; une clé inconnue lève une exception, jamais
+  « illimité »). Une fonctionnalité absente est fermée. Les noms contiennent un point : ne pas
+  utiliser la notation pointée de `config()` pour une fonctionnalité. Blog (`blog.article_quota`)
+  et Compliance (`compliance.*`) lisent cette grille. Plans en base et paiement : lot Billing.
 - Données de référence (rôles, catégories) : `ReferenceDataSeeder`, seul seeder à lancer en production :
   `php artisan db:seed --class="Database\Seeders\ReferenceDataSeeder" --force`.
 - Comptes de démonstration créés par `DatabaseSeeder` **uniquement si** `SEED_DEMO_DATA=true`,
@@ -238,6 +248,13 @@ utilitaires du module), `Console/Commands/` (commandes Artisan du module), `Noti
   codes `demo.*`, titres « [Démo] ») ; micro-entreprise de l'entrepreneur avec calendrier, parcours,
   tâche, échéance personnelle et chiffre d'affaires à 85 % d'un seuil ; deux entreprises pour le
   prestataire premium.
+- **Double authentification de l'équipe de démonstration** (obligatoire pour l'équipe) :
+  `redacteur@example.com` a aussi un secret fixe, `DatabaseSeeder::DEMO_REDACTEUR_TWO_FACTOR_SECRET`
+  (`LOOPARTNERDEMORD`, nom `Loopartner rédacteur (démo)`, codes de secours
+  `DEMO_REDACTEUR_RECOVERY_CODES`), à utiliser comme celui de l'admin ci-dessous.
+- **Documents légaux de démonstration** : version `DatabaseSeeder::DEMO_LEGAL_VERSION` (`demo-1`,
+  `is_demo`, textes « [Démo] » sans valeur juridique) des CGU et de la politique de
+  confidentialité, acceptée automatiquement par chaque compte de démonstration.
 - **Double authentification de `admin@example.com`** (démonstration uniquement) : activée et
   confirmée par le seeder avec un secret fixe, `DatabaseSeeder::DEMO_ADMIN_TWO_FACTOR_SECRET`
   (`LOOPARTNERDEMOAD`), pour tester la modération. Pour se connecter : ajouter un compte dans une
@@ -772,7 +789,10 @@ modules comme `User` et `Media`.
 Aucune réponse ne révèle si une adresse email correspond à un compte.
 
 1. **Inscription** : `POST /api/v1/auth/register` (`name`, `email`, `password`, `password_confirmation`,
-   `account_type`, et facultatifs `locale`, `timezone`, `country`). Réponse **toujours 202**
+   `account_type`, `legal_documents` = `{"terms": "<version>", "privacy": "<version>"}` (versions en
+   vigueur, lues dans `GET /legal/documents`), et facultatifs `locale`, `timezone`, `country`).
+   Version absente ou périmée : 422 sur `legal_documents` ; aucune version en vigueur : **503**
+   `{"code": "legal_documents_unavailable"}`. Réponse **toujours 202**
    `{"message": "Vérifiez votre boîte mail pour terminer votre inscription."}`, que l'adresse soit libre
    ou déjà utilisée. **L'utilisateur n'est pas connecté.** Seules les erreurs de validation (422)
    indépendantes de l'existence du compte sont renvoyées (mot de passe trop court ou compromis…).
@@ -794,12 +814,85 @@ Aucune réponse ne révèle si une adresse email correspond à un compte.
 5. **Mot de passe oublié** : `POST /api/v1/auth/forgot-password` répond **toujours 200** avec le même
    message, que l'adresse existe ou non. Le lien part par la file d'attente vers
    `FRONTEND_URL/reset-password?token=…&email=…`, qui appelle `POST /api/v1/auth/reset-password`.
+6. **Nouvelle version des CGU ou de la politique** : toute route authentifiée du groupe `api`
+   répond **403 `{"message", "code": "consent_required", "documents": [{type, version, title,
+   effective_at}]}`** jusqu'à l'acceptation (`POST /me/legal/accept`). Voir « Documents légaux et
+   consentements ».
+7. **Équipe sans 2FA** : les routes `/admin/…` répondent **403 `{"code": "two_factor_required",
+   "reason": "not_enabled" | "session"}`** ; `GET /me` expose `two_factor_required`.
 - Le CORS n'autorise que `FRONTEND_URL`, avec les cookies (`supports_credentials`).
 - Variables d'environnement : `FRONTEND_URL`, `SANCTUM_STATEFUL_DOMAINS`, `SESSION_DOMAIN`.
 - Mots de passe : 12 caractères minimum, et refus des mots de passe présents dans des fuites connues
   (`Password::defaults()` dans `AppServiceProvider`).
 - Rôles (spatie/laravel-permission, garde `web`) : `particulier`, `prestataire`, `entrepreneur`,
   `redacteur`, `admin`. Ils sont créés par `RoleSeeder`.
+
+## Documents légaux et consentements (noyau)
+
+CGU (`terms`) et politique de confidentialité (`privacy`) versionnées (décision 14) :
+`App\Models\LegalDocument`, `LegalAcceptance`, `App\Support\Legal\LegalDocuments`,
+`LegalDocumentType`.
+
+- **Publication** : `php artisan legal:publish <fichier.json>`
+  (`{"type", "version", "effective_at", "title": {"fr", "en"}, "body": {"fr", "en"}}`, texte brut
+  sans HTML ; version `[A-Za-z0-9._-]`, 32 caractères au plus). Une version publiée n'est jamais
+  modifiée ni supprimée (empreinte `content_hash` SHA-256) ; `effective_at` (UTC, maintenant par
+  défaut) ne peut pas être passé. Publiée à l'avance, elle est annoncée (`upcoming`). Le texte des
+  documents réels reste à rédiger (juriste) : aucun n'est livré.
+- **Version en vigueur** : la plus récente dont `effective_at` est passé. `is_demo` : poste local
+  seulement.
+- **Blocage** : middleware du noyau `EnsureLegalConsent`, ajouté au groupe `api` (noyau et modules)
+  et placé après l'authentification ; il ne concerne que les routes authentifiées. Routes permises
+  (`EnsureLegalConsent::ALLOWED_ROUTES`) : lire les documents, `GET /me/legal`,
+  `POST /me/legal/accept`, `DELETE /me`. La déconnexion (Fortify) n'est pas dans le groupe `api`.
+  Sans aucune version en vigueur (base neuve, tests), rien n'est exigé des comptes mais
+  l'inscription répond 503 et `security:check-config` échoue.
+- **Endpoints** : `GET /legal/documents` (public : `current` et `upcoming` de chaque type, sans le
+  texte), `GET /legal/documents/{type}?version=` (public : texte, `content_hash`), `GET /me/legal`
+  (`consent_required`, documents acceptés ou non, `accepted_at`), `POST /me/legal/accept`
+  (`{"documents": {"terms": "<version>", "privacy": "<version>"}}`, versions en vigueur exactes,
+  sinon 422 ; limiteur `legal-acceptances`).
+- **Preuve** : `legal_acceptances` (date UTC, IP), écrite à l'inscription dans la même transaction
+  que le compte, supprimée avec le compte ; un document accepté ne se supprime pas (`restrict`).
+- Tests : `legalDocumentsInForce()` (crée les versions si besoin et renvoie
+  `{"terms", "privacy"}`), utilisé par `registrationPayload()`.
+
+## Notifications (noyau)
+
+- Chaque notification implémente `App\Support\Notifications\CategorizedNotification`
+  (`notificationCategory()`), vérifié par `tests/Feature/Core/NotificationPreferencesTest.php`.
+  Catégories dans `config/notifications.php` : `mandatory` (toujours envoyée), `roles` (qui la voit),
+  `label` (fr, en). Canal : `mail` seulement.
+- Obligatoires : `account.security`, `events.participation` (confirmation, changement important,
+  annulation, retrait), `events.organizer` et `blog.author` (décisions de modération motivées).
+  Facultatives : `directory.match_requests`, `directory.messages`, `events.reminders`,
+  `events.announcements`, `events.moderation_digest`, `blog.moderation_digest`,
+  `compliance.reminders` (en plus de `emails_enabled` du module), `compliance.rule_coverage`.
+- L'écouteur `App\Listeners\ApplyNotificationPreferences` (événement `NotificationSending`)
+  abandonne l'envoi d'une catégorie facultative désactivée, **au moment de l'envoi** (après la
+  file d'attente). Tout est activé par défaut : les modules n'ont rien changé à leur `via()`.
+  `Notification::fake()` ne déclenche pas cet écouteur.
+- `GET|PUT /me/notification-preferences` (email vérifié non requis) :
+  `{"preferences": [{"category", "channel": "mail", "enabled": false}]}` ; catégorie d'un autre
+  rôle, inconnue ou obligatoire désactivée : 422. Table `notification_preferences` (choix
+  explicites seulement), supprimée avec le compte.
+- Nouvelle notification : implémenter l'interface et déclarer sa catégorie dans
+  `config/notifications.php`.
+
+## Double authentification de l'équipe
+
+Obligatoire pour `admin` et `redacteur` (décision 17, `App\Support\TeamTwoFactor`) :
+
+- Toute fonction d'équipe exige une 2FA confirmée **et** une session ouverte avec un code :
+  `/admin/…` (`EnsureModerator`, vérifié sur chaque route par
+  `tests/Feature/Security/TeamTwoFactorTest.php`), publication directe d'un événement (admin) ou
+  d'un article (équipe).
+- `ProtectTeamTwoFactor` (dans `fortify.middleware`) : l'équipe ne peut pas désactiver sa 2FA
+  (403 `two_factor_required`, journal `auth.two_factor_disable_denied`).
+- Un membre de l'équipe sans 2FA garde l'usage des fonctions ouvertes à tout compte : un blocage
+  global changerait le comportement attendu par les tests de Directory et de Compliance (comptes
+  d'équipe sans 2FA qui reçoivent 404). Le frontend impose l'activation grâce à
+  `two_factor_required` (`GET /me`).
 
 ## Sécurité transversale
 
@@ -812,7 +905,7 @@ Aucune réponse ne révèle si une adresse email correspond à un compte.
   (`rate_limits`) : `login` (5/min par email + IP, 30/h par email), `two-factor` (5/min, 20/h par
   connexion en cours), `register` (30/h par IP), `forgot-password` (5/h par email, 20/h par IP),
   `reset-password` (10/h par IP), `password-update` et `password-confirm` (5/min par utilisateur),
-  `verification` (3/min, 10/h), `api` (60/min), `media-uploads` (20/min), `account-deletion` (6/min),
+  `verification` (3/min, 10/h), `api` (60/min), `media-uploads` (20/min), `account-deletion` (6/min), `legal-acceptances` (20/h),
   `projects-browse` (30/min, 500/j), `match-requests` (10/h, 20/j, propositions et contacts confondus),
   `messages` (10/min, 300/j), `reports` (10/j), `blocks` (20/j), `event-writes` (60/h, 300/j),
   `event-submissions` (5/h, 15/j), `event_revisions` (10/h, 30/j, compté par `SubmitRevision`),
@@ -856,7 +949,9 @@ Aucune réponse ne révèle si une adresse email correspond à un compte.
   `compliance.rule_self_verification_denied`, `compliance.rules_imported`,
   `compliance.company_created|deleted`, `compliance.premium_required` (avec `feature`),
   `compliance.calendar_feed_created|regenerated|revoked|invalid` (jamais le jeton ;
-  `invalid` au plus une fois par heure et par IP), `compliance.export_downloaded`.
+  `invalid` au plus une fois par heure et par IP), `compliance.export_downloaded`,
+  `legal.document_published` (type, version, date d'entrée en vigueur), `legal.accepted` (type et
+  version), `auth.two_factor_disable_denied`.
   **Jamais le contenu d'un message, d'une demande, d'un commentaire de signalement, la description
   d'un événement, son lien de connexion, le texte d'une annonce, le contenu d'un article, un motif,
   une donnée des inscrits, ni un numéro d'entreprise, un nom d'entreprise, un montant, une note ou
@@ -870,8 +965,9 @@ Aucune réponse ne révèle si une adresse email correspond à un compte.
   sur toute valeur dangereuse (`APP_DEBUG`, cookies de session, Sanctum, CORS, `LOG_LEVEL`,
   `MAIL_MAILER`, dépendances de développement installées, colonne réelle avec
   `ON UPDATE CURRENT_TIMESTAMP` hors `updated_at`, **base de démonstration** : compte de
-  démonstration vérifié `<rôle>@example.com` (`ConfigAudit::DEMO_ACCOUNT_EMAILS`) ou règle
-  Compliance `is_demo`…). Les avertissements (`TRUSTED_PROXIES` vide, réglages php.ini,
+  démonstration vérifié `<rôle>@example.com` (`ConfigAudit::DEMO_ACCOUNT_EMAILS`), règle
+  Compliance ou document légal `is_demo`, **aucune version en vigueur des CGU ou de la politique de
+  confidentialité**…). Les avertissements (`TRUSTED_PROXIES` vide, réglages php.ini,
   `explicit_defaults_for_timestamp` à OFF, base qui ne répond pas,
   `COMPLIANCE_REQUIRE_DISTINCT_VERIFIER` à false alors que deux admins ont la 2FA) ne bloquent
   pas. Le schéma est lu par `App\Support\Database\TimestampSchema` (MySQL et MariaDB seulement) ;
@@ -939,6 +1035,18 @@ vendor/bin/phpstan analyse --memory-limit=1G   # Larastan niveau 6
 composer security            # composer audit : vulnérabilités connues des dépendances
 ```
 
+- **Les tests ne lisent jamais `backend/.env`** (`tests/TestCase.php` : dossier
+  d'environnement `tests/`) : toute leur configuration est dans `phpunit.xml` (dont une `APP_KEY`
+  publique de test). Une variable d'environnement déjà définie l'emporte sur `phpunit.xml`. Hors
+  SQLite, les tests refusent une base dont le nom n'annonce pas une base de test (`testing`,
+  `<nom>_test`, `<nom>_testing`) : ils la vident (`RefreshDatabase`).
+- **Intégration continue** (`.github/workflows/ci.yml`, GitHub Actions) : à chaque push, sur
+  toutes les branches (pas de pull request : la fusion se fait en local après un résultat vert).
+  Job « Qualité et tests (SQLite) » : Pint, PHPStan, `composer security`, tests. Puis, sur
+  **MariaDB 10.4**, **MariaDB 11.8** et **MySQL 8.0** : migrations réelles, `ReferenceDataSeeder`,
+  données de démonstration, toute la suite (base `testing`). Sur ces serveurs,
+  `tests/Feature/Core/TestEnvironmentTest.php` contrôle aussi le schéma réel (aucune colonne
+  `ON UPDATE CURRENT_TIMESTAMP` hors `updated_at`). Résultat : onglet **Actions** du dépôt GitHub.
 - La limite mémoire par défaut de PHP (128 Mo) ne suffit plus : `phpunit.xml` fixe 512 Mo pour les
   tests, et PHPStan se lance avec `--memory-limit=1G`.
 - Les helpers de test partagés (`serviceCategory()`, `projectOwner()`, `browsingProvider()`,
@@ -948,7 +1056,7 @@ composer security            # composer audit : vulnérabilités connues des dé
   `moderator()`, `asModerator()`, `fromFrontend()`, `articleAuthor()`, `asAuthor()`,
   `articlePayload()`, `articleOf()`, `blogCategory()`, `makePremium()`, `complianceUser()`,
   `verifiedLegalForm()`, `verifiedDeadlineRule()`, `companyPayload()`, `complianceCompanyOf()`,
-  images…) sont dans
+  `legalDocumentsInForce()`, images…) sont dans
   `tests/Pest.php`. Les fonctions des fichiers de test sont globales : leur nom doit être unique
   dans tout `tests/`. Un test qui fixe l'horloge (`Carbon::setTestNow`) y revient avec
   `travelTo(<date fixe>)`, jamais `travelBack()` (qui revient à l'heure réelle). Une donnée de

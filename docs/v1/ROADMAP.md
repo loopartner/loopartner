@@ -23,7 +23,7 @@ en parallèle des lots 2 et suivants (accessibilité RGAA, parcours de bout en b
 | Lot | État |
 |---|---|
 | 0. Stabiliser Compliance | **terminé et fusionné dans `main`** le 2026-11-16 (avec la correction des noms d'index, `8e12edb`) |
-| 1. Socle transverse | plan validé le 2026-11-16, en cours (branche `feature/lot1-socle`) |
+| 1. Socle transverse | terminé le 2026-11-16, en attente de validation (branche `feature/lot1-socle`, non fusionnée ; jobs MariaDB et MySQL de l'intégration continue à vérifier au premier push) |
 | 2 à 11 | à planifier |
 
 ## Lot 0 — Stabiliser le module Compliance
