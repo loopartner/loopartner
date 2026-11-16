@@ -148,6 +148,8 @@ class DatabaseSeeder extends Seeder
             $this->seedDemoAdminTwoFactor();
             $this->seedDemoEvents();
             $this->seedDemoArticles();
+            // Après les articles : le prestataire y reçoit son statut premium (deux entreprises).
+            $this->call(ComplianceDemoSeeder::class);
         }
     }
 

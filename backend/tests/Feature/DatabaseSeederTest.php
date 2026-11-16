@@ -8,6 +8,12 @@ use App\Modules\Blog\Enums\ArticleStatus;
 use App\Modules\Blog\Enums\AuthorKind;
 use App\Modules\Blog\Models\Article;
 use App\Modules\Blog\Support\ArticleQuota;
+use App\Modules\Compliance\Models\Company;
+use App\Modules\Compliance\Models\ComplianceRule;
+use App\Modules\Compliance\Models\Deadline;
+use App\Modules\Compliance\Models\Journey;
+use App\Modules\Compliance\Models\Task;
+use App\Modules\Compliance\Models\ThresholdAlert;
 use App\Modules\Directory\Enums\MatchRequestStatus;
 use App\Modules\Directory\Enums\MatchRequestType;
 use App\Modules\Directory\Enums\ProjectStatus;
@@ -17,6 +23,7 @@ use App\Modules\Directory\Models\Project;
 use App\Modules\Events\Enums\EventStatus;
 use App\Modules\Events\Models\Event;
 use App\Modules\Events\Models\EventRegistration;
+use Database\Seeders\ComplianceDemoSeeder;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\ServiceCategorySeeder;
 use Illuminate\Support\Carbon;
@@ -215,4 +222,50 @@ it('active la double authentification de l\'admin de démonstration avec un secr
     fromFrontend()->getJson('/api/v1/admin/events/queue')
         ->assertOk()
         ->assertJsonPath('meta.counts', ['event' => 1, 'revision' => 1, 'announcement' => 0]);
+});
+
+it('crée le suivi administratif de démonstration avec des règles fictives, sans email, et peut être relancé', function (): void {
+    allowDemoSeeding();
+    Carbon::setTestNow('2026-11-13 10:00:00');
+
+    $this->seed(DatabaseSeeder::class);
+    $this->seed(DatabaseSeeder::class);
+
+    $entrepreneur = User::query()->where('email', 'entrepreneur@example.com')->sole();
+    $provider = User::query()->where('email', 'prestataire@example.com')->sole();
+    $company = Company::query()->where('user_id', $entrepreneur->id)->sole();
+
+    // Règles fictives, vérifiées, toutes marquées comme démonstration ; aucun brouillon réel.
+    expect(ComplianceRule::query()->count())->toBeGreaterThan(5)
+        ->and(ComplianceRule::query()->where('is_demo', false)->count())->toBe(0)
+        ->and(ComplianceRule::query()->where('code', 'not like', 'demo.%')->count())->toBe(0)
+        ->and(ComplianceRule::query()->get()->every(fn (ComplianceRule $rule): bool => str_starts_with($rule->title['fr'], '[Démo]')))->toBeTrue();
+
+    // Entrepreneur : calendrier, tâches, parcours, chiffre d'affaires proche du seuil.
+    $thresholds = $this->actingAs($entrepreneur)->getJson("/api/v1/me/compliance/companies/{$company->uuid}/thresholds")
+        ->assertOk()
+        ->json('data.thresholds');
+    $ceiling = collect($thresholds)->firstWhere('code', 'demo.micro.ceiling.services');
+
+    expect(Deadline::query()->where('company_id', $company->id)->where('source', 'rule')->count())->toBeGreaterThan(0)
+        ->and(Deadline::query()->where('company_id', $company->id)->where('source', 'custom')->count())->toBe(1)
+        ->and(Journey::query()->where('company_id', $company->id)->count())->toBe(1)
+        ->and(Task::query()->where('company_id', $company->id)->count())->toBeGreaterThan(3)
+        ->and($ceiling['ratio_basis_points'])->toBeGreaterThanOrEqual(8000)->toBeLessThan(10_000)
+        ->and(ThresholdAlert::query()->where('company_id', $company->id)->where('level', 80)->exists())->toBeTrue();
+
+    // Prestataire premium : deux entreprises.
+    expect(Company::query()->where('user_id', $provider->id)->count())->toBe(2);
+
+    // Aucun email mis en file d'attente.
+    expect(DB::table('jobs')->count())->toBe(0);
+});
+
+it('ne crée aucune règle ni entreprise de démonstration hors du poste local', function (): void {
+    $this->seed(DatabaseSeeder::class);
+
+    expect(ComplianceRule::query()->count())->toBe(0)
+        ->and(Company::query()->count())->toBe(0);
+
+    expect(fn () => $this->seed(ComplianceDemoSeeder::class))->toThrow(RuntimeException::class);
 });
