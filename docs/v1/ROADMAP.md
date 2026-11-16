@@ -23,8 +23,9 @@ en parallèle des lots 2 et suivants (accessibilité RGAA, parcours de bout en b
 | Lot | État |
 |---|---|
 | 0. Stabiliser Compliance | **terminé et fusionné dans `main`** le 2026-11-16 (avec la correction des noms d'index, `8e12edb`) |
-| 1. Socle transverse | terminé le 2026-11-16, en attente de validation (branche `feature/lot1-socle`, non fusionnée ; jobs MariaDB et MySQL de l'intégration continue à vérifier au premier push) |
-| 2 à 11 | à planifier |
+| 1. Socle transverse | **terminé et fusionné dans `main`** le 2026-11-16 |
+| 2. Billing | plan détaillé en attente de validation (branche `feature/billing`) |
+| 3 à 11 | à planifier |
 
 ## Lot 0 — Stabiliser le module Compliance
 
@@ -60,7 +61,46 @@ authentification obligatoire pour l'équipe. Décisions 13 à 17.
 - Blog et Compliance inchangés (tous leurs tests existants verts).
 - Un membre de l'équipe sans 2FA ne peut pas utiliser une fonction d'administration.
 
-## Lot 2 — Signalements et modération (DSA)
+## Lot 2 — Billing
+
+Prochain lot après le lot 1 (décisions 4 et 5 révisées, 18). Offre **Gratuit et un seul
+Premium**, au même prix pour tous les rôles, mensuel ou annuel ; avantages selon le rôle
+(`GetEntitlements`). **Stripe** : Checkout hébergé (carte et 3-D Secure chez Stripe), portail
+client, factures Stripe ; Loopartner vendeur (TVA OSS et factures, à valider avec
+l'expert-comptable). **Essai gratuit de 30 jours** (configurable) avec carte dès le début,
+0 € prélevé, une seule fois par personne (compte et empreinte de carte). Information avant la
+souscription, **CGV** versionnées et acceptées avant tout abonnement, rappel avant la fin de
+l'essai, information avant chaque renouvellement annuel, résiliation en quelques clics,
+fonction de rétractation en ligne, relances de paiement Stripe, factures accessibles depuis le
+compte, webhooks idempotents, suppression du compte avec annulation immédiate de l'abonnement.
+Premiers avantages Premium des particuliers (limites de projets et de demandes en
+configuration). Brouillon des textes destinés aux utilisateurs : `docs/v1/billing-rules.md`
+(à faire valider par un juriste).
+
+**Critères d'acceptation**
+- Aucun prix, montant, durée d'essai, quota ni taux dans le code ; identifiants des prix Stripe
+  en configuration.
+- Aucune donnée de carte sur nos serveurs ; seuls des identifiants Stripe sont stockés.
+- Un webhook rejoué ou reçu dans le désordre n'a aucun effet en double (signature vérifiée,
+  événements déjà traités ignorés) ; route limitée en débit.
+- Une personne ne bénéficie qu'une fois de l'essai (même compte, ou même carte sur un autre
+  compte, testé) ; sans droit à l'essai, l'utilisateur voit avant de payer qu'il est débité tout
+  de suite.
+- L'écran d'information avant souscription donne le prix TTC, la périodicité, la durée de
+  l'essai, la date exacte du premier prélèvement, la date du rappel, la reconduction, la façon
+  d'annuler et le lien vers les CGV ; les CGV en vigueur sont acceptées et tracées avant tout
+  abonnement.
+- Rappel de fin d'essai (7 jours avant, configurable) et information avant chaque renouvellement
+  annuel, sans doublon, dans une catégorie de notification obligatoire.
+- Résiliation en quelques clics depuis le compte et le portail Stripe, avec email de
+  confirmation ; annulée pendant l'essai : aucun prélèvement ; après : Premium jusqu'à la fin de
+  la période payée.
+- La fin d'un paiement ramène aux droits gratuits sans perte de données ; la suppression du
+  compte annule l'abonnement chez Stripe immédiatement.
+- `security:check-config` échoue sur une clé Stripe manquante ou une clé de test en production.
+- Aucun appel réseau réel à Stripe dans les tests.
+
+## Lot 3 — Signalements et modération (DSA)
 
 Signalement générique de tout contenu public ; file d'administration ; décisions motivées ;
 recours ; journal d'audit ; alignement d'Events sur les briques de modération du noyau.
@@ -70,7 +110,7 @@ recours ; journal d'audit ; alignement d'Events sur les briques de modération d
 - Chaque décision est motivée, notifiée à l'auteur, auditée, et peut faire l'objet d'un recours.
 - 401, 403 et 404 testés sur chaque route ; aucune donnée personnelle dans le canal security.
 
-## Lot 3 — Marketplace
+## Lot 4 — Marketplace
 
 Offres des prestataires ; traçabilité des professionnels de la place de marché (DSA art. 30) ;
 devis structurés (lignes, quantités, prix en centimes, validité, acceptation, PDF), TVA lue dans
@@ -80,7 +120,7 @@ des règles en base.
 - Devis calculé en entiers ; taux de TVA issu d'une règle vérifiée, jamais du code.
 - Le PDF d'un devis ne contient aucune donnée d'un autre utilisateur ; 404 sur le devis d'autrui.
 
-## Lot 4 — Rendez-vous et agenda
+## Lot 5 — Rendez-vous et agenda
 
 Rendez-vous natifs (créneaux, confirmation, annulation, rappels, `.ics`) ; agenda personnel unifié
 (événements, échéances, rendez-vous) ; abonnement `.ics` unique.
@@ -89,7 +129,7 @@ Rendez-vous natifs (créneaux, confirmation, annulation, rappels, `.ics`) ; agen
 - Aucun créneau réservé deux fois, même en cas de demandes simultanées.
 - L'abonnement ne contient aucune donnée privée au-delà des titres et des dates.
 
-## Lot 5 — Workspaces et onboarding
+## Lot 6 — Workspaces et onboarding
 
 Module Workspaces (privé par défaut) : objectifs, étapes, tâches, avancement, lien facultatif vers
 une annonce Directory ; parcours d'onboarding.
@@ -97,26 +137,6 @@ une annonce Directory ; parcours d'onboarding.
 **Critères d'acceptation**
 - Parcours complet de l'inscription à la première tâche.
 - Aucune donnée d'un workspace n'est publique sans action explicite ; 404 sur le workspace d'autrui.
-
-## Lot 6 — Billing
-
-Offre de la décision 5 révisée : **Gratuit et un seul Premium**, au même prix pour tous les rôles,
-avantages adaptés au rôle (`GetEntitlements`, déjà en configuration depuis le lot 1). Choix du
-prestataire de paiement, **marchand de référence (Paddle ou équivalent) privilégié** face à
-Stripe (TVA de chaque pays de l'UE et factures), après vérification du calendrier de la
-facturation électronique française ; aucun paquet installé avant ce lot. Plans et prix en base
-(mensuel et annuel), **offre de lancement** (2 premiers mois à 2 €, une seule fois par personne,
-protection contre les comptes multiples), abonnements, webhooks, factures, relances ; périodes
-premium `source = payment` à côté des attributions manuelles.
-
-**Critères d'acceptation**
-- Un webhook rejoué n'a aucun effet en double (traitement idempotent, signature vérifiée).
-- La fin d'un paiement ramène aux droits gratuits sans perte de données.
-- Aucun prix, durée ou montant d'offre de lancement, quota ni taux dans le code.
-- Le prix après la promotion est affiché clairement avant le paiement ; l'utilisateur est informé
-  avant le passage au prix normal ; la résiliation se fait en ligne en quelques clics.
-- Une personne ne bénéficie qu'une fois de l'offre de lancement (règle testée, y compris avec un
-  second compte).
 
 ## Lot 7 — Avis, ressources et coffre-fort documentaire
 
