@@ -30,8 +30,9 @@ de nouveaux paquets et ce que les utilisateurs voient ou subissent attendent une
 |---|---|
 | 0. Stabiliser Compliance | **terminé et fusionné dans `main`** le 2026-11-16 (avec la correction des noms d'index, `8e12edb`) |
 | 1. Socle transverse | **terminé et fusionné dans `main`** le 2026-11-16 |
-| 2. Signalements et modération (DSA) | plan validé le 2026-11-16 (décisions 21 à 31) ; **développé sur la branche `feature/moderation-dsa`, en attente de fusion** (après le résultat vert de l'intégration continue) |
-| 3 à 9 | à planifier ; le lot 3 est le prochain |
+| 2. Signalements et modération (DSA) | **terminé et fusionné dans `main`** le 2026-11-16 (décisions 21 à 31) |
+| 3. Marketplace | à planifier ; **c'est le prochain lot** |
+| 4 à 9 | à planifier |
 | 10. Billing | plan validé dans son principe le 2026-11-16 ; développé à la fin du backend, juste avant le durcissement |
 | 11. Durcissement avant la bêta | à planifier |
 
@@ -71,6 +72,8 @@ authentification obligatoire pour l'équipe. Décisions 13 à 17.
 
 ## Lot 2 — Signalements et modération (DSA)
 
+**Terminé et fusionné dans `main` le 2026-11-16.**
+
 Signalement générique de tout contenu public ; file d'administration ; décisions motivées ;
 recours ; journal d'audit ; alignement d'Events sur les briques de modération du noyau.
 
@@ -109,10 +112,12 @@ des règles en base. Premium (décision 33) : **comparateur de devis** pour le p
   (art. 29) ; à trancher au plan du lot avec le juriste.
 - Devis calculé en entiers ; taux de TVA issu d'une règle vérifiée, jamais du code.
 - Le PDF d'un devis ne contient aucune donnée d'un autre utilisateur ; 404 sur le devis d'autrui.
-- **Comparateur de devis** : les devis reçus pour un même projet s'affichent côte à côte, avec
-  les éléments manquants et les questions à poser, calculés par des règles explicables (la brique
-  d'IA n'existe qu'à partir du lot 5) ; réservé au porteur du projet (404 sinon) ; gratuit :
-  lecture de chaque devis ; limites dans `config/entitlements.php`.
+- **Comparateur de devis** (particuliers et entrepreneurs) : les devis reçus pour un même projet
+  s'affichent côte à côte, avec les éléments manquants et les questions à poser, calculés par des
+  **règles explicables, sans IA** (chaque élément affiche sa raison) ; réservé au porteur du
+  projet (404 sinon) ; gratuit : lecture de chaque devis ; limites dans
+  `config/entitlements.php`. La brique d'IA du lot 5 pourra l'enrichir ensuite (facultatif,
+  quotas de la décision 34) : le comparateur doit rester complet sans elle.
 - **Accès anticipé** : pendant 24 heures (configurable) après sa publication, un projet n'est
   visible que des prestataires Premium (liste, détail et propositions ; testé dans les deux
   sens) ; l'ordre des résultats est le même pour tous (aucun classement payant, décision 18) ;
@@ -148,13 +153,16 @@ modèle d'IA.
   juridique ou fiscal, avertissement systématique dans chaque réponse ; gratuit : une feuille de
   route, Premium : usage étendu avec quotas ; dépassement : 403 `premium_required` ou 429 selon
   le cas ; 404 sur le projet d'autrui.
+- **Comparateur de devis** (facultatif, si retenu au plan du lot) : enrichissement par l'IA dans
+  les quotas de la décision 34 ; IA désactivée ou quota atteint : le comparateur à règles du lot 3
+  reste disponible et inchangé (testé).
 
 ## Lot 6 — Avis, ressources et coffre-fort documentaire
 
 Avis après une interaction professionnelle vérifiable (droit de réponse, signalement,
 modération) ; ressources (guides, modèles) et téléchargements signés ; coffre-fort documentaire
 privé du module Compliance (disque privé, URL signées). Premium (décision 33) : **dossier
-entreprise partageable** et **badge « entreprise vérifiée »**.
+entreprise partageable** et **badge « Entreprise immatriculée vérifiée »**.
 
 **Critères d'acceptation**
 - Un avis est impossible sans interaction vérifiable ; la méthode de vérification est affichée.
@@ -166,21 +174,25 @@ entreprise partageable** et **badge « entreprise vérifiée »**.
   seule l'empreinte est stockée), temporaire et révocable, qui ne donne accès qu'aux documents
   choisis ; lien expiré ou révoqué : 404 ; rappels d'expiration des documents (catégorie de
   notification déclarée) ; réservé au Premium selon `config/entitlements.php`.
-- **Badge « entreprise vérifiée »** : vérification par l'API publique de recherche d'entreprises
-  de l'État (appel simulé dans les tests, panne sans effet sur le reste du profil), date de la
-  vérification gardée et revérification périodique ; le badge dit ce qui est vérifié, libellé
-  validé par le juriste ; adaptateur `ModerationTarget` inchangé pour le profil.
+- **Badge « Entreprise immatriculée vérifiée »** : vérification de l'immatriculation par l'API
+  publique de recherche d'entreprises de l'État (appel simulé dans les tests, panne sans effet sur
+  le reste du profil), date de la vérification gardée et revérification périodique ; l'explication
+  affichée dit qu'il atteste **seulement l'immatriculation, jamais la qualité du travail** ;
+  libellé et explication validés par le juriste ; adaptateur `ModerationTarget` inchangé pour le
+  profil.
 
 ## Lot 7 — Recommandations
 
 Règles simples et explicables (catégorie d'une tâche, prestataires, articles, événements,
 parcours), possibilité de les désactiver. Premium (décision 33) : **radar d'opportunités**
-(aides, concours, appels à projets, événements). La source des aides, concours et appels à
-projets est présentée au plan du lot.
+(aides, concours, appels à projets, événements) pour les prestataires, les entrepreneurs et les
+particuliers (porteurs de projets : aides à la création, concours, événements pour se lancer).
+La source des aides, concours et appels à projets est présentée au plan du lot.
 
 **Critères d'acceptation**
 - Chaque recommandation affiche sa raison ; l'utilisateur peut les désactiver.
-- **Radar d'opportunités** : opportunités personnalisées (raison affichée), dates limites
+- **Radar d'opportunités** (particuliers, prestataires et entrepreneurs, opportunités adaptées
+  au rôle) : opportunités personnalisées (raison affichée), dates limites
   ajoutées au calendrier et à l'abonnement `.ics` ; email dans une catégorie de notification
   facultative ; gratuit : un email par mois, Premium : chaque semaine et complet (fréquences en
   configuration) ; aucun email en double (envoi réservé avant l'envoi, comme Compliance).
@@ -229,7 +241,7 @@ fonction de rétractation en ligne, relances de paiement Stripe, factures access
 compte, webhooks idempotents, suppression du compte avec annulation immédiate de l'abonnement.
 Premiers avantages Premium des particuliers (limites de projets et de demandes en
 configuration). **Prix** (décision 32) : 14,90 € TTC par mois ou 149 € TTC par an ; **prix
-fondateur** (500 premiers abonnés, 9,90 € TTC par mois ou 99 € TTC par an proposé, à vie tant que
+fondateur** (500 premiers abonnés, 9,90 € TTC par mois ou 99 € TTC par an, à vie tant que
 l'abonnement n'est pas résilié) ; **parrainage** (un mois offert au parrain et au filleul) ;
 **codes partenaires** (trois mois offerts) ; prix à confirmer avec l'expert-comptable. Brouillon
 des textes destinés aux utilisateurs : `docs/v1/billing-rules.md` (à faire valider par un

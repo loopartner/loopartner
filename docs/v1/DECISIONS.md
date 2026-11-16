@@ -163,7 +163,7 @@ Blog transmises par l'événement du noyau `ContentModerated` ; modération rés
 | # | Sujet | Décision |
 |---|---|---|
 | 32 | Prix du Premium | Détail ci-dessous. **Complète** la décision 5 révisée (qui laissait les prix « configurables » sans valeur) ; la décision 19 reste en vigueur (montants lus sur les prix Stripe, jamais dans le code). |
-| 33 | Fonctionnalités Premium à forte valeur | Copilote de projet, comparateur de devis, accès anticipé aux projets, dossier entreprise partageable et badge « entreprise vérifiée », radar d'opportunités, statistiques des prestataires : **ajoutés à la V1**, détail ci-dessous. |
+| 33 | Fonctionnalités Premium à forte valeur | Copilote de projet, comparateur de devis, accès anticipé aux projets, dossier entreprise partageable et badge « Entreprise immatriculée vérifiée », radar d'opportunités, statistiques des prestataires : **ajoutés à la V1**, détail ci-dessous. |
 | 34 | Brique d'IA du noyau | Créée au lot Workspaces, détail ci-dessous. |
 | 35 | Grille des avantages par rôle | Tableau ci-dessous. **Remplace le tableau de la décision 18** (conservé plus haut pour la trace) ; les principes de la décision 18 restent en vigueur (aucune mise en avant payante dans les résultats, liens suivis du Blog jamais Premium). |
 
@@ -172,8 +172,8 @@ Blog transmises par l'événement du noyau `ContentModerated` ; modération rés
 - **Prix normal** : **14,90 € TTC par mois** ou **149 € TTC par an**, même prix pour les
   particuliers, les prestataires et les entrepreneurs.
 - **Essai gratuit de 30 jours** avec carte bancaire : inchangé (décision 5 révisée).
-- **Prix fondateur** : les **500 premiers abonnés** paient **9,90 € TTC par mois** ou, proposition
-  à confirmer, **99 € TTC par an** (même rapport que le prix normal : environ deux mois offerts),
+- **Prix fondateur** : les **500 premiers abonnés** paient **9,90 € TTC par mois** ou **99 € TTC
+  par an** (même rapport que le prix normal : environ deux mois offerts ; validé le 2026-11-16),
   **à vie, tant que l'abonnement n'est pas résilié**. Après une résiliation, un nouvel abonnement
   se fait au prix normal en vigueur.
 - **Parrainage** : **un mois offert au parrain et au filleul**.
@@ -199,24 +199,31 @@ Blog transmises par l'événement du noyau `ContentModerated` ; modération rés
   feuille de route** ; Premium : usage étendu, avec quotas en configuration.
 - **Comparateur de devis** (lot 3, Marketplace) : devis reçus **côte à côte**, **éléments
   manquants**, **questions à poser** au prestataire. Étend l'avantage « comparaison et export PDF
-  des devis reçus » de la décision 18. Le lot 3 précède la brique d'IA (lot 5) : le comparateur
-  repose sur des règles explicables ; une aide de l'IA ne pourra s'y ajouter qu'une fois la brique
-  créée.
+  des devis reçus » de la décision 18, pour les particuliers et les entrepreneurs. **Au lot 3, il
+  fonctionne avec des règles explicables** (lignes, quantités, validité, mentions absentes), sans
+  IA. La brique d'IA du lot 5 (décision 34) **pourra l'enrichir ensuite**, de façon
+  **facultative** et dans les **quotas de la décision 34** ; le comparateur reste complet sans
+  elle (IA désactivée ou quota atteint).
 - **Accès anticipé de 24 heures** aux nouveaux projets pour les prestataires Premium (lot 3,
   Marketplace) : un projet publié n'est visible que des prestataires Premium pendant 24 heures
   (durée configurable), puis de tous. Ce n'est **pas un classement** : l'ordre des résultats reste
   le même pour tous (décision 18 inchangée). **Annoncé de façon transparente dans les CGU**
   (traitement différencié), à faire valider par le juriste, y compris l'information du porteur de
   projet.
-- **Dossier entreprise partageable et badge « entreprise vérifiée »** (lot 6, Avis, ressources et
-  coffre-fort) : documents rangés dans le coffre-fort (décision 11), **lien de partage sécurisé et
-  temporaire** (révocable), **rappels d'expiration** des documents ; vérification de l'entreprise
-  par l'**API publique de recherche d'entreprises de l'État**. Le badge dit précisément ce qui est
-  vérifié (existence et activité de l'entreprise au registre) et ne présente pas une garantie de
-  qualité : libellé à faire valider par le juriste.
+- **Dossier entreprise partageable et badge « Entreprise immatriculée vérifiée »** (lot 6, Avis,
+  ressources et coffre-fort) : documents rangés dans le coffre-fort (décision 11), **lien de
+  partage sécurisé et temporaire** (révocable), **rappels d'expiration** des documents ;
+  vérification de l'entreprise par l'**API publique de recherche d'entreprises de l'État**. Le
+  badge s'intitule **« Entreprise immatriculée vérifiée »** : il atteste **seulement
+  l'immatriculation** contrôlée par cette API, **jamais la qualité du travail**. Libellé et
+  explication affichée à faire valider par le juriste. *Libellé précédent (2026-11-16) :
+  « entreprise vérifiée » ; raison du changement : dire exactement ce qui est vérifié.*
 - **Radar d'opportunités** (lot 7, Recommandations) : aides, concours, appels à projets et
-  événements **personnalisés**, avec leurs **dates limites dans le calendrier**. Gratuit : **un
-  email par mois** ; Premium : **chaque semaine et complet**. Source des aides, concours et appels
+  événements **personnalisés**, avec leurs **dates limites dans le calendrier**, pour les
+  **prestataires, les entrepreneurs et les particuliers** (porteurs de projets : aides à la
+  création, concours, événements pour se lancer). Gratuit : **un email par mois** ; Premium :
+  **chaque semaine et complet**, pour les trois rôles. *Particuliers ajoutés le 2026-11-16
+  (version précédente : prestataires et entrepreneurs seulement).* Source des aides, concours et appels
   à projets à choisir au plan du lot (nouveau service : décision de l'utilisateur).
 - **Statistiques des prestataires** (lot 8, Back-office et analytics) : agrégats côté serveur,
   sans cookie de suivi (décision 8).
@@ -246,8 +253,9 @@ qui en a besoin (le noyau ne dépend d'aucun module).
 
 Chaque lot ajoute ses valeurs dans `config/entitlements.php` (rien n'y est modifié avant). Les
 valeurs gratuites citées sont les limites actuelles du code ou des décisions validées ; « à fixer »
-se tranche au plan du lot. *Les lignes marquées d'un astérisque sont des propositions déduites des
-décisions 18 et 33, à confirmer au plan du lot.*
+se tranche au plan du lot. Les propositions déduites des décisions 18 et 33 (un workspace gratuit,
+devis PDF standard, coffre-fort sans lien de partage ni badge, comparateur de devis pour les
+entrepreneurs) sont **validées le 2026-11-16**.
 
 | Rôle | Fonctionnalité Premium | Version gratuite | Lot |
 |---|---|---|---|
@@ -256,24 +264,25 @@ décisions 18 et 33, à confirmer au plan du lot.*
 | Particulier | Durée de publication d'un projet plus longue | 60 jours | lot 10 ou suivant, si validé au plan |
 | Particulier | Comparateur de devis (côte à côte, éléments manquants, questions à poser) et export PDF | lecture de chaque devis reçu | lot 3 (Marketplace) |
 | Particulier | Copilote de projet : usage étendu, quotas en configuration | une feuille de route | lot 5 (Workspaces) |
-| Particulier | Plusieurs workspaces, modèles de projet | un workspace* | lot 5 (Workspaces) |
+| Particulier | Plusieurs workspaces, modèles de projet | un workspace | lot 5 (Workspaces) |
 | Particulier | Guides et modèles réservés | ressources publiques | lot 6 |
+| Particulier | Radar d'opportunités chaque semaine et complet (aides à la création, concours, événements pour se lancer) | un email par mois | lot 7 (Recommandations) |
 | Prestataire | Articles illimités | 2 articles soumis | en place (lot 1) |
 | Prestataire | Suivi administratif : 5 entreprises, 3 délais de rappel, paliers personnalisés, parcours illimités, estimation | 1 entreprise, 1 délai (3, 7 ou 14 jours), paliers 80 % et 100 %, 1 parcours actif, sans estimation | en place (lot 1) |
 | Prestataire | Accès anticipé de 24 heures aux nouveaux projets | projets visibles 24 heures après leur publication | lot 3 (Marketplace) |
-| Prestataire | Devis PDF personnalisés (logo, mentions) | devis PDF standard* | lot 3 (Marketplace) |
+| Prestataire | Devis PDF personnalisés (logo, mentions) | devis PDF standard | lot 3 (Marketplace) |
 | Prestataire | Page de prise de rendez-vous, plus de créneaux | à fixer | lot 4 (Rendez-vous) |
-| Prestataire | Dossier entreprise partageable et badge « entreprise vérifiée » | coffre-fort privé, sans lien de partage ni badge* | lot 6 |
+| Prestataire | Dossier entreprise partageable et badge « Entreprise immatriculée vérifiée » | coffre-fort privé, sans lien de partage ni badge | lot 6 |
 | Prestataire | Guides et modèles réservés | ressources publiques | lot 6 |
 | Prestataire | Radar d'opportunités chaque semaine et complet | un email par mois | lot 7 (Recommandations) |
 | Prestataire | Statistiques du profil | à fixer | lot 8 (Back-office et analytics) |
 | Prestataire | Plus de catégories sur le profil | 5 | en configuration, lot à fixer |
 | Entrepreneur | Articles illimités | 2 articles soumis | en place (lot 1) |
 | Entrepreneur | Suivi administratif : 5 entreprises, 3 délais de rappel, paliers personnalisés, parcours illimités, estimation | 1 entreprise, 1 délai (3, 7 ou 14 jours), paliers 80 % et 100 %, 1 parcours actif, sans estimation | en place (lot 1) |
-| Entrepreneur | Comparateur de devis et export PDF* | lecture de chaque devis reçu | lot 3 (Marketplace) |
+| Entrepreneur | Comparateur de devis et export PDF | lecture de chaque devis reçu | lot 3 (Marketplace) |
 | Entrepreneur | Copilote de projet : usage étendu, quotas en configuration | une feuille de route | lot 5 (Workspaces) |
-| Entrepreneur | Plusieurs workspaces, modèles de projet | un workspace* | lot 5 (Workspaces) |
-| Entrepreneur | Dossier entreprise partageable et badge « entreprise vérifiée » ; coffre-fort plus grand | coffre-fort privé de taille gratuite, sans lien de partage ni badge* | lot 6 |
+| Entrepreneur | Plusieurs workspaces, modèles de projet | un workspace | lot 5 (Workspaces) |
+| Entrepreneur | Dossier entreprise partageable et badge « Entreprise immatriculée vérifiée » ; coffre-fort plus grand | coffre-fort privé de taille gratuite, sans lien de partage ni badge | lot 6 |
 | Entrepreneur | Guides et modèles réservés | ressources publiques | lot 6 |
 | Entrepreneur | Radar d'opportunités chaque semaine et complet | un email par mois | lot 7 (Recommandations) |
 | Entrepreneur | Plus d'événements publiés ou en attente | 3 en attente, 20 publiés à venir | en configuration, lot à fixer |
