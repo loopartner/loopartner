@@ -9,19 +9,20 @@ entrepreneurs.
 
 ## V1 2027 : feuille de route et décisions (à lire au début de chaque session)
 
-- **`docs/v1/ROADMAP.md`** : lots 0 à 11 de la V1 commercialisable, avec leurs critères
+- **`docs/v1/ROADMAP.md`** : lots 0 à 11 de la V1 commercialisable (Billing est le lot 10, le prochain est le lot 2), avec leurs critères
   d'acceptation et leur état. Ne commence jamais un lot sans validation explicite de son plan
   détaillé par l'utilisateur.
 - **`docs/v1/DECISIONS.md`** : décisions produit et techniques validées, datées. Ne les remets pas
   en cause sans le demander ; une nouvelle décision s'y ajoute avec sa date.
 - Rappels : pas de refonte ; aucun taux, seuil ou montant réglementaire dans le code ; aucun
   module ni parcours incomplet présenté comme terminé ; base MySQL/MariaDB (jamais PostgreSQL) ;
-  le frontend démarre après le lot 1.
+  le frontend démarre une fois tous les lots backend terminés, Billing compris ; un plan est
+  toujours présenté avant de coder, les décisions purement techniques y sont tranchées (décision 20).
 
 ## Dépôt
 
 - `backend/` : API Laravel 13, PHP 8.4. Elle ne sert aucune vue : elle renvoie uniquement du JSON.
-- `frontend/` (à venir, après le lot 1) : Next.js et TypeScript, servi sur un autre sous-domaine.
+- `frontend/` (à venir, après tous les lots backend) : Next.js et TypeScript, servi sur un autre sous-domaine.
   Il consomme l'API avec des cookies de session.
 - `docs/v1/` : feuille de route et décisions de la V1 (voir ci-dessus).
 - `.github/workflows/ci.yml` : intégration continue (voir « Qualité »).
