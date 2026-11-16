@@ -5,6 +5,7 @@ namespace App\Modules\Moderation\Notifications;
 use App\Models\User;
 use App\Modules\Moderation\Enums\ModerationMail;
 use App\Modules\Moderation\Support\TargetTypes;
+use App\Modules\Moderation\Support\TermsClauses;
 use App\Support\Locale;
 use App\Support\Notifications\CategorizedNotification;
 use Illuminate\Bus\Queueable;
@@ -25,7 +26,8 @@ use Illuminate\Support\Facades\Notification as Notifier;
  * signalement. Textes : ModerationMail (brouillon à faire valider par le juriste).
  *
  * Données : uuid, type, path (page du frontend), et selon l'email label, measure, source,
- * ground, law, clause, clause_reference, facts, hint, deadline (ISO 8601), reason, outcome.
+ * ground, law, clause (clé de la clause des CGU), facts, hint, deadline (ISO 8601), reason,
+ * outcome.
  */
 class ModerationNotification extends Notification implements CategorizedNotification, ShouldBeEncrypted, ShouldQueueAfterCommit
 {
@@ -149,11 +151,21 @@ class ModerationNotification extends Notification implements CategorizedNotifica
         return match ($this->value('ground')) {
             'illegal' => strtr($common['ground_illegal'], [':law' => (string) $this->value('law')]),
             'terms' => strtr($common['ground_terms'], [
-                ':clause' => (string) $this->value('clause'),
-                ':reference' => $this->value('clause_reference') !== null ? ' ('.$this->value('clause_reference').')' : '',
+                ':clause' => $this->clause()['label'] ?? '',
+                ':reference' => ($reference = $this->clause()['reference'] ?? null) !== null ? ' ('.$reference.')' : '',
             ]),
             default => null,
         };
+    }
+
+    /**
+     * Clause des CGU (clé dans les données), dans la langue de l'email.
+     *
+     * @return array{key: string, reference: string|null, label: string}|null
+     */
+    private function clause(): ?array
+    {
+        return TermsClauses::describe($this->value('clause'), self::localeOf($this->locale));
     }
 
     private function outcome(string $locale): string

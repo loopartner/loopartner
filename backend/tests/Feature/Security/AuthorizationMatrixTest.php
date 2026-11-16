@@ -207,6 +207,14 @@ const API_ROUTES = [
     'POST api/v1/moderation/notices/{uuid}/lookup' => 'public',
     'GET api/v1/me/moderation/notices' => 'auth',
     'GET api/v1/me/moderation/notices/{uuid}' => 'auth',
+    'GET api/v1/me/moderation/decisions' => 'auth',
+    'GET api/v1/me/moderation/decisions/{uuid}' => 'auth',
+    'GET api/v1/admin/moderation/queue' => 'auth',
+    'GET api/v1/admin/moderation/targets/{type}/{ref}' => 'auth',
+    'GET api/v1/admin/moderation/decisions/{uuid}' => 'auth',
+    'POST api/v1/admin/moderation/targets/{type}/{ref}/decisions' => 'auth',
+    'POST api/v1/admin/moderation/decisions/{uuid}/lift' => 'auth',
+    'POST api/v1/admin/moderation/notices/{uuid}/referral' => 'auth',
 ];
 
 /**
@@ -229,6 +237,7 @@ function concreteUri(string $uri): string
         '{id}' => '1',
         '{hash}' => str_repeat('a', 40),
         '{type}' => 'terms',
+        '{ref}' => 'un-contenu',
     ]);
 }
 
