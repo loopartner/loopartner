@@ -46,6 +46,12 @@ entrepreneurs.
   - Vérifié par `tests/Arch/MigrationsTest.php` (lecture du code des migrations) et, sur la base
     réelle, par `security:check-config` (erreur sur toute colonne `ON UPDATE CURRENT_TIMESTAMP` hors
     `updated_at`).
+  - **Aucun nom de table, d'index, de clé unique ou de clé étrangère au-delà de 64 caractères**
+    (limite de MySQL et MariaDB, erreur 1059 ; SQLite et `migrate --pretend` ne la voient pas).
+    Le nom généré par Laravel est `<table>_<colonnes>_<unique|index|foreign>` : s'il est trop
+    long, donner un nom court explicite (`$table->unique([...], 'compliance_revenue_entries_unique')`).
+    Vérifié par `tests/Feature/Core/MigrationIdentifiersTest.php`, qui exécute toutes les
+    migrations et contrôle chaque nom réel ou généré.
   - Une migration déjà exécutée ne se modifie pas : toute correction passe par une nouvelle migration.
 - **Ne lis jamais et ne modifie jamais `backend/.env`**. Cette interdiction est aussi bloquée dans
   `.claude/settings.json`. Seul `backend/.env.example` se modifie.

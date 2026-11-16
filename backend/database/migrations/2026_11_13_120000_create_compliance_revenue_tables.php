@@ -26,7 +26,8 @@ return new class extends Migration
             $table->text('amount');
             $table->timestamps();
 
-            $table->unique(['company_id', 'period', 'activity_type']);
+            // Nom explicite : le nom généré (65 caractères) dépasse la limite de MySQL/MariaDB (64).
+            $table->unique(['company_id', 'period', 'activity_type'], 'compliance_revenue_entries_unique');
         });
 
         Schema::create('compliance_threshold_alerts', function (Blueprint $table) {
