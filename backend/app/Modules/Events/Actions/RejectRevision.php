@@ -7,10 +7,10 @@ use App\Modules\Events\Enums\EventNotice;
 use App\Modules\Events\Enums\RevisionStatus;
 use App\Modules\Events\Models\EventRevision;
 use App\Modules\Events\Notifications\EventNotification;
-use App\Modules\Events\Support\Moderation;
 use App\Modules\Events\Support\PendingRevisions;
 use App\Support\AdminAudit;
 use App\Support\Media\MediaLibrary;
+use App\Support\Moderation\VersionGuard;
 use App\Support\SecurityLog;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
@@ -35,7 +35,7 @@ class RejectRevision
                 throw new ConflictHttpException('Cette modification n\'est plus en attente de validation.');
             }
 
-            Moderation::assertVersion($version, $revision->version);
+            VersionGuard::assertSame($version, $revision->version);
 
             PendingRevisions::deleteProposedCover($revision, $this->library);
 

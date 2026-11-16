@@ -7,23 +7,11 @@ use App\Modules\Accounts\Actions\HasPublishedProviderProfile;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 /**
- * Contrôles communs aux décisions de modération.
+ * Contrôles communs aux décisions de modération. Le contrôle de version est celui du noyau
+ * (`App\Support\Moderation\VersionGuard`).
  */
 final class Moderation
 {
-    /**
-     * L'admin décide sur la version qu'il a vue : si l'organisateur a modifié l'élément depuis,
-     * la décision est refusée (409) et l'admin doit relire.
-     *
-     * @throws ConflictHttpException
-     */
-    public static function assertVersion(int $expected, int $actual): void
-    {
-        if ($expected !== $actual) {
-            throw new ConflictHttpException('Cet élément a été modifié depuis votre lecture : rechargez-le avant de décider.');
-        }
-    }
-
     /**
      * L'organisateur peut-il toujours publier (compte existant, rôle, profil prestataire publié) ?
      *

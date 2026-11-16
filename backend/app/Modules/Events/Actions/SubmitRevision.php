@@ -12,9 +12,9 @@ use App\Modules\Events\Support\Organizers;
 use App\Modules\Events\Support\PendingRevisions;
 use App\Support\Media\MediaLibrary;
 use App\Support\Media\MediaPurpose;
+use App\Support\RateLimit\ActionThrottle;
 use App\Support\SecurityLog;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
-use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -134,21 +134,9 @@ class SubmitRevision
      */
     private function throttle(User $organizer): void
     {
-        $limits = [
+        ActionThrottle::hit('event-revisions', $organizer->id, [
             'hour' => [(int) config('security.rate_limits.event_revisions.per_hour'), 3600],
             'day' => [(int) config('security.rate_limits.event_revisions.per_day'), 86400],
-        ];
-
-        foreach ($limits as $window => [$max, $decay]) {
-            $key = "event-revisions:{$window}:{$organizer->id}";
-
-            if (RateLimiter::tooManyAttempts($key, $max)) {
-                throw new ThrottleRequestsException('Too Many Attempts.', null, ['Retry-After' => RateLimiter::availableIn($key)]);
-            }
-        }
-
-        foreach ($limits as $window => [, $decay]) {
-            RateLimiter::hit("event-revisions:{$window}:{$organizer->id}", $decay);
-        }
+        ]);
     }
 }

@@ -11,6 +11,7 @@ use App\Modules\Events\Support\EventPublisher;
 use App\Modules\Events\Support\Moderation;
 use App\Modules\Events\Support\OrganizerQuota;
 use App\Support\AdminAudit;
+use App\Support\Moderation\VersionGuard;
 use App\Support\SecurityLog;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
@@ -36,7 +37,7 @@ class ApproveEvent
                 throw new ConflictHttpException('Cet événement n\'est plus en attente de validation.');
             }
 
-            Moderation::assertVersion($version, $event->version);
+            VersionGuard::assertSame($version, $event->version);
 
             if (! $event->starts_at->isFuture()) {
                 throw new ConflictHttpException('La date de début de cet événement est passée : il ne peut plus être publié.');

@@ -5,6 +5,7 @@ namespace App\Modules\Events\Support;
 use App\Modules\Events\Enums\EventStatus;
 use App\Modules\Events\Models\Event;
 use App\Support\Links\ExternalLink;
+use App\Support\Links\LinkInspection;
 
 /**
  * Liens d'un événement mis en évidence pour la modération : chaque lien (champs de lien et liens
@@ -30,30 +31,7 @@ final class EventLinks
      */
     public static function inspect(array $content, ?int $organizerId, ?int $eventId): array
     {
-        $links = self::links($content);
-        $known = self::approvedHosts($organizerId, $eventId);
-        $domains = [];
-
-        foreach ($links as $link) {
-            if ($link['host'] === null) {
-                continue;
-            }
-
-            $domains[$link['host']] ??= [
-                'host' => $link['host'],
-                'fields' => [],
-                'punycode' => ExternalLink::isPunycode($link['host']),
-                'previously_approved' => in_array($link['host'], $known, true),
-            ];
-
-            if (! in_array($link['field'], $domains[$link['host']]['fields'], true)) {
-                $domains[$link['host']]['fields'][] = $link['field'];
-            }
-        }
-
-        ksort($domains);
-
-        return ['links' => $links, 'domains' => array_values($domains)];
+        return LinkInspection::inspect(self::links($content), self::approvedHosts($organizerId, $eventId));
     }
 
     /**

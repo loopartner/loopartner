@@ -15,6 +15,7 @@ use App\Modules\Events\Support\Moderation;
 use App\Modules\Events\Support\Organizers;
 use App\Support\AdminAudit;
 use App\Support\Media\MediaLibrary;
+use App\Support\Moderation\VersionGuard;
 use App\Support\SecurityLog;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -46,7 +47,7 @@ class ApproveRevision
                 throw new ConflictHttpException('Cette modification n\'est plus en attente de validation.');
             }
 
-            Moderation::assertVersion($version, $revision->version);
+            VersionGuard::assertSame($version, $revision->version);
 
             if (! $event->isUpcoming()) {
                 throw new ConflictHttpException('Cet événement a commencé ou n\'est plus publié : la modification ne peut plus être appliquée.');
