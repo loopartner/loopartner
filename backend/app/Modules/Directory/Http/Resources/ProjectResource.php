@@ -5,6 +5,7 @@ namespace App\Modules\Directory\Http\Resources;
 use App\Http\Resources\ServiceCategoryResource;
 use App\Modules\Directory\Enums\ProjectStatus;
 use App\Modules\Directory\Models\Project;
+use App\Support\Moderation\Restriction;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -38,6 +39,8 @@ class ProjectResource extends JsonResource
             'published_at' => $this->published_at?->toIso8601ZuluString(),
             'expires_at' => $this->expires_at?->toIso8601ZuluString(),
             'closed_at' => $this->closed_at?->toIso8601ZuluString(),
+            // Masqué par la modération : invisible des prestataires jusqu'à la levée.
+            'moderation' => Restriction::view($this->resource),
             'created_at' => $this->created_at?->toIso8601ZuluString(),
             'updated_at' => $this->updated_at?->toIso8601ZuluString(),
         ];

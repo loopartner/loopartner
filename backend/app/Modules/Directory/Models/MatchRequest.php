@@ -42,6 +42,8 @@ use Illuminate\Support\Carbon;
  * @property Carbon|CarbonImmutable|null $responded_at
  * @property Carbon|CarbonImmutable|null $withdrawn_at
  * @property Carbon|CarbonImmutable|null $expired_at
+ * @property Carbon|CarbonImmutable|null $moderation_restricted_at
+ * @property string|null $moderation_decision_uuid
  * @property Carbon|CarbonImmutable|null $created_at
  * @property Carbon|CarbonImmutable|null $updated_at
  * @property-read User|null $author
@@ -81,6 +83,7 @@ class MatchRequest extends Model
     protected function casts(): array
     {
         return [
+            'moderation_restricted_at' => 'datetime',
             'type' => MatchRequestType::class,
             'status' => MatchRequestStatus::class,
             'price_amount' => 'integer',

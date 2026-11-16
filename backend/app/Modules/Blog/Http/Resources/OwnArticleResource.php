@@ -8,6 +8,7 @@ use App\Modules\Blog\Enums\RevisionStatus;
 use App\Modules\Blog\Models\Article;
 use App\Modules\Blog\Models\ArticleRevision;
 use App\Modules\Blog\Support\ArticleViews;
+use App\Support\Moderation\Restriction;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -67,6 +68,8 @@ class OwnArticleResource extends JsonResource
             'rejection_reason' => $this->rejection_reason,
             'unpublished_at' => $this->unpublished_at?->toIso8601ZuluString(),
             'unpublication_reason' => $this->unpublication_reason,
+            // Masqué par la modération (exposé des motifs : GET /me/moderation/decisions/{decision}).
+            'moderation' => Restriction::view($this->resource),
             'pending_revision' => $this->pendingRevisionView(),
             'last_revision_decision' => $this->lastRevisionDecision(),
             'created_at' => $this->created_at?->toIso8601ZuluString(),

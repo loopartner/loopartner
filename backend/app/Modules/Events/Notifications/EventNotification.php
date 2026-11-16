@@ -120,6 +120,10 @@ class EventNotification extends Notification implements CategorizedNotification,
             return '/me/events/'.$this->event->uuid;
         }
 
+        if ($this->notice === EventNotice::HiddenByModeration) {
+            return '/me/event-registrations';
+        }
+
         return $this->event->slug !== null ? '/events/'.$this->event->slug : '/events';
     }
 

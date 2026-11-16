@@ -42,6 +42,8 @@ use Illuminate\Support\Carbon;
  * @property Carbon|CarbonImmutable|null $published_at
  * @property Carbon|CarbonImmutable|null $expires_at
  * @property Carbon|CarbonImmutable|null $closed_at
+ * @property Carbon|CarbonImmutable|null $moderation_restricted_at
+ * @property string|null $moderation_decision_uuid
  * @property Carbon|CarbonImmutable|null $created_at
  * @property Carbon|CarbonImmutable|null $updated_at
  */
@@ -79,6 +81,7 @@ class Project extends Model
     protected function casts(): array
     {
         return [
+            'moderation_restricted_at' => 'datetime',
             'status' => ProjectStatus::class,
             'budget_min' => 'integer',
             'budget_max' => 'integer',
@@ -128,5 +131,17 @@ class Project extends Model
     {
         $query->where('status', ProjectStatus::Published->value)
             ->where('expires_at', '>', now());
+    }
+
+    /**
+     * Projets visibles des prestataires : en ligne (live) et non masqués par la modération.
+     * Un projet masqué compte toujours dans le plafond de projets publiés de son porteur.
+     *
+     * @param  Builder<self>  $query
+     */
+    #[Scope]
+    protected function browsable(Builder $query): void
+    {
+        $query->live()->whereNull('moderation_restricted_at');
     }
 }

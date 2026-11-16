@@ -19,6 +19,7 @@ enum EventNotice: string
     case Cancelled = 'cancelled';
     case AnnouncementPublished = 'announcement_published';
     case RegistrationRemoved = 'registration_removed';
+    case HiddenByModeration = 'hidden_by_moderation';
 
     // Organisateur.
     case EventApproved = 'event_approved';
@@ -57,7 +58,7 @@ enum EventNotice: string
      */
     public function requiresActiveRegistration(): bool
     {
-        return in_array($this, [self::Reminder, self::Changed, self::AnnouncementPublished], true);
+        return in_array($this, [self::Reminder, self::Changed, self::AnnouncementPublished, self::HiddenByModeration], true);
     }
 
     /**
@@ -95,6 +96,10 @@ enum EventNotice: string
         'registration_removed' => [
             'fr' => ['subject' => 'Inscription annulée : :title', 'intro' => 'Votre inscription à « :title » a été annulée par l\'organisateur.', 'action' => 'Voir l\'agenda'],
             'en' => ['subject' => 'Registration cancelled: :title', 'intro' => 'Your registration for ":title" has been cancelled by the organiser.', 'action' => 'View the agenda'],
+        ],
+        'hidden_by_moderation' => [
+            'fr' => ['subject' => 'Événement momentanément indisponible : :title', 'intro' => '« :title », prévu le :date, n\'est plus visible dans l\'agenda pour le moment, à la suite d\'une décision de modération. Votre inscription est conservée.', 'action' => 'Voir mes inscriptions', 'outro' => 'Si l\'événement est annulé, vous en serez prévenu.'],
+            'en' => ['subject' => 'Event temporarily unavailable: :title', 'intro' => '":title", scheduled for :date, is no longer visible in the agenda for now, following a moderation decision. Your registration is kept.', 'action' => 'View my registrations', 'outro' => 'If the event is cancelled, you will be notified.'],
         ],
         'event_approved' => [
             'fr' => ['subject' => 'Votre événement est publié', 'intro' => '« :title » a été validé par l\'équipe Loopartner et figure maintenant dans l\'agenda.', 'action' => 'Voir mon événement'],

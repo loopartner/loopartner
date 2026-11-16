@@ -37,6 +37,10 @@ class PostAnnouncement
                 throw new ConflictHttpException('Seul un événement publié et pas encore terminé peut faire l\'objet d\'une annonce.');
             }
 
+            if ($event->isRestricted()) {
+                throw new ConflictHttpException('Cet événement est masqué par la modération : aucune annonce ne peut être envoyée.');
+            }
+
             $previous = EventAnnouncement::query()
                 ->where('event_id', $event->id)
                 ->where('status', '!=', AnnouncementStatus::Rejected->value);

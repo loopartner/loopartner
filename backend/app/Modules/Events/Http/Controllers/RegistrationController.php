@@ -36,6 +36,7 @@ class RegistrationController extends Controller
     {
         $user = self::user($request);
         $event = self::publicEvent($slug);
+        abort_if($event->isRestricted(), 404, 'Événement introuvable.');
         Gate::authorize('register', $event);
 
         $registration = $registerForEvent->handle($user, $event);

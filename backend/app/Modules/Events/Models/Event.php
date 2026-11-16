@@ -74,6 +74,8 @@ use Illuminate\Support\Carbon;
  * @property CancelledBy|null $cancelled_by
  * @property string|null $cancellation_reason
  * @property Carbon|CarbonImmutable|null $reminder_sent_at
+ * @property Carbon|CarbonImmutable|null $moderation_restricted_at
+ * @property string|null $moderation_decision_uuid
  * @property Carbon|CarbonImmutable|null $created_at
  * @property Carbon|CarbonImmutable|null $updated_at
  */
@@ -105,6 +107,7 @@ class Event extends Model
     protected function casts(): array
     {
         return [
+            'moderation_restricted_at' => 'datetime',
             'status' => EventStatus::class,
             'type' => EventType::class,
             'format' => EventFormat::class,
@@ -208,6 +211,15 @@ class Event extends Model
     /**
      * Publié et pas encore commencé : modifiable par révision, ouvert aux inscriptions.
      */
+    /**
+     * Masqué par la modération (module Moderation) : absent de l'agenda public, inscriptions,
+     * rappels et annonces fermés, jusqu'à la levée de la restriction.
+     */
+    public function isRestricted(): bool
+    {
+        return $this->moderation_restricted_at !== null;
+    }
+
     public function isUpcoming(): bool
     {
         return $this->status === EventStatus::Published && $this->starts_at->isFuture();
@@ -277,5 +289,17 @@ class Event extends Model
     protected function publiclyVisible(Builder $query): void
     {
         $query->whereIn('status', [EventStatus::Published->value, EventStatus::Past->value]);
+    }
+
+    /**
+     * Événements non masqués par la modération (à combiner avec live() ou publiclyVisible()
+     * pour l'agenda public).
+     *
+     * @param  Builder<self>  $query
+     */
+    #[Scope]
+    protected function notRestricted(Builder $query): void
+    {
+        $query->whereNull('moderation_restricted_at');
     }
 }

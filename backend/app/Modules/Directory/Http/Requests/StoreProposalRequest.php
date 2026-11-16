@@ -53,7 +53,7 @@ class StoreProposalRequest extends FormRequest
     public function project(): Project
     {
         if ($this->project === null) {
-            $project = Project::query()->live()->where('uuid', (string) $this->route('uuid'))->first();
+            $project = Project::query()->browsable()->where('uuid', (string) $this->route('uuid'))->first();
             abort_if($project === null, 404, 'Projet introuvable.');
             $this->project = $project;
         }

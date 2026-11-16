@@ -3,6 +3,7 @@
 namespace App\Modules\Events\Http\Resources;
 
 use App\Modules\Events\Models\EventAnnouncement;
+use App\Support\Moderation\Restriction;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -47,6 +48,7 @@ class AnnouncementResource extends JsonResource
             'has_links' => $announcement->has_links,
             'recipients_count' => $announcement->recipients_count,
             'rejection_reason' => $announcement->rejection_reason,
+            'moderation' => Restriction::view($announcement),
             'created_at' => $announcement->created_at?->toIso8601ZuluString(),
         ];
     }

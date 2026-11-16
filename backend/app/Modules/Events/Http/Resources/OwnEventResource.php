@@ -6,6 +6,7 @@ use App\Modules\Events\Models\Event;
 use App\Modules\Events\Models\EventRevision;
 use App\Modules\Events\Support\EventContent;
 use App\Modules\Events\Support\EventPresenter;
+use App\Support\Moderation\Restriction;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -43,6 +44,8 @@ class OwnEventResource extends JsonResource
             'cancelled_at' => $event->cancelled_at?->toIso8601ZuluString(),
             'cancelled_by' => $event->cancelled_by?->value,
             'cancellation_reason' => $event->cancellation_reason,
+            // Masqué par la modération (exposé des motifs : GET /me/moderation/decisions/{decision}).
+            'moderation' => Restriction::view($event),
             'pending_revision' => $this->pendingRevision($event),
             'latest_revision' => $this->latestRevision($event),
             'created_at' => $event->created_at?->toIso8601ZuluString(),

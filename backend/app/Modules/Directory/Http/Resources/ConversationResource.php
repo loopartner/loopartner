@@ -57,7 +57,7 @@ class ConversationResource extends JsonResource
             'counterpart' => $this->context->counterpart($other, revealName: true),
             'last_message' => $lastMessage === null ? null : [
                 'uuid' => $lastMessage->uuid,
-                'excerpt' => Str::limit($lastMessage->body, self::EXCERPT_LENGTH),
+                'excerpt' => $lastMessage->isRestricted() ? null : Str::limit($lastMessage->body, self::EXCERPT_LENGTH),
                 'mine' => $lastMessage->sender_id !== null && $lastMessage->sender_id === $viewer->id,
                 'sent_at' => $lastMessage->created_at?->toIso8601ZuluString(),
             ],

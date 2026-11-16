@@ -47,7 +47,9 @@ class MatchRequestResource extends JsonResource
             'type' => $this->type->value,
             'status' => $this->status->value,
             'role' => $isAuthor ? 'author' : 'recipient',
-            'message' => $this->message,
+            // Demande masquée par la modération : son texte n'est plus montré (null ; une
+            // demande n'est jamais vide autrement).
+            'message' => $this->moderation_restricted_at === null ? $this->message : null,
             'price' => $this->price_amount === null ? null : [
                 'amount' => $this->price_amount,
                 'currency' => $this->price_currency,

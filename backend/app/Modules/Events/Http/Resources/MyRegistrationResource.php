@@ -64,10 +64,13 @@ class MyRegistrationResource extends JsonResource
                 'organizer' => $this->organizers->present($event),
                 'cancelled_at' => $event->cancelled_at?->toIso8601ZuluString(),
                 'cancellation_reason' => $event->cancellation_reason,
+                // Masqué par la modération : plus dans l'agenda ; l'inscription est conservée.
+                'hidden_by_moderation' => $event->isRestricted(),
             ],
             'announcements' => $this->when($this->withAnnouncements, fn () => AnnouncementResource::collection(
                 $event->announcements
-                    ->filter(fn (EventAnnouncement $announcement): bool => $announcement->status === AnnouncementStatus::Published)
+                    ->filter(fn (EventAnnouncement $announcement): bool => $announcement->status === AnnouncementStatus::Published
+                        && $announcement->moderation_restricted_at === null)
                     ->sortByDesc('published_at')
                     ->values(),
             )),

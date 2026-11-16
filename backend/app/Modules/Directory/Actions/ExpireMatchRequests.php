@@ -35,7 +35,7 @@ class ExpireMatchRequests
             ->where('type', MatchRequestType::Proposal->value)
             ->where(fn (Builder $query) => $query
                 ->whereNull('project_id')
-                ->orWhereNotIn('project_id', Project::query()->live()->select('id')))
+                ->orWhereNotIn('project_id', Project::query()->browsable()->select('id')))
             ->update(self::expiredValues($now));
     }
 

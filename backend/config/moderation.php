@@ -1,5 +1,13 @@
 <?php
 
+use App\Modules\Accounts\Support\ProviderProfileModerationTarget;
+use App\Modules\Blog\Support\ArticleModerationTarget;
+use App\Modules\Directory\Support\Moderation\MatchRequestModerationTarget;
+use App\Modules\Directory\Support\Moderation\MessageModerationTarget;
+use App\Modules\Directory\Support\Moderation\ProjectModerationTarget;
+use App\Modules\Events\Support\AnnouncementModerationTarget;
+use App\Modules\Events\Support\EventModerationTarget;
+
 /*
 |--------------------------------------------------------------------------
 | Signalements et modération (module Moderation, règlement (UE) 2022/2065 « DSA »)
@@ -19,6 +27,13 @@ return [
     | avis…) ajoute ici son adaptateur : un test vérifie que chaque contenu public en a un.
     */
     'targets' => [
+        'provider_profile' => ProviderProfileModerationTarget::class,
+        'project' => ProjectModerationTarget::class,
+        'message' => MessageModerationTarget::class,
+        'match_request' => MatchRequestModerationTarget::class,
+        'event' => EventModerationTarget::class,
+        'event_announcement' => AnnouncementModerationTarget::class,
+        'article' => ArticleModerationTarget::class,
     ],
 
     /*

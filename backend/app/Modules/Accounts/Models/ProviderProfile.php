@@ -38,6 +38,8 @@ use Illuminate\Support\Carbon;
  * @property int|null $logo_media_id
  * @property ProviderProfileStatus $status
  * @property Carbon|CarbonImmutable|null $published_at
+ * @property Carbon|CarbonImmutable|null $moderation_restricted_at
+ * @property string|null $moderation_decision_uuid
  * @property Carbon|CarbonImmutable|null $created_at
  * @property Carbon|CarbonImmutable|null $updated_at
  */
@@ -61,6 +63,7 @@ class ProviderProfile extends Model
     protected function casts(): array
     {
         return [
+            'moderation_restricted_at' => 'datetime',
             'status' => ProviderProfileStatus::class,
             'published_at' => 'datetime',
         ];
@@ -96,17 +99,34 @@ class ProviderProfile extends Model
             ->orderBy('service_categories.slug');
     }
 
+    /**
+     * Statut choisi par le prestataire (brouillon ou publié), indépendant de la modération.
+     */
     public function isPublished(): bool
     {
         return $this->status === ProviderProfileStatus::Published;
     }
 
     /**
+     * Publié et non masqué par la modération : la page publique existe.
+     */
+    public function isPubliclyVisible(): bool
+    {
+        return $this->isPublished() && $this->moderation_restricted_at === null;
+    }
+
+    /**
+     * Profils visibles du public. Un profil masqué par la modération est traité comme non
+     * publié partout (décision 23) : absent de la recherche, page publique en 404, et le
+     * prestataire perd ce qu'ouvre un profil publié (consultation des projets, événements,
+     * articles), jusqu'à la levée de la restriction.
+     *
      * @param  Builder<self>  $query
      */
     #[Scope]
     protected function published(Builder $query): void
     {
-        $query->where('status', ProviderProfileStatus::Published->value);
+        $query->where('status', ProviderProfileStatus::Published->value)
+            ->whereNull('moderation_restricted_at');
     }
 }

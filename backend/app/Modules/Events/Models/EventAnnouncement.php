@@ -26,6 +26,8 @@ use Illuminate\Support\Carbon;
  * @property Carbon|CarbonImmutable|null $decided_at
  * @property int|null $decided_by
  * @property string|null $rejection_reason
+ * @property Carbon|CarbonImmutable|null $moderation_restricted_at
+ * @property string|null $moderation_decision_uuid
  * @property Carbon|CarbonImmutable|null $created_at
  * @property Carbon|CarbonImmutable|null $updated_at
  * @property-read Event $event
@@ -43,6 +45,7 @@ class EventAnnouncement extends Model
     protected function casts(): array
     {
         return [
+            'moderation_restricted_at' => 'datetime',
             'status' => AnnouncementStatus::class,
             'has_links' => 'boolean',
             'recipients_count' => 'integer',

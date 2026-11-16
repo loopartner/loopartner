@@ -29,7 +29,7 @@ class PublicEventController extends Controller
      */
     public function index(SearchEventsRequest $request): AnonymousResourceCollection
     {
-        $query = Event::query()->live()->with(self::RELATIONS);
+        $query = Event::query()->live()->notRestricted()->with(self::RELATIONS);
 
         if ($request->filled('from')) {
             $query->where('ends_at', '>=', CarbonImmutable::parse($request->string('from')->toString(), 'UTC')->startOfDay());
@@ -104,7 +104,7 @@ class PublicEventController extends Controller
 
     private static function find(string $slug): Event
     {
-        $event = Event::query()->publiclyVisible()->where('slug', $slug)->first();
+        $event = Event::query()->publiclyVisible()->notRestricted()->where('slug', $slug)->first();
         abort_if($event === null, 404, 'Événement introuvable.');
 
         return $event;

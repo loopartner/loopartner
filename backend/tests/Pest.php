@@ -24,6 +24,7 @@ use App\Modules\Events\Models\Event;
 use App\Modules\Events\Models\EventRegistration;
 use App\Notifications\VerifyEmailNotification;
 use App\Support\Legal\LegalDocuments;
+use App\Support\Moderation\ModerationTargets;
 use App\Support\TwoFactorSession;
 use Database\Factories\Modules\Blog\ArticleFactory;
 use Database\Seeders\RoleSeeder;
@@ -733,4 +734,22 @@ function companyPayload(array $overrides = []): array
 function complianceCompanyOf(?User $user = null, array $overrides = []): Company
 {
     return app(CreateCompany::class)->handle($user ?? complianceUser(), companyPayload($overrides));
+}
+
+/*
+|--------------------------------------------------------------------------
+| Signalements et modération (module Moderation)
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * Masque un contenu par son adaptateur (sans décision ni email du module Moderation) et
+ * renvoie l'uuid de la décision fictive qui l'a masqué.
+ */
+function restrictContent(string $type, string $ref): string
+{
+    $decision = (string) Str::uuid();
+    ModerationTargets::get($type)->restrict($ref, $decision);
+
+    return $decision;
 }

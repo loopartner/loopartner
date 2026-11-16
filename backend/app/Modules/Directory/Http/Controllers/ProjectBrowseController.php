@@ -23,7 +23,7 @@ class ProjectBrowseController extends Controller
 {
     public function index(BrowseProjectsRequest $request, RecordProjectConsultation $recordConsultation): AnonymousResourceCollection
     {
-        $query = Project::query()->live()->with(['category', 'user.roles']);
+        $query = Project::query()->browsable()->with(['category', 'user.roles']);
 
         if ($request->filled('category')) {
             $query->whereIn('service_category_id', ServiceCategory::idsWithDescendants($request->string('category')->toString()));
@@ -76,7 +76,7 @@ class ProjectBrowseController extends Controller
     {
         Gate::authorize('browse', Project::class);
 
-        $project = Project::query()->live()->with(['category', 'user.roles'])->where('uuid', $uuid)->first();
+        $project = Project::query()->browsable()->with(['category', 'user.roles'])->where('uuid', $uuid)->first();
 
         // Brouillon, clos, expiré ou inconnu : même réponse, sans révéler le nom du modèle.
         abort_if($project === null, 404, 'Projet introuvable.');

@@ -29,6 +29,7 @@ class SendEventReminders
 
         Event::query()
             ->where('status', EventStatus::Published->value)
+            ->whereNull('moderation_restricted_at')
             ->whereNull('reminder_sent_at')
             ->where('starts_at', '>', now())
             ->where('starts_at', '<=', now()->addHours($hours))

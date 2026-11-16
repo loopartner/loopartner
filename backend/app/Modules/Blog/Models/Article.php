@@ -56,6 +56,8 @@ use Illuminate\Support\Carbon;
  * @property string|null $rejection_reason
  * @property Carbon|CarbonImmutable|null $unpublished_at
  * @property string|null $unpublication_reason
+ * @property Carbon|CarbonImmutable|null $moderation_restricted_at
+ * @property string|null $moderation_decision_uuid
  * @property Carbon|CarbonImmutable|null $created_at
  * @property Carbon|CarbonImmutable|null $updated_at
  */
@@ -82,6 +84,7 @@ class Article extends Model
     protected function casts(): array
     {
         return [
+            'moderation_restricted_at' => 'datetime',
             'status' => ArticleStatus::class,
             'author_kind' => AuthorKind::class,
             'body' => 'array',
@@ -167,6 +170,16 @@ class Article extends Model
     #[Scope]
     protected function published(Builder $query): void
     {
-        $query->where('status', ArticleStatus::Published->value);
+        $query->where('status', ArticleStatus::Published->value)
+            ->whereNull('moderation_restricted_at');
+    }
+
+    /**
+     * Masqué par la modération (module Moderation) : absent de la lecture publique (404) jusqu'à
+     * la levée de la restriction ; son statut ne change pas.
+     */
+    public function isRestricted(): bool
+    {
+        return $this->moderation_restricted_at !== null;
     }
 }

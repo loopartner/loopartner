@@ -9,8 +9,9 @@ use App\Modules\Accounts\Models\ProviderProfile;
  * modules (Directory : mise en relation et messagerie), sans exposer le modèle ProviderProfile.
  *
  * Le résumé ne contient que ce que montre déjà la page publique d'un prestataire : ni email, ni
- * nom de l'utilisateur, ni identifiant. "slug" vaut null si le profil n'est plus publié (sa
- * page publique n'existe plus). Un utilisateur sans profil est absent du résultat.
+ * nom de l'utilisateur, ni identifiant. "slug" vaut null si le profil n'est plus publié ou s'il
+ * est masqué par la modération (sa page publique n'existe plus). Un utilisateur sans profil est
+ * absent du résultat.
  *
  * @phpstan-type ProviderSummary array{display_name: string, slug: string|null, headline: string|null, city: string|null, country: string|null, logo_url: string|null}
  */
@@ -41,7 +42,7 @@ class GetProviderSummaries
     {
         return [
             'display_name' => $profile->display_name,
-            'slug' => $profile->isPublished() ? $profile->slug : null,
+            'slug' => $profile->isPubliclyVisible() ? $profile->slug : null,
             'headline' => $profile->headline,
             'city' => $profile->city,
             'country' => $profile->country,
