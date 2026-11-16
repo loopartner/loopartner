@@ -8,6 +8,7 @@ use App\Modules\Events\Enums\EventNotice;
 use App\Modules\Events\Models\Event;
 use App\Modules\Events\Notifications\EventNotification;
 use App\Support\AdminAudit;
+use App\Support\Moderation\ContentModerated;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
@@ -29,6 +30,8 @@ class CancelEventByModeration
             $event = $this->cancelEvent->handle($event, CancelledBy::Admin, $reason);
 
             AdminAudit::record($admin, 'events.event.cancelled', 'event', $event->uuid, $event->version, $reason);
+            // Exposé des motifs consultable et contestable (module Moderation).
+            ContentModerated::dispatch('event', $event->slug ?? $event->uuid, $event->user_id, $event->title, $reason, $admin->id, ContentModerated::WITHDRAWN);
 
             if ($event->user !== null) {
                 EventNotification::sendTo($event->user, $event, EventNotice::CancelledByModeration, $reason);

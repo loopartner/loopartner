@@ -8,6 +8,7 @@ use App\Modules\Events\Enums\EventStatus;
 use App\Modules\Events\Models\Event;
 use App\Modules\Events\Notifications\EventNotification;
 use App\Support\AdminAudit;
+use App\Support\Moderation\ContentModerated;
 use App\Support\Moderation\VersionGuard;
 use App\Support\SecurityLog;
 use Illuminate\Support\Facades\DB;
@@ -40,6 +41,8 @@ class RejectEvent
             ])->save();
 
             AdminAudit::record($admin, 'events.event.rejected', 'event', $event->uuid, $event->version, $reason);
+            // Exposé des motifs consultable et contestable (module Moderation).
+            ContentModerated::dispatch('event', $event->slug ?? $event->uuid, $event->user_id, $event->title, $reason, $admin->id, ContentModerated::REFUSED);
             SecurityLog::record('events.rejected', ['user_id' => $admin->id, 'event' => $event->uuid, 'version' => $event->version]);
 
             if ($event->user !== null) {

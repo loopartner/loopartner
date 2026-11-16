@@ -41,11 +41,11 @@ class EventNotification extends Notification implements CategorizedNotification,
     public bool $deleteWhenMissingModels = true;
 
     /**
-     * @var array<string, array{greeting: string, reason: string, salutation: string}>
+     * @var array<string, array{greeting: string, reason: string, statement: string, salutation: string}>
      */
     private const COMMON = [
-        'fr' => ['greeting' => 'Bonjour,', 'reason' => 'Motif :', 'salutation' => 'L\'équipe Loopartner'],
-        'en' => ['greeting' => 'Hello,', 'reason' => 'Reason:', 'salutation' => 'The Loopartner team'],
+        'fr' => ['greeting' => 'Bonjour,', 'reason' => 'Motif :', 'statement' => 'Exposé des motifs de cette décision et possibilité de la contester gratuitement : :url', 'salutation' => 'L\'équipe Loopartner'],
+        'en' => ['greeting' => 'Hello,', 'reason' => 'Reason:', 'statement' => 'Statement of reasons for this decision and how to contest it free of charge: :url', 'salutation' => 'The Loopartner team'],
     ];
 
     public function __construct(
@@ -100,6 +100,10 @@ class EventNotification extends Notification implements CategorizedNotification,
 
         if ($this->reason !== null && $this->notice->isForOrganizer()) {
             $mail->line($common['reason'].' '.$this->reason);
+        }
+
+        if ($this->notice->isRestrictiveDecision()) {
+            $mail->line(strtr($common['statement'], [':url' => rtrim((string) config('app.frontend_url'), '/').'/me/moderation/decisions']));
         }
 
         if (isset($texts['outro'])) {

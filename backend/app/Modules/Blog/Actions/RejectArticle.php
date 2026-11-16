@@ -9,6 +9,7 @@ use App\Modules\Blog\Models\Article;
 use App\Modules\Blog\Notifications\ArticleNotification;
 use App\Modules\Blog\Support\BlogModeration;
 use App\Support\AdminAudit;
+use App\Support\Moderation\ContentModerated;
 use App\Support\Moderation\VersionGuard;
 use App\Support\SecurityLog;
 use Illuminate\Support\Facades\DB;
@@ -48,6 +49,8 @@ class RejectArticle
             ])->save();
 
             AdminAudit::record($moderator, 'blog.article.rejected', 'article', $article->uuid, $article->version, $reason);
+            // Exposé des motifs consultable et contestable (module Moderation).
+            ContentModerated::dispatch('article', $article->slug ?? $article->uuid, $article->user_id, $article->title, $reason, $moderator->id, ContentModerated::REFUSED);
             SecurityLog::record('blog.article_rejected', ['user_id' => $moderator->id, 'article' => $article->uuid, 'version' => $article->version]);
 
             ArticleNotification::sendTo($article->user, $article, ArticleNotice::Rejected, $reason);

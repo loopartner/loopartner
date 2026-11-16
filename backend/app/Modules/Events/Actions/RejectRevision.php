@@ -10,6 +10,7 @@ use App\Modules\Events\Notifications\EventNotification;
 use App\Modules\Events\Support\PendingRevisions;
 use App\Support\AdminAudit;
 use App\Support\Media\MediaLibrary;
+use App\Support\Moderation\ContentModerated;
 use App\Support\Moderation\VersionGuard;
 use App\Support\SecurityLog;
 use Illuminate\Support\Facades\DB;
@@ -48,6 +49,8 @@ class RejectRevision
             ])->save();
 
             AdminAudit::record($admin, 'events.revision.rejected', 'revision', $revision->uuid, $revision->version, $reason);
+            // Exposé des motifs consultable et contestable (module Moderation).
+            ContentModerated::dispatch('event', $revision->event->slug ?? $revision->event->uuid, $revision->event->user_id, $revision->event->title, $reason, $admin->id, ContentModerated::REFUSED);
             SecurityLog::record('events.revision_rejected', ['user_id' => $admin->id, 'event' => $revision->event->uuid, 'revision' => $revision->uuid]);
 
             if ($revision->event->user !== null) {

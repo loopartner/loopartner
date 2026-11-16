@@ -10,6 +10,7 @@ use App\Modules\Blog\Notifications\ArticleNotification;
 use App\Modules\Blog\Support\BlogModeration;
 use App\Modules\Blog\Support\PendingRevisions;
 use App\Support\AdminAudit;
+use App\Support\Moderation\ContentModerated;
 use App\Support\SecurityLog;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
@@ -49,6 +50,8 @@ class UnpublishArticle
             ])->save();
 
             AdminAudit::record($moderator, 'blog.article.unpublished', 'article', $article->uuid, $article->version, $reason);
+            // Exposé des motifs consultable et contestable (module Moderation).
+            ContentModerated::dispatch('article', $article->slug ?? $article->uuid, $article->user_id, $article->title, $reason, $moderator->id, ContentModerated::WITHDRAWN);
             SecurityLog::record('blog.article_unpublished', ['user_id' => $moderator->id, 'article' => $article->uuid]);
 
             ArticleNotification::sendTo($article->user, $article, ArticleNotice::Unpublished, $reason);

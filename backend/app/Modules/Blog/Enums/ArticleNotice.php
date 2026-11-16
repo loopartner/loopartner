@@ -22,6 +22,15 @@ enum ArticleNotice: string
      * L'email renvoie vers la page publique de l'article (sinon vers l'article dans l'espace
      * de l'auteur).
      */
+    /**
+     * Décision restrictive : l'email renvoie aussi vers l'exposé des motifs et le recours
+     * (module Moderation, GET /me/moderation/decisions).
+     */
+    public function isRestrictiveDecision(): bool
+    {
+        return in_array($this, [self::Rejected, self::Unpublished, self::RevisionRejected], true);
+    }
+
     public function linksToPublicPage(): bool
     {
         return in_array($this, [self::Approved, self::RevisionApproved], true);

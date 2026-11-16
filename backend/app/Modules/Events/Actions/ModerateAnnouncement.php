@@ -9,6 +9,7 @@ use App\Modules\Events\Models\Event;
 use App\Modules\Events\Models\EventAnnouncement;
 use App\Modules\Events\Notifications\EventNotification;
 use App\Support\AdminAudit;
+use App\Support\Moderation\ContentModerated;
 use App\Support\SecurityLog;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
@@ -62,6 +63,8 @@ class ModerateAnnouncement
             ])->save();
 
             AdminAudit::record($admin, 'events.announcement.rejected', 'announcement', $announcement->uuid, null, $reason);
+            // Exposé des motifs consultable et contestable (module Moderation).
+            ContentModerated::dispatch('event_announcement', $announcement->uuid, $event->user_id, $event->title, $reason, $admin->id, ContentModerated::REFUSED);
             SecurityLog::record('events.announcement_rejected', ['user_id' => $admin->id, 'announcement' => $announcement->uuid]);
 
             if ($event->user !== null) {

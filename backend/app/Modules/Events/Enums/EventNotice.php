@@ -39,6 +39,15 @@ enum EventNotice: string
     }
 
     /**
+     * Décision restrictive : l'email renvoie aussi vers l'exposé des motifs et le recours
+     * (module Moderation, GET /me/moderation/decisions).
+     */
+    public function isRestrictiveDecision(): bool
+    {
+        return in_array($this, [self::EventRejected, self::RevisionRejected, self::AnnouncementRejected, self::CancelledByModeration], true);
+    }
+
+    /**
      * Catégorie de notifications (config/notifications.php) : le participant peut couper les
      * rappels et les annonces ; la confirmation, les changements importants, l'annulation, le
      * retrait et les décisions de modération (organisateur) partent toujours.
