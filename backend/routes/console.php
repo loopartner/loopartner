@@ -85,6 +85,11 @@ Schedule::command('compliance:check-rule-coverage')
     ->dailyAt('06:30')
     ->withoutOverlapping();
 
+// Minimisation des données du suivi administratif (durées dans config/security.php, retention).
+Schedule::command('compliance:prune')
+    ->dailyAt('05:30')
+    ->withoutOverlapping();
+
 // Suivi administratif : récapitulatif par email (rappels d'échéances, alertes de seuil), un email
 // par utilisateur et par jour au plus, sans doublon (réservation avant l'envoi).
 Schedule::command('compliance:send-reminders')

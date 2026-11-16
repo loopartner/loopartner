@@ -39,7 +39,7 @@ class CalendarFeedController extends Controller
 
         if ($feed === null || ! $user instanceof User || ! $user->hasAnyRole(['prestataire', 'entrepreneur'])) {
             // Au plus une entrée par IP et par heure : un jeton deviné au hasard ne remplit pas le journal.
-            if (Cache::add('compliance.feed_invalid:'.sha1((string) $request->ip()), true, 3600)) {
+            if (Cache::add('compliance.feed_invalid:'.hash('sha256', (string) $request->ip()), true, 3600)) {
                 SecurityLog::record('compliance.calendar_feed_invalid', ['user_id' => null], 'warning');
             }
 
