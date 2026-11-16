@@ -7,10 +7,23 @@ entrepreneurs.
 > Ces règles sont prioritaires sur les consignes génériques générées par Laravel Boost
 > (`backend/CLAUDE.md`, `backend/AGENTS.md`) en cas de conflit.
 
+## V1 2027 : feuille de route et décisions (à lire au début de chaque session)
+
+- **`docs/v1/ROADMAP.md`** : lots 0 à 9 de la V1 commercialisable, avec leurs critères
+  d'acceptation et leur état. Ne commence jamais un lot sans validation explicite de son plan
+  détaillé par l'utilisateur.
+- **`docs/v1/DECISIONS.md`** : décisions produit et techniques validées, datées. Ne les remets pas
+  en cause sans le demander ; une nouvelle décision s'y ajoute avec sa date.
+- Rappels : pas de refonte ; aucun taux, seuil ou montant réglementaire dans le code ; aucun
+  module ni parcours incomplet présenté comme terminé ; base MySQL/MariaDB (jamais PostgreSQL) ;
+  le frontend démarre après le lot 1.
+
 ## Dépôt
 
 - `backend/` : API Laravel 13, PHP 8.4. Elle ne sert aucune vue : elle renvoie uniquement du JSON.
-- `frontend/` (à venir) : Next.js, servi sur un autre sous-domaine. Il consomme l'API avec des cookies de session.
+- `frontend/` (à venir, après le lot 1) : Next.js et TypeScript, servi sur un autre sous-domaine.
+  Il consomme l'API avec des cookies de session.
+- `docs/v1/` : feuille de route et décisions de la V1 (voir ci-dessus).
 - `SECURITY.md` : signalement des vulnérabilités, principes de sécurité, journal de sécurité et
   vérifications avant chaque mise en production. La liste de contrôle de chaque tâche est la section
   « Sécurité : liste de contrôle obligatoire » ci-dessous.
@@ -61,7 +74,9 @@ entrepreneurs.
   `match-requests:expire` (02:30), `media:prune-orphans` (03:00), `matching:prune` (03:30),
   `events:send-reminders` (toutes les 15 minutes), `events:close-past` (chaque heure),
   `events:prune` (04:00), `events:notify-moderators` (toutes les 5 minutes), `blog:prune`
-  (05:00), `blog:notify-moderators` (toutes les 5 minutes), `admin-audit:prune` (04:30), puis le
+  (05:00), `blog:notify-moderators` (toutes les 5 minutes), `admin-audit:prune` (04:30),
+  `compliance:extend-calendars` (01:30), `compliance:prune` (05:30), `compliance:send-reminders`
+  (06:00), `compliance:check-rule-coverage` (06:30, actif du 1er octobre au 30 novembre), puis le
   worker.
 - Toutes les dates sont stockées en **UTC** (`app.timezone = UTC`, connexion MySQL en `+00:00`).
   La conversion vers le fuseau de l'utilisateur se fait à l'affichage, côté frontend.
@@ -120,6 +135,9 @@ utilitaires du module), `Console/Commands/` (commandes Artisan du module), `Noti
   comptée dans une Action, sur plusieurs fenêtres) et le middleware
   `App\Http\Middleware\LimitRequestBody:<octets>` (413 avant la validation). Le module Events
   garde pour l'instant ses propres versions (`Events\Support\Moderation`, `EventLinks`).
+- Calendrier iCalendar du noyau : `App\Support\Calendar\Ics` (échappement, repli des lignes à
+  75 octets, dates UTC et journées entières, enveloppe `VCALENDAR`), utilisé par Events (fichier
+  d'un événement, sortie figée par `tests/Fixtures/ics`) et Compliance (abonnement aux échéances).
 - `TrimStrings` ne rogne pas `body.blocks.*` (corps des articles : les espaces entre segments
   comptent), voir `bootstrap/app.php`.
 - Langues : `App\Support\Locale` (`fr`, `en`). `Locale::fromRequest()` choisit la langue d'une réponse :
@@ -210,6 +228,10 @@ utilitaires du module), `Console/Commands/` (commandes Artisan du module), `Noti
   rédaction (rédacteur, admin) ; prestataire **premium** (attribution manuelle) avec un article
   publié et une révision en attente, et un article en attente ; entrepreneur au **quota gratuit
   atteint** (un article publié, un refusé avec `DEMO_ARTICLE_REJECTION_REASON`) et un brouillon.
+  Suivi administratif (`ComplianceDemoSeeder`, sans aucun email) : règles **fictives** (`is_demo`,
+  codes `demo.*`, titres « [Démo] ») ; micro-entreprise de l'entrepreneur avec calendrier, parcours,
+  tâche, échéance personnelle et chiffre d'affaires à 85 % d'un seuil ; deux entreprises pour le
+  prestataire premium.
 - **Double authentification de `admin@example.com`** (démonstration uniquement) : activée et
   confirmée par le seeder avec un secret fixe, `DatabaseSeeder::DEMO_ADMIN_TWO_FACTOR_SECRET`
   (`LOOPARTNERDEMOAD`), pour tester la modération. Pour se connecter : ajouter un compte dans une
@@ -576,6 +598,134 @@ validation.** Réglages métier dans `config/blog.php`, limites et durées dans 
   6 mois, brouillons jamais soumis 12 mois sans modification, articles refusés ou dépubliés
   12 mois sans modification, slugs retirés 24 mois.
 
+## Module Compliance (suivi administratif)
+
+Suivi administratif des prestataires et des entrepreneurs : profil d'entreprise, calendrier
+d'échéances, rappels, tâches et parcours, chiffre d'affaires et seuils, estimation (premium),
+abonnement au calendrier, export. Partie 2 (à venir, dans la V1) : coffre-fort de documents privé.
+**Principe central : les règles fiscales et sociales (statuts, échéances, seuils, taux) ne sont
+JAMAIS écrites dans le code ; ce sont des données vérifiées par un professionnel, et une règle non
+vérifiée n'est jamais montrée.** **L'outil est une aide à l'organisation et ne remplace pas un
+expert-comptable** : chaque réponse porte le champ racine `disclaimer` (`{"text", "version"}`,
+`Support/Disclaimer`), repris en pied de chaque email et dans l'abonnement `.ics` ; le frontend
+l'affiche sur chaque écran. Réglages dans `config/compliance.php` (aucune valeur fiscale), limites
+et durées dans `config/security.php`.
+
+- **Règles** (`ComplianceRule`, table `compliance_rules`) : par pays, `kind` (`legal_form`,
+  `deadline`, `threshold`, `rate`, `journey`), `code` stable entre versions et années
+  (`fr.vat.franchise.services.base`), `valid_from`/`valid_until`, `status` (`draft`, `verified`,
+  `retired`), `version`, `title`/`summary` traduits, `conditions` et `payload` à **liste fermée**
+  de clés reconstruites par le serveur (`Support/RuleContent`), `source_url`/`source_label`,
+  `last_verified_at`, `verification_note`, `internal_notes`. Montants en centimes, taux en points
+  de base (2120 = 21,20 %), toujours entiers. Un brouillon peut laisser une valeur à `null`
+  (« à compléter ») ; la vérification exige un contenu complet et une source (422 avec la liste
+  `missing_fields`). Conditions : statut, activités (`ActivityType`), régime de TVA (`VatRegime`),
+  options (`ComplianceOption`) ; une liste vide veut dire « toutes ». Seules les règles
+  `usable()` (vérifiées, et jamais `is_demo` hors du poste local) sortent vers les utilisateurs
+  (`Support/RuleCatalog`). `tests/Arch/ComplianceNoFiscalValuesTest.php` refuse tout décimal ou
+  grand nombre dans le code du module.
+- **Administration** (`/admin/compliance/rules`, `RuleAdminController`, **admin seul** avec 2FA de
+  session, `EnsureModerator` ; les admins n'ont aucun accès aux données des entreprises) : création
+  en brouillon, modification d'un brouillon (version lue, 409 sinon), `POST …/revise` (une règle
+  vérifiée ne se modifie jamais sur place : nouveau brouillon `replaces_rule_id`, l'ancienne reste
+  en vigueur jusqu'à la vérification du brouillon, qui la retire), `POST …/verify`,
+  `POST …/retire` (motif), suppression d'un brouillon. Pas deux versions vérifiées d'un même code
+  sur des périodes qui se chevauchent (409). Journal d'audit `compliance.rule.*` (motifs et notes),
+  canal security sans motif ni note, limiteur `compliance-rules-admin`. Vérifier ou retirer une
+  règle d'échéance recalcule en file d'attente les calendriers du pays (`RefreshCountryCalendars`).
+- **Vérification humaine** : une règle est vérifiée par un **professionnel** (expert-comptable
+  externe, sans compte admin) ; l'admin enregistre la vérification avec une **`verification_note`
+  obligatoire** d'au moins `compliance.verification_note_min_length` (30) caractères, qui dit
+  **qui** a vérifié (nom du cabinet ou du professionnel), **quand**, et **sur quel document ou
+  quelle source** (422 sinon). Elle est gardée sur la règle et dans le journal d'audit.
+- **Quatre yeux** (`compliance.require_distinct_verifier`, `COMPLIANCE_REQUIRE_DISTINCT_VERIFIER`,
+  **false par défaut** tant que l'équipe ne compte qu'un admin) : à `true`, l'admin qui a modifié
+  une règle en dernier ne peut pas la vérifier (403, `compliance.rule_self_verification_denied`).
+  Pour l'activer : `COMPLIANCE_REQUIRE_DISTINCT_VERIFIER=true` dans `.env`, puis
+  `php artisan config:cache`. `security:check-config` avertit si le réglage reste à false alors que
+  deux admins au moins ont la 2FA.
+- **Brouillons à importer** : `php artisan compliance:import-rules <fichier.json> [--dry-run]`
+  (`Support/RuleImporter`) crée **uniquement des brouillons**, validés comme par l'API, tout ou
+  rien ; une règle déjà présente (même code et même `valid_from`) est ignorée, une règle vérifiée
+  n'est jamais modifiée. Utilisable en production pour la relecture par l'expert-comptable ;
+  **jamais appelée par `ReferenceDataSeeder`**. Fichier livré :
+  `database/data/compliance/fr-2027.draft.json` (38 règles 2027). Chaque valeur remplie y cite
+  « lue sur <URL> le <date> » ; sinon elle est à `null` avec « à compléter : <source> »
+  (`RuleImportTest` vérifie ces deux points). **N'y écris jamais une valeur de mémoire.**
+- **Mise à jour annuelle** : `GET /admin/compliance/coverage?year=` (codes sans version vérifiée
+  pour l'année, règles sans date de fin vérifiées avant le 1er septembre, brouillons, pays encore
+  proposé) ; `compliance:check-rule-coverage` envoie un récapitulatif aux admins avec 2FA, du
+  1er octobre au 30 novembre, au plus une fois par semaine.
+- **Accès** (`CompanyPolicy`) : prestataires et entrepreneurs avec un email vérifié (403 sinon,
+  profil publié non requis). **L'entreprise d'un autre utilisateur et toutes ses données donnent
+  404, admins compris.** `tests/Feature/Security/ComplianceAuthorizationTest.php` teste CHAQUE
+  route du module (lue dans le routeur) contre chaque rôle et un autre utilisateur.
+- **Questionnaire** : `GET /compliance/countries` (pays de `config/compliance.php` ayant un statut
+  vérifié couvrant toute l'année), `GET /compliance/countries/{cc}/questionnaire`,
+  `POST /me/compliance/companies` (nom, pays, statut, 1 ou 2 activités, régime de TVA, date de
+  création, clôture `MM-DD`, options, SIREN/SIRET, TVA), vérifié contre les règles du pays
+  (`Support/CompanyProfile`, 422 sur le champ). Le pays ne change jamais (422).
+- **Calendrier** (`Support/CalendarGenerator`, `DeadlineSchedule`) : échéances des règles vérifiées
+  sur 15 mois (`yearly`, `monthly`, `quarterly`, `fixed_dates`, `after_creation`,
+  `after_fiscal_year_end` ; jour ramené au dernier jour du mois ; `skip_creation_year`), clé
+  d'occurrence par période (une date déplacée par une nouvelle version déplace l'échéance).
+  Recalcul idempotent : **une échéance faite ou ignorée n'est jamais modifiée** (seulement
+  `obsolete_at` si sa règle ne s'applique plus), une échéance passée reste, une échéance
+  personnelle n'est jamais touchée. `compliance:extend-calendars` fait avancer la fenêtre.
+  **Pas de report automatique** d'une échéance qui tombe un week-end ou un jour férié : la date
+  vient de la règle.
+- **Échéances et tâches** : `/me/compliance/deadlines` (toutes les entreprises, 400 jours au plus,
+  `status=overdue`), `/me/compliance/companies/{company}/deadlines` (personnelles : 50 à venir au
+  plus ; issues d'une règle : notes seulement, à ignorer plutôt qu'à supprimer),
+  `…/complete|skip|reopen`, `…/tasks` (issues des règles : à cocher seulement), parcours types
+  (règles `journey`, gratuit : un parcours actif par entreprise). Une tâche qui demande un
+  professionnel porte une `service_category` : le frontend propose des prestataires avec
+  `GET /providers?category=<slug>&country=<cc>`, sans couplage entre modules.
+- **Chiffre d'affaires et seuils** : `PUT …/revenue/{AAAA-MM}` (`{"lines": {"<activité>": <centimes>}}`,
+  entiers JSON stricts de 0 à `compliance.revenue.max_amount`, du mois de création au mois en
+  cours), `GET …/revenue`, `…/revenue.csv`, `…/thresholds` (`Support/ThresholdReport` : seuil
+  proratisé au jour l'année de création si la règle le prévoit, ratio en points de base,
+  projection linéaire sur les mois complets, paliers ; **arrondis par défaut, annoncés par
+  `"rounding": "floor"`**), `…/estimate` (premium, `Support/ContributionEstimate`, taux vérifiés
+  seulement, `is_estimate`, `available: false` sans taux pour le profil). Paliers atteints et
+  dépassement projeté enregistrés une fois par année (`compliance_threshold_alerts`). Limite
+  connue : les seuils sont comparés au cumul de l'année en cours (les seuils appréciés sur N-1 ou
+  N-2 sont signalés dans les notes des brouillons).
+- **Gratuit et premium** (`Support/Entitlements`, Action publique `Accounts\Actions\IsPremium`) :
+  gratuit = 1 entreprise, un délai de rappel parmi 3, 7 ou 14 jours, paliers 80 % et 100 %,
+  1 parcours actif, abonnement `.ics`, export ; premium = 5 entreprises, jusqu'à 3 délais, paliers
+  personnalisés, parcours illimités, estimation. Refus : **403
+  `{"message", "code": "premium_required", "feature"}`** (`Exceptions/PremiumFeatureRequired`,
+  même code que le Blog ; `feature` : `multiple_companies`, `estimate`, `custom_reminders`,
+  `custom_threshold_levels`, `multiple_journeys`). Fin du premium : rien n'est supprimé ; une
+  entreprise reste active (choisie par `POST …/activate`, sinon la plus ancienne), les autres sont
+  verrouillées (`locked` : lecture, export, suppression) ; les réglages premium restent enregistrés
+  mais les valeurs gratuites s'appliquent (`effective_*`).
+- **Rappels** (`compliance:send-reminders`, `SendDigests`) : **un email par utilisateur et par jour
+  au plus** (quota Resend), réservé avant l'envoi (`compliance_digests`,
+  `compliance_reminder_deliveries`, index uniques) ; quotidien (délais) ou hebdomadaire (lundi,
+  14 jours) ; paliers de seuil, calendrier modifié, annonce de la purge annuelle le 1er décembre.
+  Titres, dates et pourcentages seulement, chiffré dans la file (`ShouldBeEncrypted`).
+- **Abonnement au calendrier** (gratuit) : `POST|GET|DELETE /me/compliance/calendar-feed` (URL
+  montrée une seule fois) ; `GET /compliance/calendar/{token}.ics` **public** : jeton de
+  56 caractères (sélecteur de 16 + secret de 40), seule l'empreinte HMAC-SHA256 (`APP_KEY`) du
+  secret est stockée, comparaison en temps constant (`Support/CalendarFeedToken`) ; titres et
+  dates en journée entière, jamais de montant ni de note ; entreprises actives seulement.
+- **Données chiffrées en base** (cast `encrypted` et `Support/EncryptedInteger`) : nom de
+  l'entreprise, SIREN/SIRET, numéro de TVA, montants du chiffre d'affaires, titres et notes saisis.
+  Ces colonnes ne sont ni indexées ni utilisées dans une requête SQL. **Elles dépendent de
+  `APP_KEY`** : voir SECURITY.md (sauvegarde, rotation avec `APP_PREVIOUS_KEYS`).
+- **Export** : `GET /me/compliance/export` (JSON complet, portabilité RGPD ; section `documents`
+  réservée au coffre-fort).
+- **Suppression de compte** (`ForgetUserCompliance`, sur `AccountDeleting`) : tout est supprimé.
+- **Minimisation** (`compliance:prune`, 05:30, `config/security.php`, `retention`) : échéances
+  passées depuis 36 mois, chiffre d'affaires au-delà de 6 années civiles, alertes et parcours
+  terminés depuis 36 mois ; durées et prochaine purge annoncées par `GET /me/compliance`.
+- **Coffre-fort (partie 2)** : prévoir un disque **privé** (pas la brique média, publique), une
+  table rattachée à `company_id` (et facultativement à une échéance ou une tâche ;
+  `expects_document` est déjà dans le contenu des règles d'échéance), la même `CompanyPolicy`, la
+  suppression dans `ForgetUserCompliance` et la section `documents` de l'export.
+
 ## Catégories de services (noyau)
 
 Modèle partagé `App\Models\ServiceCategory` (table `service_categories`), utilisable par tous les
@@ -663,7 +813,10 @@ Aucune réponse ne révèle si une adresse email correspond à un compte.
   `event-registrations` (20/h, 60/j), `event-registrant-removals` (20/j), `event-announcements`
   (3/j), `event-moderation` (60/h par admin), `article-writes` (60/h, 300/j), `article-submissions`
   (5/h, 10/j), `article_revisions` (10/h, 30/j, compté par `SubmitRevision`), `blog-moderation`
-  (60/h par modérateur), `premium-admin` (30/h par admin).
+  (60/h par modérateur), `premium-admin` (30/h par admin), `compliance-rules-admin` (60/h par
+  admin), `compliance-writes` (120/h, 600/j), `compliance-companies` (10/j),
+  `compliance-revenue` (60/h), `compliance-exports` (10/h), `compliance-feed-manage` (10/j),
+  `compliance-feed` (30/h par abonnement, 120/h par IP, route publique à jeton).
 - Règles de validation du texte saisi : `NoHtml` et `NoInvisibleCharacters` (caractères de contrôle
   sauf tabulation et retours à la ligne, contrôles de direction U+202A–202E et U+2066–2069, espace
   de largeur nulle U+200B, marques de direction U+200E et U+200F, U+2060–2064, BOM…), sur **tous**
@@ -692,11 +845,17 @@ Aucune réponse ne révèle si une adresse email correspond à un compte.
   `changed_fields`), `blog.article_approved`, `blog.article_rejected`, `blog.article_unpublished`,
   `blog.revision_submitted` (avec `changed_fields`), `blog.revision_withdrawn`,
   `blog.revision_approved`, `blog.revision_rejected`, `blog.self_moderation_denied`,
-  `premium.granted`, `premium.revoked` (uuids et `subject_user_id`, jamais de motif).
+  `premium.granted`, `premium.revoked` (uuids et `subject_user_id`, jamais de motif),
+  `compliance.rule_created|updated|revised|verified|retired|deleted` (uuid, code, pays, version),
+  `compliance.rule_self_verification_denied`, `compliance.rules_imported`,
+  `compliance.company_created|deleted`, `compliance.premium_required` (avec `feature`),
+  `compliance.calendar_feed_created|regenerated|revoked|invalid` (jamais le jeton ;
+  `invalid` au plus une fois par heure et par IP), `compliance.export_downloaded`.
   **Jamais le contenu d'un message, d'une demande, d'un commentaire de signalement, la description
-  d'un événement, son lien de connexion, le texte d'une annonce, le contenu d'un article, un motif
-  ni une donnée des inscrits** (tests `MatchingPrivacyTest`, `EventsPrivacyTest` et
-  `BlogInputAndPrivacyTest`).
+  d'un événement, son lien de connexion, le texte d'une annonce, le contenu d'un article, un motif,
+  une donnée des inscrits, ni un numéro d'entreprise, un nom d'entreprise, un montant, une note ou
+  un jeton du suivi administratif** (tests `MatchingPrivacyTest`, `EventsPrivacyTest`,
+  `BlogInputAndPrivacyTest` et `ComplianceInputAndPrivacyTest`).
   Les événements Laravel et Fortify sont journalisés par `App\Listeners\LogSecurityEvents`
   (listeners découverts automatiquement dans `app/Listeners`). Les tests gardent ce journal en
   mémoire (`securityLog()` dans `tests/Pest.php`).
@@ -704,8 +863,11 @@ Aucune réponse ne révèle si une adresse email correspond à un compte.
   vérifie la configuration de production (`App\Support\Security\ConfigAudit`) et échoue (code 1)
   sur toute valeur dangereuse (`APP_DEBUG`, cookies de session, Sanctum, CORS, `LOG_LEVEL`,
   `MAIL_MAILER`, dépendances de développement installées, colonne réelle avec
-  `ON UPDATE CURRENT_TIMESTAMP` hors `updated_at`…). Les avertissements (`TRUSTED_PROXIES` vide,
-  réglages php.ini, `explicit_defaults_for_timestamp` à OFF, base qui ne répond pas) ne bloquent
+  `ON UPDATE CURRENT_TIMESTAMP` hors `updated_at`, **base de démonstration** : compte de
+  démonstration vérifié `<rôle>@example.com` (`ConfigAudit::DEMO_ACCOUNT_EMAILS`) ou règle
+  Compliance `is_demo`…). Les avertissements (`TRUSTED_PROXIES` vide, réglages php.ini,
+  `explicit_defaults_for_timestamp` à OFF, base qui ne répond pas,
+  `COMPLIANCE_REQUIRE_DISTINCT_VERIFIER` à false alors que deux admins ont la 2FA) ne bloquent
   pas. Le schéma est lu par `App\Support\Database\TimestampSchema` (MySQL et MariaDB seulement) ;
   relancer la commande après `migrate`. Toute nouvelle variable de sécurité doit y être ajoutée,
   avec son test dans `tests/Feature/Security/CheckConfigCommandTest.php`.
@@ -778,7 +940,9 @@ composer security            # composer audit : vulnérabilités connues des dé
   `postMessage()`, `expectNoPrivateFields()`, `userWithTwoFactor()`, `verificationUrlFor()`, `securityLog()`,
   `allowDemoSeeding()`, `eventOrganizer()`, `eventPayload()`, `publishedEventOf()`, `registerTo()`,
   `moderator()`, `asModerator()`, `fromFrontend()`, `articleAuthor()`, `asAuthor()`,
-  `articlePayload()`, `articleOf()`, `blogCategory()`, `makePremium()`, images…) sont dans
+  `articlePayload()`, `articleOf()`, `blogCategory()`, `makePremium()`, `complianceUser()`,
+  `verifiedLegalForm()`, `verifiedDeadlineRule()`, `companyPayload()`, `complianceCompanyOf()`,
+  images…) sont dans
   `tests/Pest.php`. Les fonctions des fichiers de test sont globales : leur nom doit être unique
   dans tout `tests/`. Un test qui fixe l'horloge (`Carbon::setTestNow`) y revient avec
   `travelTo(<date fixe>)`, jamais `travelBack()` (qui revient à l'heure réelle). Une donnée de

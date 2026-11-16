@@ -204,6 +204,79 @@ par événement) et l'annulation.
 > confidentialité**, et prévoir dans les CGU les règles de publication des articles (contenu
 > autorisé, liens, modération, retrait).
 
+## Suivi administratif : règles vérifiées, données privées et durées de conservation
+
+- **Règles vérifiées par un professionnel** : les statuts, échéances, seuils et taux sont des
+  données (jamais du code), montrées aux utilisateurs seulement une fois vérifiées. La
+  vérification est faite par un professionnel (expert-comptable externe, sans compte admin) ;
+  l'admin qui l'enregistre doit saisir une **note de vérification obligatoire** (au moins
+  30 caractères : qui a vérifié, quand, sur quel document ou quelle source), gardée sur la règle et
+  dans le journal d'audit (24 mois). Une règle vérifiée n'est jamais modifiée sur place : sa
+  modification est une nouvelle version en brouillon, vérifiée à son tour. Les brouillons importés
+  (`compliance:import-rules`) ne contiennent que des valeurs lues sur une page officielle, avec
+  leur source et leur date de lecture ; le reste est « à compléter ».
+- **Principe des quatre yeux** : désactivé par défaut tant que l'équipe ne compte qu'un admin
+  (`COMPLIANCE_REQUIRE_DISTINCT_VERIFIER=false`). À activer dès que deux admins peuvent se relire
+  (`COMPLIANCE_REQUIRE_DISTINCT_VERIFIER=true`, puis `php artisan config:cache`) : l'admin qui a
+  modifié une règle en dernier ne pourra plus la vérifier. `security:check-config` avertit si le
+  réglage reste désactivé alors que deux admins ont la double authentification.
+- **Responsabilité** : l'outil est une aide à l'organisation et **ne remplace pas un
+  expert-comptable**. Chaque réponse de l'API (champ `disclaimer`), chaque email et l'abonnement
+  au calendrier le rappellent ; l'estimation des cotisations est présentée comme une estimation.
+- **Données strictement privées** : toutes les données d'une entreprise ne sont visibles que de
+  leur propriétaire (404 pour tout autre utilisateur, **administrateurs compris** : les admins ne
+  gèrent que les règles). Le journal security n'en contient jamais : ni numéro d'entreprise, ni
+  nom, ni montant, ni note, ni jeton.
+- **Chiffrement en base** : nom de l'entreprise, SIREN/SIRET, numéro de TVA, montants du chiffre
+  d'affaires, titres et notes saisis par l'utilisateur sont chiffrés par l'application avec
+  `APP_KEY` (une copie de la base ne les révèle pas). Les emails du suivi administratif sont aussi
+  chiffrés dans la file d'attente.
+- **Abonnement au calendrier** : URL privée à jeton (56 caractères, dont un secret d'environ
+  238 bits) ; seule l'empreinte HMAC du secret est stockée, la comparaison se fait en temps
+  constant, l'URL est limitée en débit, révocable et régénérable, et ne donne que les titres et
+  dates des échéances. Un jeton invalide est journalisé au plus une fois par heure et par IP,
+  sans le jeton.
+
+| Données | Conservation | Ensuite |
+|---|---|---|
+| Entreprise, profil, réglages, abonnement au calendrier | tant que le compte existe | supprimés avec le compte |
+| Échéance passée (et ses tâches) | 36 mois après sa date | supprimée |
+| Chiffre d'affaires | 6 années civiles complètes | supprimé par année entière le 1er janvier (annoncé dans le récapitulatif du 1er décembre) |
+| Alerte de seuil, parcours terminé, tâche libre cochée | 36 mois | supprimés |
+| Trace d'un récapitulatif envoyé | 3 mois | supprimée |
+
+- **Suppression de compte** : toutes les données du suivi administratif sont supprimées.
+- **Export** : l'utilisateur peut télécharger toutes ses données à tout moment
+  (`GET /me/compliance/export`, JSON) ; les durées de conservation et la prochaine purge sont
+  indiquées par l'API.
+- **Réglage** : durées dans `backend/config/security.php` (`retention.compliance_*`), appliquées
+  chaque nuit par `compliance:prune`. Toute modification doit être reportée dans la politique de
+  confidentialité.
+
+### `APP_KEY` : sauvegarde et rotation
+
+`APP_KEY` chiffre les sessions, les secrets 2FA, le lien de connexion des événements et les données
+du suivi administratif (SIRET, montants…). **Sans elle, ces données sont définitivement
+illisibles.**
+
+- **Sauvegarde** : garder `APP_KEY` de production hors du serveur (coffre de mots de passe de
+  l'équipe, accès restreint), à côté des sauvegardes de la base, mais jamais dans le même fichier
+  ni le même stockage.
+- **Rotation** (fuite suspectée, départ d'une personne qui la connaissait) : générer une nouvelle
+  clé, la mettre dans `APP_KEY` et placer l'ancienne dans `APP_PREVIOUS_KEYS` (liste séparée par
+  des virgules), puis `php artisan config:cache`. Laravel déchiffre alors avec l'ancienne clé les
+  valeurs qu'elle a chiffrées et chiffre les nouvelles avec la nouvelle. Les sessions ouvertes
+  restent valides. Les empreintes HMAC calculées avec `APP_KEY` (abonnements au calendrier,
+  empreintes d'email du journal) ne se recalculent pas : les URL d'abonnement deviennent invalides
+  et doivent être régénérées par les utilisateurs. Ne retirer l'ancienne clé de
+  `APP_PREVIOUS_KEYS` qu'après avoir rechiffré les données (commande à prévoir avant la première
+  rotation réelle).
+
+> **À faire avant l'ouverture au public** : reprendre le tableau ci-dessus dans la **politique de
+> confidentialité**, prévoir dans les CGU la limite de responsabilité du suivi administratif, et
+> faire vérifier les règles françaises 2027 par un expert-comptable (aucune n'est vérifiée
+> aujourd'hui : le module n'est proposé à aucun utilisateur tant que ce n'est pas fait).
+
 ## Vérifications avant chaque mise en production
 
 Depuis `backend/`, sur le serveur de production :
@@ -216,7 +289,11 @@ Depuis `backend/`, sur le serveur de production :
 3. **Base de données** : `php artisan migrate --force`, puis uniquement les données de référence :
    `php artisan db:seed --class="Database\Seeders\ReferenceDataSeeder" --force`.
    Relancer ensuite `php artisan security:check-config` : il vérifie aussi le schéma migré (aucune
-   colonne `ON UPDATE CURRENT_TIMESTAMP` hors `updated_at`).
+   colonne `ON UPDATE CURRENT_TIMESTAMP` hors `updated_at`) et l'absence de **données de
+   démonstration** (comptes `<rôle>@example.com` vérifiés, règles administratives fictives) : une
+   base de démonstration ne doit jamais être copiée en production.
+   Les brouillons de règles administratives s'importent volontairement, jamais par un seeder :
+   `php artisan compliance:import-rules database/data/compliance/fr-2027.draft.json`.
    Ne jamais lancer `db:seed` sans `--class` en production, ni définir `SEED_DEMO_DATA`.
 4. **Tâche cron** du planificateur en place (`php artisan schedule:run` chaque minute) : sans elle,
    aucun email (vérification, réinitialisation) ne part.
@@ -226,7 +303,8 @@ Depuis `backend/`, sur le serveur de production :
 6. **PHP** : `upload_max_filesize` et `post_max_size` d'au moins 8 Mo, GD avec WebP, extensions
    `exif` et `fileinfo`, `zend.exception_ignore_args = On`, `expose_php = Off`.
 7. **Fichiers** : `backend/.env` non accessible depuis le web (seul `backend/public` est exposé),
-   `APP_KEY` propre à la production et sauvegardée hors du serveur.
+   `APP_KEY` propre à la production et sauvegardée hors du serveur (voir « `APP_KEY` : sauvegarde
+   et rotation » : sans elle, les données chiffrées sont perdues).
 8. **Contrôle rapide après déploiement** : `GET /up` répond 200, une réponse de l'API porte bien
    `Strict-Transport-Security` et `Content-Security-Policy`, et `/` ne renvoie pas de page HTML.
 
