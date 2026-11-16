@@ -3,7 +3,6 @@
 namespace App\Modules\Directory\Support;
 
 use App\Modules\Directory\Enums\ReportReason;
-use App\Modules\Directory\Models\AbuseReport;
 use App\Modules\Directory\Models\MatchRequest;
 use App\Modules\Directory\Models\Message;
 use App\Rules\NoHtml;
@@ -45,7 +44,7 @@ final class MatchingRules
     {
         return [
             'reason' => ['required', 'string', Rule::enum(ReportReason::class)],
-            'comment' => ['nullable', 'string', 'max:'.AbuseReport::COMMENT_MAX_LENGTH, new NoHtml, new NoInvisibleCharacters],
+            'comment' => ['nullable', 'string', 'max:'.ReportReason::COMMENT_MAX_LENGTH, new NoHtml, new NoInvisibleCharacters],
         ];
     }
 }

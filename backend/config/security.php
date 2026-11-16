@@ -230,6 +230,32 @@ return [
             'per_hour_per_ip' => 120,
         ],
 
+        // Signalements de contenus (module Moderation, POST /moderation/notices, ouvert sans
+        // compte) : par IP, et par compte ou par email du signalant (compté dans SubmitNotice).
+        // Limite aussi les emails d'accusé de réception envoyés à une adresse saisie.
+        'moderation_notices' => [
+            'per_hour_per_ip' => 5,
+            'per_day_per_ip' => 20,
+            'per_day_per_user' => 10,
+            'per_day_per_email' => 5,
+        ],
+
+        // Consultation d'un signalement avec son jeton de suivi (signalant sans compte), par IP.
+        'moderation_lookups' => [
+            'per_hour' => 30,
+        ],
+
+        // Recours contre une décision de modération, par compte ou par IP.
+        'moderation_appeals' => [
+            'per_day' => 5,
+        ],
+
+        // Décisions de la modération des signalements (décision, levée, recours, signalement aux
+        // autorités), par admin : limite l'effet d'un compte admin compromis.
+        'moderation_admin' => [
+            'per_hour' => 60,
+        ],
+
     ],
 
     /*
@@ -244,10 +270,6 @@ return [
 
         // Demandes refusées, retirées ou expirées (sans conversation) : supprimées.
         'closed_match_requests_months' => 12,
-
-        // Signalements : copie du contenu signalé et commentaire effacés, signalements clos
-        // supprimés.
-        'abuse_reports_months' => 12,
 
         // Événements (module Events, purge quotidienne events:prune).
         // Inscriptions aux événements terminés depuis cette durée : supprimées (seul le nombre
@@ -299,6 +321,17 @@ return [
         // Journal d'audit des décisions d'administration (table admin_audit_logs) : supprimé
         // après cette durée (admin-audit:prune).
         'admin_audit_months' => 24,
+
+        // Signalements et modération (module Moderation, purge quotidienne moderation:prune).
+        // Identité et email du signalant, explication, précision sur l'emplacement et copie du
+        // contenu signalé : effacés après cette durée, comptée depuis la clôture du signalement
+        // (ou depuis sa réception s'il est encore ouvert).
+        'moderation_notices_months' => 12,
+
+        // Décisions (exposés des motifs), recours et signalements clos : supprimés après cette
+        // durée, comptée depuis la fin du délai de recours ou la levée de la restriction (la
+        // plus tardive), sans recours en attente. Le journal d'audit suit sa propre durée.
+        'moderation_records_months' => 24,
 
     ],
 

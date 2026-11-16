@@ -1,13 +1,11 @@
 <?php
 
 use App\Modules\Directory\Enums\MatchRequestStatus;
-use App\Modules\Directory\Enums\ReportReason;
-use App\Modules\Directory\Enums\ReportTarget;
-use App\Modules\Directory\Models\AbuseReport;
 use App\Modules\Directory\Models\MatchRequest;
 use App\Modules\Directory\Models\Message;
 use App\Modules\Directory\Models\UserBlock;
 use App\Modules\Directory\Notifications\MatchRequestDeclinedNotification;
+use App\Modules\Moderation\Models\Notice;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Notification;
 
@@ -143,12 +141,13 @@ describe('signalement', function (): void {
         expectNoPrivateFields($response->json());
         expect($response->getContent())->not->toContain('virement');
 
-        $report = AbuseReport::query()->sole();
+        $report = Notice::query()->sole();
         expect($report->reporter_id)->toBe($owner->id)
-            ->and($report->reported_user_id)->toBe($provider->id)
-            ->and($report->target_type)->toBe(ReportTarget::Message)
-            ->and($report->target_id)->toBe($message->id)
-            ->and($report->reason)->toBe(ReportReason::OffPlatform)
+            ->and($report->target_owner_id)->toBe($provider->id)
+            ->and($report->target_type)->toBe('message')
+            ->and($report->target_ref)->toBe($message->uuid)
+            ->and($report->source_reason)->toBe('off_platform')
+            ->and($report->category)->toBe('terms')
             ->and($report->content_snapshot)->toBe('Payez-moi directement par virement, hors plateforme.');
 
         $log = securityLog('moderation.report_created');
@@ -166,11 +165,11 @@ describe('signalement', function (): void {
             ->assertCreated()
             ->assertJsonPath('data.target_type', 'match_request');
 
-        $report = AbuseReport::query()->sole();
-        expect($report->target_type)->toBe(ReportTarget::MatchRequest)
-            ->and($report->reported_user_id)->toBe($provider->id)
+        $report = Notice::query()->sole();
+        expect($report->target_type)->toBe('match_request')
+            ->and($report->target_owner_id)->toBe($provider->id)
             ->and($report->content_snapshot)->toBe($matchRequest->message)
-            ->and($report->comment)->toBeNull();
+            ->and($report->explanation)->toBeNull();
     });
 
     it('refuse un second signalement du même contenu (409)', function (): void {
@@ -203,7 +202,7 @@ describe('signalement', function (): void {
             ->postJson("/api/v1/me/conversations/{$conversation->uuid}/messages/{$foreign->uuid}/report", ['reason' => 'spam'])
             ->assertNotFound();
 
-        expect(AbuseReport::query()->count())->toBe(0);
+        expect(Notice::query()->count())->toBe(0);
     });
 
     it('valide le motif et le commentaire (422)', function (array $payload, string $field): void {
@@ -234,9 +233,9 @@ describe('signalement', function (): void {
             'target_id' => 999,
         ])->assertCreated()->assertJsonPath('data.status', 'open');
 
-        $report = AbuseReport::query()->sole();
-        expect($report->reported_user_id)->toBe($provider->id)
+        $report = Notice::query()->sole();
+        expect($report->target_owner_id)->toBe($provider->id)
             ->and($report->content_snapshot)->toBe($message->body)
-            ->and($report->target_id)->toBe($message->id);
+            ->and($report->target_ref)->toBe($message->uuid);
     });
 });

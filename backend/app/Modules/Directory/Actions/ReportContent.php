@@ -4,68 +4,51 @@ namespace App\Modules\Directory\Actions;
 
 use App\Models\User;
 use App\Modules\Directory\Enums\ReportReason;
-use App\Modules\Directory\Enums\ReportStatus;
 use App\Modules\Directory\Enums\ReportTarget;
-use App\Modules\Directory\Models\AbuseReport;
 use App\Modules\Directory\Models\MatchRequest;
 use App\Modules\Directory\Models\Message;
+use App\Modules\Moderation\Actions\SubmitNotice;
+use App\Modules\Moderation\Support\NoticeReceipt;
 use App\Support\SecurityLog;
-use Illuminate\Database\UniqueConstraintViolationException;
-use Illuminate\Support\Str;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 /**
- * Enregistre le signalement d'un message ou d'une demande, pour la modération (back-office à
- * venir). Le contenu signalé est copié (content_snapshot) : il reste consultable par la
- * modération même s'il disparaît ensuite. Un même contenu n'est signalé qu'une fois par
- * utilisateur (409).
+ * Signalement d'un message ou d'une demande par son destinataire. Il rejoint les signalements de
+ * tous les contenus (Action publique Moderation\Actions\SubmitNotice) : la modération copie le
+ * contenu signalé (il reste consultable même s'il disparaît), et un même contenu n'est signalé
+ * qu'une fois par utilisateur tant qu'il est en cours d'examen (409).
  *
  * Le journal security reçoit le motif, le type de contenu et les identifiants, jamais le
  * contenu signalé ni le commentaire.
  */
 class ReportContent
 {
+    public function __construct(private readonly SubmitNotice $submitNotice) {}
+
     /**
      * @param  array{reason: string, comment?: string|null}  $data
+     * @return array{receipt: NoticeReceipt, target_type: ReportTarget, reason: ReportReason}
      *
      * @throws ConflictHttpException
      */
-    public function handle(User $reporter, MatchRequest|Message $target, array $data): AbuseReport
+    public function handle(User $reporter, MatchRequest|Message $target, array $data): array
     {
-        [$type, $reportedUserId, $snapshot] = $target instanceof Message
-            ? [ReportTarget::Message, $target->sender_id, $target->body]
-            : [ReportTarget::MatchRequest, $target->author_id, $target->message];
+        [$type, $reportedUserId] = $target instanceof Message
+            ? [ReportTarget::Message, $target->sender_id]
+            : [ReportTarget::MatchRequest, $target->author_id];
+        $reason = ReportReason::from($data['reason']);
 
-        $report = new AbuseReport([
-            'reason' => ReportReason::from($data['reason']),
-            'comment' => $data['comment'] ?? null,
-        ]);
-
-        $report->forceFill([
-            'uuid' => (string) Str::uuid(),
-            'reporter_id' => $reporter->id,
-            'reported_user_id' => $reportedUserId,
-            'target_type' => $type,
-            'target_id' => $target->id,
-            'content_snapshot' => $snapshot,
-            'status' => ReportStatus::Open,
-        ]);
-
-        try {
-            $report->save();
-        } catch (UniqueConstraintViolationException) {
-            throw new ConflictHttpException('Vous avez déjà signalé ce contenu.');
-        }
+        $receipt = $this->submitNotice->inApp($reporter, $type->value, $target->uuid, $reason->category(), $reason->value, $data['comment'] ?? null);
 
         SecurityLog::record('moderation.report_created', [
             'user_id' => $reporter->id,
-            'report' => $report->uuid,
+            'report' => $receipt->uuid,
             'target_type' => $type->value,
             'target' => $target->uuid,
-            'reason' => $report->reason->value,
+            'reason' => $reason->value,
             'reported_user_id' => $reportedUserId,
         ]);
 
-        return $report;
+        return ['receipt' => $receipt, 'target_type' => $type, 'reason' => $reason];
     }
 }

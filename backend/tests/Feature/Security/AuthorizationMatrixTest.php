@@ -200,6 +200,13 @@ const API_ROUTES = [
     // Abonnement au calendrier : public, protégé par le jeton secret de l'URL (404 sans jeton
     // valide), voir CalendarFeedTest.
     'GET api/v1/compliance/calendar/{token}.ics' => 'public',
+    // Signalements (module Moderation) : ouverts sans compte (DSA art. 16 : tout particulier
+    // ou entité) ; le suivi sans compte exige le jeton secret (404 sinon), voir NoticesTest.
+    'GET api/v1/moderation/info' => 'public',
+    'POST api/v1/moderation/notices' => 'public',
+    'POST api/v1/moderation/notices/{uuid}/lookup' => 'public',
+    'GET api/v1/me/moderation/notices' => 'auth',
+    'GET api/v1/me/moderation/notices/{uuid}' => 'auth',
 ];
 
 /**

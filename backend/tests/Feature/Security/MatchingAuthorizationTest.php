@@ -2,9 +2,9 @@
 
 use App\Models\User;
 use App\Modules\Directory\Enums\MatchRequestStatus;
-use App\Modules\Directory\Models\AbuseReport;
 use App\Modules\Directory\Models\Message;
 use App\Modules\Directory\Models\UserBlock;
+use App\Modules\Moderation\Models\Notice;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Notification;
 
@@ -78,7 +78,7 @@ it('cache chaque demande, conversation et message aux autres utilisateurs, quel 
     }
 
     expect(Message::query()->count())->toBe(1)
-        ->and(AbuseReport::query()->count())->toBe(0)
+        ->and(Notice::query()->count())->toBe(0)
         ->and(UserBlock::query()->count())->toBe(0);
 })->with([
     'particulier' => [fn () => projectOwner('particulier')],

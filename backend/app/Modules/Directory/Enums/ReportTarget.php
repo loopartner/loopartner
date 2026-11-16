@@ -3,7 +3,8 @@
 namespace App\Modules\Directory\Enums;
 
 /**
- * Contenu visé par un signalement (stocké dans abuse_reports.target_type).
+ * Contenu de la messagerie visé par un signalement (type de contenu signalable du module
+ * Moderation, voir config/moderation.php).
  */
 enum ReportTarget: string
 {

@@ -1,13 +1,10 @@
 <?php
 
 use App\Modules\Directory\Enums\MatchRequestStatus;
-use App\Modules\Directory\Enums\ReportStatus;
-use App\Modules\Directory\Models\AbuseReport;
 use App\Modules\Directory\Models\MatchRequest;
 use App\Modules\Directory\Models\Message;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Notification;
-use Illuminate\Support\Str;
 
 /*
 | Minimisation des données (matching:prune) : durées de conservation de config/security.php.
@@ -22,7 +19,6 @@ it('conserve 12 mois par défaut chaque type de données', function (): void {
     expect(config('security.retention'))->toMatchArray([
         'orphaned_conversations_months' => 12,
         'closed_match_requests_months' => 12,
-        'abuse_reports_months' => 12,
     ]);
 });
 
@@ -78,29 +74,4 @@ it('supprime les conversations orphelines au-delà de la durée de conservation,
     expect(Message::query()->where('conversation_id', $conversation->id)->count())->toBe(0)
         ->and(MatchRequest::query()->whereKey($conversation->match_request_id)->exists())->toBeFalse();
     $this->assertModelExists($kept);
-});
-
-it('efface la copie du contenu signalé, puis supprime les signalements clos, au-delà de la durée de conservation', function (): void {
-    $open = AbuseReport::query()->forceCreate([
-        'uuid' => (string) Str::uuid(), 'target_type' => 'message', 'target_id' => 1, 'reason' => 'spam',
-        'comment' => 'Commentaire', 'content_snapshot' => 'Contenu signalé', 'status' => 'open',
-    ]);
-    $closed = AbuseReport::query()->forceCreate([
-        'uuid' => (string) Str::uuid(), 'target_type' => 'message', 'target_id' => 2, 'reason' => 'spam',
-        'content_snapshot' => 'Contenu signalé', 'status' => ReportStatus::Closed->value, 'closed_at' => now(),
-    ]);
-
-    Carbon::setTestNow(now()->addMonths(12)->addDay());
-    $recent = AbuseReport::query()->forceCreate([
-        'uuid' => (string) Str::uuid(), 'target_type' => 'message', 'target_id' => 3, 'reason' => 'spam',
-        'content_snapshot' => 'Contenu récent', 'status' => 'open',
-    ]);
-
-    $this->artisan('matching:prune')->assertSuccessful();
-
-    expect($open->fresh()->content_snapshot)->toBeNull()
-        ->and($open->fresh()->comment)->toBeNull()
-        ->and($open->fresh()->status)->toBe(ReportStatus::Open)
-        ->and($recent->fresh()->content_snapshot)->toBe('Contenu récent');
-    $this->assertModelMissing($closed);
 });

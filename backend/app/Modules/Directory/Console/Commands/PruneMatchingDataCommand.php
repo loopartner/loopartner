@@ -12,7 +12,7 @@ use Illuminate\Console\Command;
  * (config/security.php, retention). Planifiée chaque jour dans routes/console.php.
  */
 #[Signature('matching:prune')]
-#[Description('Supprime les conversations orphelines, les demandes closes et les données des signalements au-delà de leur durée de conservation')]
+#[Description('Supprime les conversations orphelines et les demandes closes au-delà de leur durée de conservation')]
 class PruneMatchingDataCommand extends Command
 {
     public function handle(PruneMatchingData $pruneMatchingData): int
@@ -20,11 +20,9 @@ class PruneMatchingDataCommand extends Command
         $result = $pruneMatchingData->handle();
 
         $this->info(sprintf(
-            '%d conversation(s) orpheline(s), %d demande(s) close(s) supprimée(s) ; %d signalement(s) purgé(s), %d supprimé(s).',
+            '%d conversation(s) orpheline(s), %d demande(s) close(s) supprimée(s).',
             $result['conversations'],
             $result['match_requests'],
-            $result['reports_purged'],
-            $result['reports_deleted'],
         ));
 
         return self::SUCCESS;

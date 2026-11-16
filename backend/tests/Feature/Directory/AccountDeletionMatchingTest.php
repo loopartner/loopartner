@@ -3,12 +3,12 @@
 use App\Models\User;
 use App\Modules\Accounts\Actions\DeleteAccount;
 use App\Modules\Directory\Enums\MatchRequestStatus;
-use App\Modules\Directory\Models\AbuseReport;
 use App\Modules\Directory\Models\Conversation;
 use App\Modules\Directory\Models\ConversationParticipant;
 use App\Modules\Directory\Models\MatchRequest;
 use App\Modules\Directory\Models\Message;
 use App\Modules\Directory\Models\UserBlock;
+use App\Modules\Moderation\Models\Notice;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Notification;
 
@@ -110,8 +110,8 @@ it('supprime les blocages et anonymise les signalements du compte supprimé', fu
 
     expect(UserBlock::query()->count())->toBe(0);
 
-    $report = AbuseReport::query()->sole();
-    expect($report->reported_user_id)->toBeNull()
+    $report = Notice::query()->sole();
+    expect($report->target_owner_id)->toBeNull()
         ->and($report->reporter_id)->toBe($owner->id)
         ->and($report->content_snapshot)->toBe('Contenu signalé');
 });

@@ -3,8 +3,6 @@
 namespace App\Modules\Directory\Actions;
 
 use App\Modules\Directory\Enums\MatchRequestStatus;
-use App\Modules\Directory\Enums\ReportStatus;
-use App\Modules\Directory\Models\AbuseReport;
 use App\Modules\Directory\Models\Conversation;
 use App\Modules\Directory\Models\MatchRequest;
 use Carbon\CarbonInterface;
@@ -19,14 +17,14 @@ use Illuminate\Support\Facades\DB;
  *   orphaned_conversations_months : supprimées avec leurs messages et leur demande ;
  * - demandes refusées, retirées ou expirées depuis plus de closed_match_requests_months
  *   (date de leur dernière modification, c'est-à-dire de leur passage à ce statut) : supprimées.
- *   Les demandes acceptées restent tant que leur conversation existe ;
- * - signalements de plus de abuse_reports_months : la copie du contenu signalé et le
- *   commentaire sont effacés ; les signalements clos depuis plus de cette durée sont supprimés.
+ *   Les demandes acceptées restent tant que leur conversation existe.
+ *
+ * Les signalements des messages et des demandes relèvent du module Moderation (moderation:prune).
  */
 class PruneMatchingData
 {
     /**
-     * @return array{conversations: int, match_requests: int, reports_purged: int, reports_deleted: int}
+     * @return array{conversations: int, match_requests: int}
      */
     public function handle(): array
     {
@@ -35,14 +33,6 @@ class PruneMatchingData
             'match_requests' => MatchRequest::query()
                 ->whereIn('status', MatchRequestStatus::closedValues())
                 ->where('updated_at', '<=', self::cutoff('closed_match_requests_months'))
-                ->delete(),
-            'reports_purged' => AbuseReport::query()
-                ->where('created_at', '<=', self::cutoff('abuse_reports_months'))
-                ->where(fn ($query) => $query->whereNotNull('content_snapshot')->orWhereNotNull('comment'))
-                ->update(['content_snapshot' => null, 'comment' => null, 'updated_at' => now()]),
-            'reports_deleted' => AbuseReport::query()
-                ->where('status', ReportStatus::Closed->value)
-                ->where('closed_at', '<=', self::cutoff('abuse_reports_months'))
                 ->delete(),
         ];
     }

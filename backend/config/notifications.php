@@ -100,6 +100,31 @@ return [
             'label' => ['fr' => 'Mise à jour annuelle des règles administratives', 'en' => 'Annual update of administrative rules'],
         ],
 
+        // Moderation (DSA). Accusé de réception et décision envoyés au signalant (art. 16 §4 et
+        // §5), exposé des motifs envoyé à l'auteur du contenu (art. 17), issue d'un recours :
+        // obligatoires. Un signalant sans compte les reçoit à l'adresse qu'il a donnée.
+        'moderation.notices' => [
+            'mandatory' => true,
+            'roles' => $everyone,
+            'label' => ['fr' => 'Suivi de mes signalements', 'en' => 'Updates on my reports'],
+        ],
+        'moderation.decisions' => [
+            'mandatory' => true,
+            'roles' => $everyone,
+            'label' => ['fr' => 'Décisions de modération sur mes contenus', 'en' => 'Moderation decisions about my content'],
+        ],
+        // Admins : alerte immédiate sur un signalement urgent (sans contenu), et récapitulatif.
+        'moderation.urgent_alerts' => [
+            'mandatory' => true,
+            'roles' => ['admin'],
+            'label' => ['fr' => 'Alertes de signalements urgents', 'en' => 'Urgent report alerts'],
+        ],
+        'moderation.digest' => [
+            'mandatory' => false,
+            'roles' => ['admin'],
+            'label' => ['fr' => 'Récapitulatif des signalements et recours', 'en' => 'Reports and appeals digest'],
+        ],
+
     ],
 
 ];

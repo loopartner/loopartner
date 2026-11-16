@@ -42,6 +42,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $reporter_name
  * @property string|null $reporter_email
  * @property string|null $reporter_email_hash
+ * @property string|null $reporter_locale
  * @property string|null $tracking_token_hash
  * @property string|null $active_key
  * @property Carbon|CarbonImmutable|null $good_faith_confirmed_at

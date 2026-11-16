@@ -73,6 +73,7 @@ return new class extends Migration
             $table->text('reporter_name')->nullable();
             $table->text('reporter_email')->nullable();
             $table->char('reporter_email_hash', 64)->nullable();
+            $table->string('reporter_locale', 5)->nullable();
             $table->char('tracking_token_hash', 64)->nullable();
             $table->char('active_key', 64)->nullable()->unique();
             $table->dateTime('good_faith_confirmed_at')->nullable();

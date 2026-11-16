@@ -5,6 +5,7 @@ use App\Models\User;
 use App\Modules\Blog\Notifications\ModerationDigestNotification;
 use App\Modules\Events\Enums\EventNotice;
 use App\Modules\Events\Notifications\EventNotification;
+use App\Modules\Moderation\Notifications\ModerationNotification;
 use App\Notifications\VerifyEmailNotification;
 use App\Support\Notifications\CategorizedNotification;
 use App\Support\Notifications\NotificationCategories;
@@ -76,7 +77,8 @@ describe('catégories', function (): void {
 
             $reflection = new ReflectionClass($class);
 
-            if ($reflection->isAbstract() || $class === EventNotification::class) {
+            // Catégorie fixée à la construction (destinataire) : vérifiée à part ci-dessous.
+            if ($reflection->isAbstract() || in_array($class, [EventNotification::class, ModerationNotification::class], true)) {
                 continue;
             }
 
@@ -87,6 +89,10 @@ describe('catégories', function (): void {
 
         foreach (EventNotice::cases() as $notice) {
             expect(NotificationCategories::exists($notice->notificationCategory()))->toBeTrue($notice->value);
+        }
+
+        foreach (['moderation.notices', 'moderation.decisions'] as $category) {
+            expect(NotificationCategories::isMandatory($category))->toBeTrue($category);
         }
     });
 
@@ -145,6 +151,7 @@ describe('GET|PUT /me/notification-preferences', function (): void {
         expect(array_column($response->json('data'), 'category'))->toBe([
             'account.security', 'directory.match_requests', 'directory.messages',
             'events.participation', 'events.reminders', 'events.announcements',
+            'moderation.notices', 'moderation.decisions',
         ]);
         $response->assertJsonPath('data.4', [
             'category' => 'events.reminders',

@@ -2,32 +2,34 @@
 
 namespace App\Modules\Directory\Actions;
 
-use App\Modules\Directory\Enums\ReportStatus;
-use App\Modules\Directory\Models\AbuseReport;
 use App\Modules\Directory\Models\UserBlock;
+use App\Modules\Moderation\Actions\CountNoticesAgainst;
 
 /**
  * Action publique du module Directory : signaux de modération sur un utilisateur, pour
- * l'historique présenté aux admins par d'autres modules (Events : vérification d'un
- * organisateur), sans exposer les modèles AbuseReport ni UserBlock.
+ * l'historique présenté aux modérateurs par d'autres modules (Events, Blog), sans exposer de
+ * modèle.
  *
- * Seulement des nombres : ni contenu signalé, ni commentaire, ni identité de qui a signalé ou
- * bloqué. Lecture seule.
+ * Seulement des nombres : signalements reçus par ses contenus (module Moderation, tous contenus
+ * confondus) et encore en cours d'examen, blocages subis. Ni contenu signalé, ni commentaire, ni
+ * identité de qui a signalé ou bloqué. Lecture seule.
  *
  * @phpstan-type ModerationSignals array{reports_received: int, reports_open: int, blocked_by_users: int}
  */
 class GetUserModerationSignals
 {
+    public function __construct(private readonly CountNoticesAgainst $countNoticesAgainst) {}
+
     /**
      * @return ModerationSignals
      */
     public function handle(int $userId): array
     {
-        $reports = AbuseReport::query()->where('reported_user_id', $userId);
+        $notices = $this->countNoticesAgainst->handle($userId);
 
         return [
-            'reports_received' => (clone $reports)->count(),
-            'reports_open' => (clone $reports)->where('status', ReportStatus::Open->value)->count(),
+            'reports_received' => $notices['received'],
+            'reports_open' => $notices['open'],
             'blocked_by_users' => UserBlock::query()->where('blocked_id', $userId)->count(),
         ];
     }

@@ -213,6 +213,29 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('compliance-exports', fn (Request $request): Limit => Limit::perHour(self::limit('compliance_exports.per_hour'))->by($this->userOrIp($request)));
         RateLimiter::for('compliance-feed-manage', fn (Request $request): Limit => Limit::perDay(self::limit('compliance_feed_manage.per_day'))->by($this->userOrIp($request)));
 
+        // Signalements et modération (module Moderation). Le signalement est ouvert sans compte :
+        // limites par IP, plus une limite par compte quand le signalant est connecté (la limite
+        // par email est comptée dans SubmitNotice). Un dépassement est journalisé.
+        RateLimiter::for('moderation-notices', function (Request $request): array {
+            $limits = [
+                $this->loggedLimit(Limit::perHour(self::limit('moderation_notices.per_hour_per_ip')), 'moderation.notice_limit_exceeded', 'hour')
+                    ->by('hour:ip:'.$request->ip()),
+                $this->loggedLimit(Limit::perDay(self::limit('moderation_notices.per_day_per_ip')), 'moderation.notice_limit_exceeded', 'day')
+                    ->by('day:ip:'.$request->ip()),
+            ];
+            $userId = $request->user()?->getAuthIdentifier();
+
+            if ($userId !== null) {
+                $limits[] = $this->loggedLimit(Limit::perDay(self::limit('moderation_notices.per_day_per_user')), 'moderation.notice_limit_exceeded', 'day')
+                    ->by('day:user:'.$userId);
+            }
+
+            return $limits;
+        });
+        RateLimiter::for('moderation-lookups', fn (Request $request): Limit => Limit::perHour(self::limit('moderation_lookups.per_hour'))->by('ip:'.$request->ip()));
+        RateLimiter::for('moderation-appeals', fn (Request $request): Limit => Limit::perDay(self::limit('moderation_appeals.per_day'))->by($this->userOrIp($request)));
+        RateLimiter::for('moderation-admin', fn (Request $request): Limit => Limit::perHour(self::limit('moderation_admin.per_hour'))->by($this->userOrIp($request)));
+
         // Abonnement au calendrier (route publique) : par abonnement, compté sur le sélecteur du
         // jeton (sa partie publique, jamais le secret), et par IP.
         RateLimiter::for('compliance-feed', fn (Request $request): array => [
