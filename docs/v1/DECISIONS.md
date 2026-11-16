@@ -99,6 +99,9 @@ référence (Paddle) au lot Billing ; marchand de référence privilégié par l
 |---|---|---|
 | 18 | Avantages Premium | La proposition du lot 1 est validée (tableau ci-dessous). **Aucune mise en avant payante dans les résultats** (prestataires, projets, événements, articles) : elle devrait être signalée comme publicité et fausserait la mise en relation. Les liens suivis du Blog ne sont jamais un avantage Premium. Toutes les valeurs sont dans `config/entitlements.php`. |
 
+*Tableau remplacé le 2026-11-16 par la grille de la décision 35 (raison : nouvelles fonctionnalités
+Premium de la décision 33) ; conservé pour la trace.*
+
 | Rôle | Avantage Premium | Lot |
 |---|---|---|
 | Prestataire, entrepreneur | Articles illimités (quota gratuit) ; suivi administratif : 5 entreprises, 3 délais de rappel, paliers personnalisés, parcours illimités, estimation | en place (lot 1) |
@@ -154,6 +157,126 @@ restriction réversible par colonne (`moderation_restricted_at`) sans toucher au
 reprise de `abuse_reports` dans `moderation_notices` par une migration ; décisions d'Events et du
 Blog transmises par l'événement du noyau `ContentModerated` ; modération réservée aux admins
 (les rédacteurs gardent leurs flux du Blog).
+
+## Prix et fonctionnalités Premium de la V1 (validées le 2026-11-16)
+
+| # | Sujet | Décision |
+|---|---|---|
+| 32 | Prix du Premium | Détail ci-dessous. **Complète** la décision 5 révisée (qui laissait les prix « configurables » sans valeur) ; la décision 19 reste en vigueur (montants lus sur les prix Stripe, jamais dans le code). |
+| 33 | Fonctionnalités Premium à forte valeur | Copilote de projet, comparateur de devis, accès anticipé aux projets, dossier entreprise partageable et badge « entreprise vérifiée », radar d'opportunités, statistiques des prestataires : **ajoutés à la V1**, détail ci-dessous. |
+| 34 | Brique d'IA du noyau | Créée au lot Workspaces, détail ci-dessous. |
+| 35 | Grille des avantages par rôle | Tableau ci-dessous. **Remplace le tableau de la décision 18** (conservé plus haut pour la trace) ; les principes de la décision 18 restent en vigueur (aucune mise en avant payante dans les résultats, liens suivis du Blog jamais Premium). |
+
+### Décision 32 : prix du Premium
+
+- **Prix normal** : **14,90 € TTC par mois** ou **149 € TTC par an**, même prix pour les
+  particuliers, les prestataires et les entrepreneurs.
+- **Essai gratuit de 30 jours** avec carte bancaire : inchangé (décision 5 révisée).
+- **Prix fondateur** : les **500 premiers abonnés** paient **9,90 € TTC par mois** ou, proposition
+  à confirmer, **99 € TTC par an** (même rapport que le prix normal : environ deux mois offerts),
+  **à vie, tant que l'abonnement n'est pas résilié**. Après une résiliation, un nouvel abonnement
+  se fait au prix normal en vigueur.
+- **Parrainage** : **un mois offert au parrain et au filleul**.
+- **Codes partenaires** : **trois mois offerts**.
+- **Toutes ces valeurs sont configurables** (prix Stripe, nombre de places au prix fondateur,
+  durées offertes), jamais dans le code.
+- **Fixé au plan du lot Billing** : mécanisme Stripe (prix dédiés, coupons, codes promotionnels,
+  crédits sur le solde du client) ; conditions (ce qui compte comme « abonné » pour les 500 places,
+  cumul avec l'essai, cumul du parrainage et d'un code partenaire, plafond de parrainages,
+  prévention de l'auto-parrainage) ; **information des abonnés avant toute hausse de prix** ;
+  textes dans `docs/v1/billing-rules.md` et les CGV.
+- **Les prix exacts restent à confirmer avec l'expert-comptable** (TVA incluse, guichet unique
+  OSS) ; conditions du prix fondateur, du parrainage et des codes partenaires à faire valider par
+  le juriste.
+
+### Décision 33 : fonctionnalités Premium à forte valeur (ajoutées à la V1)
+
+- **Copilote de projet** (lot 5, Workspaces ; brique d'IA de la décision 34) : à partir de la
+  description d'un projet, une IA propose une **feuille de route**, les **catégories de
+  prestataires utiles** (catégories actives de l'annuaire, reliées à `GET /providers`) et un
+  **cahier des charges**. Il ne donne **jamais d'avis juridique ou fiscal** et chaque réponse
+  porte un **avertissement systématique** (comme le `disclaimer` de Compliance). Gratuit : **une
+  feuille de route** ; Premium : usage étendu, avec quotas en configuration.
+- **Comparateur de devis** (lot 3, Marketplace) : devis reçus **côte à côte**, **éléments
+  manquants**, **questions à poser** au prestataire. Étend l'avantage « comparaison et export PDF
+  des devis reçus » de la décision 18. Le lot 3 précède la brique d'IA (lot 5) : le comparateur
+  repose sur des règles explicables ; une aide de l'IA ne pourra s'y ajouter qu'une fois la brique
+  créée.
+- **Accès anticipé de 24 heures** aux nouveaux projets pour les prestataires Premium (lot 3,
+  Marketplace) : un projet publié n'est visible que des prestataires Premium pendant 24 heures
+  (durée configurable), puis de tous. Ce n'est **pas un classement** : l'ordre des résultats reste
+  le même pour tous (décision 18 inchangée). **Annoncé de façon transparente dans les CGU**
+  (traitement différencié), à faire valider par le juriste, y compris l'information du porteur de
+  projet.
+- **Dossier entreprise partageable et badge « entreprise vérifiée »** (lot 6, Avis, ressources et
+  coffre-fort) : documents rangés dans le coffre-fort (décision 11), **lien de partage sécurisé et
+  temporaire** (révocable), **rappels d'expiration** des documents ; vérification de l'entreprise
+  par l'**API publique de recherche d'entreprises de l'État**. Le badge dit précisément ce qui est
+  vérifié (existence et activité de l'entreprise au registre) et ne présente pas une garantie de
+  qualité : libellé à faire valider par le juriste.
+- **Radar d'opportunités** (lot 7, Recommandations) : aides, concours, appels à projets et
+  événements **personnalisés**, avec leurs **dates limites dans le calendrier**. Gratuit : **un
+  email par mois** ; Premium : **chaque semaine et complet**. Source des aides, concours et appels
+  à projets à choisir au plan du lot (nouveau service : décision de l'utilisateur).
+- **Statistiques des prestataires** (lot 8, Back-office et analytics) : agrégats côté serveur,
+  sans cookie de suivi (décision 8).
+
+### Décision 34 : brique d'IA du noyau
+
+Créée au **lot 5 (Workspaces)**, utilisée d'abord par le copilote de projet, puis par tout module
+qui en a besoin (le noyau ne dépend d'aucun module).
+
+- Appels au service d'IA **derrière une interface**, **simulée dans les tests** : aucun appel
+  réseau réel dans les tests (comme `StripeGateway`).
+- **Quotas par utilisateur et par plan en configuration** (`config/entitlements.php`, jamais dans
+  le code).
+- **Suivi des coûts** (consommation et coût estimé de chaque appel, agrégés).
+- **Journalisation sans le contenu des échanges** : ni la question, ni la réponse, ni la
+  description du projet.
+- **Possibilité de désactiver l'IA** en configuration : la fonctionnalité devient indisponible,
+  sans erreur.
+- **Information dans la politique de confidentialité**, à faire valider par le juriste (y compris
+  le sous-traitant, le lieu de traitement et la durée de conservation des échanges).
+- La réponse de l'IA est traitée comme une **donnée non fiable** : texte brut, catégories filtrées
+  sur la liste des catégories actives.
+- **Le choix du fournisseur et du modèle sera présenté dans le plan du lot 5** (nouveau service ou
+  paquet : décision de l'utilisateur).
+
+### Décision 35 : grille des avantages Premium par rôle
+
+Chaque lot ajoute ses valeurs dans `config/entitlements.php` (rien n'y est modifié avant). Les
+valeurs gratuites citées sont les limites actuelles du code ou des décisions validées ; « à fixer »
+se tranche au plan du lot. *Les lignes marquées d'un astérisque sont des propositions déduites des
+décisions 18 et 33, à confirmer au plan du lot.*
+
+| Rôle | Fonctionnalité Premium | Version gratuite | Lot |
+|---|---|---|---|
+| Particulier | 25 projets publiés en même temps | 10 | lot 10 (Billing, décision 19) |
+| Particulier | 60 demandes en attente, 50 demandes par jour | 30 en attente, 20 par jour | lot 10 (Billing, décision 19) |
+| Particulier | Durée de publication d'un projet plus longue | 60 jours | lot 10 ou suivant, si validé au plan |
+| Particulier | Comparateur de devis (côte à côte, éléments manquants, questions à poser) et export PDF | lecture de chaque devis reçu | lot 3 (Marketplace) |
+| Particulier | Copilote de projet : usage étendu, quotas en configuration | une feuille de route | lot 5 (Workspaces) |
+| Particulier | Plusieurs workspaces, modèles de projet | un workspace* | lot 5 (Workspaces) |
+| Particulier | Guides et modèles réservés | ressources publiques | lot 6 |
+| Prestataire | Articles illimités | 2 articles soumis | en place (lot 1) |
+| Prestataire | Suivi administratif : 5 entreprises, 3 délais de rappel, paliers personnalisés, parcours illimités, estimation | 1 entreprise, 1 délai (3, 7 ou 14 jours), paliers 80 % et 100 %, 1 parcours actif, sans estimation | en place (lot 1) |
+| Prestataire | Accès anticipé de 24 heures aux nouveaux projets | projets visibles 24 heures après leur publication | lot 3 (Marketplace) |
+| Prestataire | Devis PDF personnalisés (logo, mentions) | devis PDF standard* | lot 3 (Marketplace) |
+| Prestataire | Page de prise de rendez-vous, plus de créneaux | à fixer | lot 4 (Rendez-vous) |
+| Prestataire | Dossier entreprise partageable et badge « entreprise vérifiée » | coffre-fort privé, sans lien de partage ni badge* | lot 6 |
+| Prestataire | Guides et modèles réservés | ressources publiques | lot 6 |
+| Prestataire | Radar d'opportunités chaque semaine et complet | un email par mois | lot 7 (Recommandations) |
+| Prestataire | Statistiques du profil | à fixer | lot 8 (Back-office et analytics) |
+| Prestataire | Plus de catégories sur le profil | 5 | en configuration, lot à fixer |
+| Entrepreneur | Articles illimités | 2 articles soumis | en place (lot 1) |
+| Entrepreneur | Suivi administratif : 5 entreprises, 3 délais de rappel, paliers personnalisés, parcours illimités, estimation | 1 entreprise, 1 délai (3, 7 ou 14 jours), paliers 80 % et 100 %, 1 parcours actif, sans estimation | en place (lot 1) |
+| Entrepreneur | Comparateur de devis et export PDF* | lecture de chaque devis reçu | lot 3 (Marketplace) |
+| Entrepreneur | Copilote de projet : usage étendu, quotas en configuration | une feuille de route | lot 5 (Workspaces) |
+| Entrepreneur | Plusieurs workspaces, modèles de projet | un workspace* | lot 5 (Workspaces) |
+| Entrepreneur | Dossier entreprise partageable et badge « entreprise vérifiée » ; coffre-fort plus grand | coffre-fort privé de taille gratuite, sans lien de partage ni badge* | lot 6 |
+| Entrepreneur | Guides et modèles réservés | ressources publiques | lot 6 |
+| Entrepreneur | Radar d'opportunités chaque semaine et complet | un email par mois | lot 7 (Recommandations) |
+| Entrepreneur | Plus d'événements publiés ou en attente | 3 en attente, 20 publiés à venir | en configuration, lot à fixer |
 
 ## Décisions antérieures toujours en vigueur (rappel)
 

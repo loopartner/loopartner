@@ -99,7 +99,8 @@ rédaction des clauses de modération des CGU (art. 14) et report de leurs numé
 
 Offres des prestataires ; traçabilité des professionnels de la place de marché (DSA art. 30) ;
 devis structurés (lignes, quantités, prix en centimes, validité, acceptation, PDF), TVA lue dans
-des règles en base.
+des règles en base. Premium (décision 33) : **comparateur de devis** pour le porteur de projet et
+**accès anticipé de 24 heures** aux nouveaux projets pour les prestataires Premium.
 
 **Critères d'acceptation**
 - Les offres sont signalables : adaptateur `ModerationTarget` déclaré dans `config/moderation.php`
@@ -108,6 +109,14 @@ des règles en base.
   (art. 29) ; à trancher au plan du lot avec le juriste.
 - Devis calculé en entiers ; taux de TVA issu d'une règle vérifiée, jamais du code.
 - Le PDF d'un devis ne contient aucune donnée d'un autre utilisateur ; 404 sur le devis d'autrui.
+- **Comparateur de devis** : les devis reçus pour un même projet s'affichent côte à côte, avec
+  les éléments manquants et les questions à poser, calculés par des règles explicables (la brique
+  d'IA n'existe qu'à partir du lot 5) ; réservé au porteur du projet (404 sinon) ; gratuit :
+  lecture de chaque devis ; limites dans `config/entitlements.php`.
+- **Accès anticipé** : pendant 24 heures (configurable) après sa publication, un projet n'est
+  visible que des prestataires Premium (liste, détail et propositions ; testé dans les deux
+  sens) ; l'ordre des résultats est le même pour tous (aucun classement payant, décision 18) ;
+  annonce dans les CGU et information du porteur de projet validées par le juriste.
 
 ## Lot 4 — Rendez-vous et agenda
 
@@ -121,17 +130,31 @@ Rendez-vous natifs (créneaux, confirmation, annulation, rappels, `.ics`) ; agen
 ## Lot 5 — Workspaces et onboarding
 
 Module Workspaces (privé par défaut) : objectifs, étapes, tâches, avancement, lien facultatif vers
-une annonce Directory ; parcours d'onboarding.
+une annonce Directory ; parcours d'onboarding. **Brique d'IA du noyau** (décision 34) et
+**copilote de projet** (décision 33). Le plan du lot présente le choix du fournisseur et du
+modèle d'IA.
 
 **Critères d'acceptation**
 - Parcours complet de l'inscription à la première tâche.
 - Aucune donnée d'un workspace n'est publique sans action explicite ; 404 sur le workspace d'autrui.
+- **Brique d'IA** : appels derrière une interface simulée dans les tests (aucun appel réseau
+  réel) ; quotas par utilisateur et par plan dans `config/entitlements.php` ; suivi des coûts ;
+  journal sans le contenu des échanges (testé) ; IA désactivable en configuration (fonctionnalité
+  indisponible, testé) ; réponse de l'IA traitée comme une donnée non fiable (texte brut,
+  catégories filtrées sur les catégories actives) ; politique de confidentialité mise à jour et
+  validée par le juriste ; clés vérifiées par `security:check-config` quand l'IA est activée.
+- **Copilote de projet** : à partir de la description d'un projet, feuille de route, catégories
+  de prestataires utiles (reliées à `GET /providers`) et cahier des charges ; jamais d'avis
+  juridique ou fiscal, avertissement systématique dans chaque réponse ; gratuit : une feuille de
+  route, Premium : usage étendu avec quotas ; dépassement : 403 `premium_required` ou 429 selon
+  le cas ; 404 sur le projet d'autrui.
 
 ## Lot 6 — Avis, ressources et coffre-fort documentaire
 
 Avis après une interaction professionnelle vérifiable (droit de réponse, signalement,
 modération) ; ressources (guides, modèles) et téléchargements signés ; coffre-fort documentaire
-privé du module Compliance (disque privé, URL signées).
+privé du module Compliance (disque privé, URL signées). Premium (décision 33) : **dossier
+entreprise partageable** et **badge « entreprise vérifiée »**.
 
 **Critères d'acceptation**
 - Un avis est impossible sans interaction vérifiable ; la méthode de vérification est affichée.
@@ -139,22 +162,39 @@ privé du module Compliance (disque privé, URL signées).
   du Code de la consommation sur les avis en ligne à valider avec le juriste.
 - Un document du coffre-fort n'est accessible qu'à son propriétaire (404 sinon), jamais par une
   URL publique, et il est supprimé avec le compte.
+- **Dossier entreprise partageable** : documents rangés, lien de partage sécurisé (jeton dont
+  seule l'empreinte est stockée), temporaire et révocable, qui ne donne accès qu'aux documents
+  choisis ; lien expiré ou révoqué : 404 ; rappels d'expiration des documents (catégorie de
+  notification déclarée) ; réservé au Premium selon `config/entitlements.php`.
+- **Badge « entreprise vérifiée »** : vérification par l'API publique de recherche d'entreprises
+  de l'État (appel simulé dans les tests, panne sans effet sur le reste du profil), date de la
+  vérification gardée et revérification périodique ; le badge dit ce qui est vérifié, libellé
+  validé par le juriste ; adaptateur `ModerationTarget` inchangé pour le profil.
 
 ## Lot 7 — Recommandations
 
 Règles simples et explicables (catégorie d'une tâche, prestataires, articles, événements,
-parcours), possibilité de les désactiver.
+parcours), possibilité de les désactiver. Premium (décision 33) : **radar d'opportunités**
+(aides, concours, appels à projets, événements). La source des aides, concours et appels à
+projets est présentée au plan du lot.
 
 **Critères d'acceptation**
 - Chaque recommandation affiche sa raison ; l'utilisateur peut les désactiver.
+- **Radar d'opportunités** : opportunités personnalisées (raison affichée), dates limites
+  ajoutées au calendrier et à l'abonnement `.ics` ; email dans une catégorie de notification
+  facultative ; gratuit : un email par mois, Premium : chaque semaine et complet (fréquences en
+  configuration) ; aucun email en double (envoi réservé avant l'envoi, comme Compliance).
 
 ## Lot 8 — Back-office et analytics
 
 Gestion des utilisateurs, des catégories et des plans ; indicateurs agrégés côté serveur, sans
-cookie de suivi.
+cookie de suivi. Premium (décision 33) : **statistiques des prestataires**.
 
 **Critères d'acceptation**
 - Aucune donnée personnelle dans les indicateurs ; chaque action d'administration est auditée.
+- **Statistiques des prestataires** : agrégats côté serveur sans cookie de suivi (décision 8),
+  visibles du seul prestataire concerné (404 sinon), sans donnée permettant d'identifier un
+  visiteur ; version gratuite et Premium selon `config/entitlements.php`.
 
 ## Lot 9 — Compliance : évolutions du moteur avant vérification
 
@@ -176,8 +216,8 @@ le moteur doit savoir représenter les règles réelles. Limites relevées au lo
 
 ## Lot 10 — Billing
 
-Dernier lot fonctionnel, juste avant le durcissement (décisions 4 et 5 révisées, 18 et
-19 ; reporté le 2026-11-16 : Stripe est mis en place à la fin du backend). Offre **Gratuit et un seul
+Dernier lot fonctionnel, juste avant le durcissement (décisions 4 et 5 révisées, 18, 19, 32
+et 35 ; reporté le 2026-11-16 : Stripe est mis en place à la fin du backend). Offre **Gratuit et un seul
 Premium**, au même prix pour tous les rôles, mensuel ou annuel ; avantages selon le rôle
 (`GetEntitlements`). **Stripe** : Checkout hébergé (carte et 3-D Secure chez Stripe), portail
 client, factures Stripe ; Loopartner vendeur (TVA OSS et factures, à valider avec
@@ -188,8 +228,12 @@ l'essai, information avant chaque renouvellement annuel, résiliation en quelque
 fonction de rétractation en ligne, relances de paiement Stripe, factures accessibles depuis le
 compte, webhooks idempotents, suppression du compte avec annulation immédiate de l'abonnement.
 Premiers avantages Premium des particuliers (limites de projets et de demandes en
-configuration). Brouillon des textes destinés aux utilisateurs : `docs/v1/billing-rules.md`
-(à faire valider par un juriste).
+configuration). **Prix** (décision 32) : 14,90 € TTC par mois ou 149 € TTC par an ; **prix
+fondateur** (500 premiers abonnés, 9,90 € TTC par mois ou 99 € TTC par an proposé, à vie tant que
+l'abonnement n'est pas résilié) ; **parrainage** (un mois offert au parrain et au filleul) ;
+**codes partenaires** (trois mois offerts) ; prix à confirmer avec l'expert-comptable. Brouillon
+des textes destinés aux utilisateurs : `docs/v1/billing-rules.md` (à faire valider par un
+juriste).
 
 **Plan détaillé** (validé dans son principe le 2026-11-16, à reprendre tel quel ; décisions
 du plan : décision 19)
@@ -266,6 +310,11 @@ du plan : décision 19)
   l'expert-comptable.
 - **Rétractation et remboursement** : proposition du § 8 de `docs/v1/billing-rules.md`, à faire
   valider par le juriste.
+- **Prix fondateur, parrainage et codes partenaires** (décision 32, ajoutés le 2026-11-16) : à
+  détailler dans le plan du lot avant de coder : mécanisme Stripe (prix dédiés, coupons, codes
+  promotionnels, crédits sur le solde du client), décompte des 500 places sous verrou, conditions
+  (cumul avec l'essai et entre offres, plafond de parrainages, prévention de l'auto-parrainage),
+  information des abonnés avant toute hausse de prix, textes des CGV.
 
 **Critères d'acceptation**
 - Aucun prix, montant, durée d'essai, quota ni taux dans le code ; identifiants des prix Stripe
@@ -289,12 +338,25 @@ du plan : décision 19)
   compte annule l'abonnement chez Stripe immédiatement.
 - `security:check-config` échoue sur une clé Stripe manquante ou une clé de test en production.
 - Aucun appel réseau réel à Stripe dans les tests.
+- **Prix fondateur** : jamais plus de places que le nombre configuré, même en cas de souscriptions
+  simultanées (testé) ; le prix est conservé tant que l'abonnement n'est pas résilié, perdu
+  après une résiliation.
+- **Parrainage** : un mois offert au parrain et au filleul une seule fois par filleul, jamais à
+  soi-même ; **codes partenaires** : trois mois offerts, code inconnu, expiré ou déjà utilisé
+  refusé ; durées et valeurs en configuration.
+- Les abonnés sont informés avant toute hausse de prix, dans une catégorie de notification
+  obligatoire.
 
 ## Lot 11 — Durcissement avant la bêta
 
 Performance (requêtes N+1, index, recherche), tests de charge, sauvegardes et restauration,
-supervision, revue de sécurité externe ; préparation du VPS ou de l'hébergement Laravel géré.
+supervision, revue de sécurité externe ; préparation du VPS ou de l'hébergement Laravel géré ;
+**documentation de l'API au format OpenAPI** (le paquet est proposé dans le plan du lot).
 
 **Critères d'acceptation**
 - Objectifs de temps de réponse atteints ; restauration d'une sauvegarde testée.
 - Procédure de rotation d'`APP_KEY` testée (voir SECURITY.md).
+- **Documentation OpenAPI** de toutes les routes `api/*` (paramètres, réponses, codes d'erreur
+  dont `premium_required` et `consent_required`), vérifiée contre le routeur par un test (aucune
+  route oubliée) ; elle n'expose ni route d'administration en production, ni exemple contenant
+  une donnée réelle.
