@@ -23,17 +23,15 @@ class UpdateSettings
      */
     public function handle(User $user, array $data): ComplianceSettings
     {
-        $premium = $this->entitlements->isPremium($user->id);
+        if (isset($data['reminder_offsets'])) {
+            ['choices' => $choices, 'max' => $max] = $this->entitlements->reminderChoices($user->id);
 
-        if (isset($data['reminder_offsets']) && ! $premium) {
-            $free = array_map('intval', (array) config('compliance.reminders.free_offsets'));
-
-            if (count($data['reminder_offsets']) > 1 || array_diff($data['reminder_offsets'], $free) !== []) {
+            if (count($data['reminder_offsets']) > $max || array_diff($data['reminder_offsets'], $choices) !== []) {
                 $this->entitlements->require('custom_reminders', $user->id);
             }
         }
 
-        if (isset($data['threshold_levels']) && ! $premium) {
+        if (isset($data['threshold_levels']) && ! $this->entitlements->allowsCustomThresholdLevels($user->id)) {
             $default = array_map('intval', (array) config('compliance.thresholds.default_levels'));
             $requested = $data['threshold_levels'];
             sort($requested);

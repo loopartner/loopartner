@@ -3,7 +3,8 @@
 namespace App\Modules\Blog\Support;
 
 use App\Models\User;
-use App\Modules\Accounts\Actions\IsPremium;
+use App\Modules\Accounts\Actions\GetEntitlements;
+use App\Modules\Accounts\Support\EntitlementSet;
 use App\Modules\Blog\Enums\ArticleStatus;
 use App\Modules\Blog\Exceptions\PremiumRequired;
 use App\Modules\Blog\Models\Article;
@@ -18,8 +19,9 @@ use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
  *   entrepreneur compte à sa PREMIÈRE soumission, une fois pour toutes (table
  *   article_quota_entries) : le resoumettre après un refus ne compte pas de nouveau, et le
  *   supprimer ne libère rien. Les soumissions faites pendant une période premium comptent
- *   aussi. Seuls les auteurs sans statut premium en cours (Action publique IsPremium du module
- *   Accounts) sont bloqués au-delà du quota : 403 "premium_required".
+ *   aussi. Le quota vient des droits de l'auteur (Action publique GetEntitlements du module
+ *   Accounts, fonctionnalité blog.article_quota : limite du plan gratuit, illimitée avec
+ *   premium). Au-delà : 403 "premium_required".
  * - Plafonds pour tous les auteurs extérieurs : articles en attente (max_pending_per_author),
  *   nouvelles soumissions d'un même article (max_resubmissions) ; pour tous : brouillons
  *   (max_drafts_per_author). Au-delà : 409.
@@ -29,6 +31,9 @@ use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
  */
 final class ArticleQuota
 {
+    /** Fonctionnalité de config/entitlements.php (Action publique GetEntitlements). */
+    public const FEATURE = 'blog.article_quota';
+
     public static function lock(int $userId): void
     {
         User::query()->whereKey($userId)->lockForUpdate()->first();
@@ -41,11 +46,23 @@ final class ArticleQuota
      */
     public static function status(int $userId): array
     {
-        $limit = (int) config('blog.free_articles_quota');
+        return self::statusFrom(app(GetEntitlements::class)->handle($userId), $userId);
+    }
+
+    /**
+     * La limite affichée est toujours celle du plan gratuit du rôle (un abonné premium voit
+     * aussi son quota gratuit, qui reprend effet à la fin du premium).
+     *
+     * @return array{premium: bool, limit: int, used: int, remaining: int}
+     */
+    private static function statusFrom(EntitlementSet $entitlements, int $userId): array
+    {
+        $free = app(GetEntitlements::class)->features($entitlements->role, EntitlementSet::PLAN_FREE);
+        $limit = (int) ($free[self::FEATURE] ?? 0);
         $used = self::used($userId);
 
         return [
-            'premium' => app(IsPremium::class)->handle($userId),
+            'premium' => $entitlements->isPremium(),
             'limit' => $limit,
             'used' => $used,
             'remaining' => max(0, $limit - $used),
@@ -104,9 +121,11 @@ final class ArticleQuota
             return;
         }
 
-        $status = self::status($author->id);
+        $entitlements = app(GetEntitlements::class)->handle($author);
+        $status = self::statusFrom($entitlements, $author->id);
+        $quota = $entitlements->limit(self::FEATURE);
 
-        if (! $status['premium'] && $status['used'] >= $status['limit']) {
+        if ($quota !== null && $status['used'] >= $quota) {
             SecurityLog::record('blog.quota_reached', ['user_id' => $author->id, 'article' => $article->uuid]);
 
             throw new PremiumRequired($status['limit'], $status['used']);

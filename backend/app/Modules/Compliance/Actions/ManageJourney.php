@@ -51,7 +51,9 @@ class ManageJourney
                 throw new ConflictHttpException('Vous suivez déjà ce parcours pour cette entreprise.');
             }
 
-            if (! $this->entitlements->isPremium($company->user_id) && $active->count() >= (int) config('compliance.max_active_journeys_free')) {
+            $maxActive = $this->entitlements->maxActiveJourneys($company->user_id);
+
+            if ($maxActive !== null && $active->count() >= $maxActive) {
                 $this->entitlements->require('multiple_journeys', $company->user_id);
             }
 

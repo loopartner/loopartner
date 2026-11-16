@@ -90,7 +90,7 @@ class RevenueController extends Controller
     public function estimate(Request $request, string $company): JsonResponse
     {
         $model = CompanyController::find($company, 'view');
-        $this->entitlements->require('estimate', $model->user_id);
+        $this->entitlements->requireFeature('estimate', $model->user_id);
 
         return response()->json([
             'data' => ContributionEstimate::for($model, self::year($request, $model->country), Locale::fromRequest($request)),

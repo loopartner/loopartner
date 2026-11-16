@@ -46,6 +46,7 @@ const API_ROUTES = [
     'GET api/v1/me' => 'auth',
     'PATCH api/v1/me' => 'auth',
     'DELETE api/v1/me' => 'auth',
+    'GET api/v1/me/entitlements' => 'auth',
     'GET api/v1/me/provider-profile' => 'auth',
     'PUT api/v1/me/provider-profile' => 'auth',
     'POST api/v1/media' => 'auth',

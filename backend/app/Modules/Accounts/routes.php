@@ -8,6 +8,7 @@
 
 use App\Http\Middleware\EnsureModerator;
 use App\Modules\Accounts\Http\Controllers\EmailVerificationController;
+use App\Modules\Accounts\Http\Controllers\EntitlementsController;
 use App\Modules\Accounts\Http\Controllers\MeController;
 use App\Modules\Accounts\Http\Controllers\PremiumGrantController;
 use App\Modules\Accounts\Http\Controllers\ProviderProfileController;
@@ -37,6 +38,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::delete('me', [MeController::class, 'destroy'])
         ->middleware('throttle:account-deletion')
         ->name('accounts.me.destroy');
+
+    Route::get('me/entitlements', EntitlementsController::class)->name('accounts.me.entitlements');
 
     Route::get('me/provider-profile', [ProviderProfileController::class, 'show'])
         ->name('accounts.provider-profile.show');

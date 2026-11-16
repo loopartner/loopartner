@@ -40,7 +40,7 @@ class SettingsController extends Controller
 
     private function respond(Request $request, ComplianceSettings $settings): JsonResponse
     {
-        $premium = $this->entitlements->isPremium($settings->user_id);
+        $reminders = $this->entitlements->reminderChoices($settings->user_id);
 
         return response()->json([
             'data' => [
@@ -51,9 +51,9 @@ class SettingsController extends Controller
                 'threshold_levels' => $settings->threshold_levels,
                 'effective_threshold_levels' => $this->entitlements->thresholdLevels($settings),
                 'choices' => [
-                    'reminder_offsets' => array_map('intval', (array) config($premium ? 'compliance.reminders.premium_offsets' : 'compliance.reminders.free_offsets')),
-                    'max_reminder_offsets' => $premium ? (int) config('compliance.reminders.premium_max_offsets') : 1,
-                    'custom_threshold_levels' => $premium,
+                    'reminder_offsets' => $reminders['choices'],
+                    'max_reminder_offsets' => $reminders['max'],
+                    'custom_threshold_levels' => $this->entitlements->allowsCustomThresholdLevels($settings->user_id),
                 ],
             ],
             'disclaimer' => Disclaimer::forRequest($request),
