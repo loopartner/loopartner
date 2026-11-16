@@ -17,7 +17,25 @@ final class VersionGuard
     public static function assertSame(int $expected, int $actual): void
     {
         if ($expected !== $actual) {
-            throw new ConflictHttpException('Cet élément a été modifié depuis votre lecture : rechargez-le avant de décider.');
+            self::fail();
         }
+    }
+
+    /**
+     * Même contrôle pour un contenu sans colonne de version : le modérateur renvoie
+     * l'empreinte qu'il a lue (comparaison en temps constant).
+     *
+     * @throws ConflictHttpException
+     */
+    public static function assertSameFingerprint(string $expected, string $actual): void
+    {
+        if (! hash_equals($actual, $expected)) {
+            self::fail();
+        }
+    }
+
+    private static function fail(): never
+    {
+        throw new ConflictHttpException('Cet élément a été modifié depuis votre lecture : rechargez-le avant de décider.');
     }
 }
