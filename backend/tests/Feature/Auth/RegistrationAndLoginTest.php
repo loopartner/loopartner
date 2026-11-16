@@ -15,6 +15,7 @@ it('inscrit un utilisateur sans le connecter, puis il se connecte', function ():
         'email' => 'camille@example.com',
         'password' => VALID_PASSWORD,
         'password_confirmation' => VALID_PASSWORD,
+        'legal_documents' => legalDocumentsInForce(),
     ])->assertStatus(202);
 
     $user = User::query()->where('email', 'camille@example.com')->firstOrFail();
@@ -39,6 +40,7 @@ it('refuse un mot de passe de moins de 12 caractères', function (): void {
         'email' => 'camille@example.com',
         'password' => 'Court-123',
         'password_confirmation' => 'Court-123',
+        'legal_documents' => legalDocumentsInForce(),
     ])->assertUnprocessable()->assertJsonValidationErrors(['password']);
 
     $this->assertGuest();
@@ -53,6 +55,7 @@ it('refuse un mot de passe présent dans une fuite connue', function (): void {
         'email' => 'camille@example.com',
         'password' => VALID_PASSWORD,
         'password_confirmation' => VALID_PASSWORD,
+        'legal_documents' => legalDocumentsInForce(),
     ])->assertUnprocessable()->assertJsonValidationErrors(['password']);
 
     expect(User::query()->count())->toBe(0);

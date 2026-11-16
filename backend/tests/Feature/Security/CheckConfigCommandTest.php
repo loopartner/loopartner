@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\LegalDocument;
 use App\Models\User;
 use App\Modules\Compliance\Models\ComplianceRule;
 use App\Support\Database\TimestampSchema;
@@ -11,6 +12,11 @@ use Database\Seeders\RoleSeeder;
 | security:check-config, lancée à chaque déploiement : échoue (code 1) dès qu'une valeur est
 | dangereuse en production. Les avertissements ne bloquent pas le déploiement.
 */
+
+// Base de production saine : CGU et politique de confidentialité en vigueur.
+beforeEach(function (): void {
+    legalDocumentsInForce();
+});
 
 /**
  * Configuration de production sûre. Chaque test en dégrade une seule valeur.
@@ -285,4 +291,51 @@ it('ne se laisse pas bloquer par une inscription non vérifiée avec une adresse
 it('connaît l\'adresse de chaque compte de démonstration créé par le seeder', function (): void {
     expect(ConfigAudit::DEMO_ACCOUNT_EMAILS)
         ->toBe(array_map(fn (string $role): string => "{$role}@example.com", RoleSeeder::ROLES));
+});
+
+/**
+ * Remplace la lecture des documents légaux.
+ *
+ * @param  array{in_force: list<string>, demo: int}|null  $documents
+ */
+function fakeLegalDocuments(?array $documents): void
+{
+    app()->bind(ConfigAudit::class, fn (): ConfigAudit => new ConfigAudit(
+        devDependenciesInstalled: fn (): bool => false,
+        ini: fn (string $key): string|false => ['zend.exception_ignore_args' => '1', 'expose_php' => '0'][$key] ?? false,
+        timestampSchema: fn (): array => ['explicit_defaults' => true, 'on_update_columns' => []],
+        legalDocuments: fn (): ?array => $documents,
+    ));
+}
+
+it('échoue sans version en vigueur des CGU ou de la politique de confidentialité', function (array $inForce): void {
+    safeProductionConfig();
+    fakeLegalDocuments(['in_force' => $inForce, 'demo' => 0]);
+
+    $this->artisan('security:check-config')
+        ->expectsOutputToContain('legal_documents')
+        ->assertFailed();
+})->with([
+    'aucun document' => [[]],
+    'politique absente' => [['terms']],
+]);
+
+it('échoue si la base de production contient des documents légaux de démonstration', function (): void {
+    safeProductionConfig();
+    fakeLegalDocuments(['in_force' => ['privacy', 'terms'], 'demo' => 2]);
+
+    $this->artisan('security:check-config')
+        ->expectsOutputToContain('legal_documents')
+        ->assertFailed();
+});
+
+it('lit les documents légaux par défaut sur la base de test (démonstration et version à venir exclues)', function (): void {
+    safeProductionConfig();
+    LegalDocument::query()->delete();
+    LegalDocument::factory()->create(['version' => 'cgu-a-venir', 'effective_at' => now()->addDay()]);
+    LegalDocument::factory()->privacy()->create(['version' => 'demo-1', 'is_demo' => true]);
+
+    $this->artisan('security:check-config')
+        ->expectsOutputToContain('legal_documents')
+        ->assertFailed();
 });

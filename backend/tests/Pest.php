@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\LegalDocument;
 use App\Models\ServiceCategory;
 use App\Models\User;
 use App\Modules\Accounts\Models\PremiumGrant;
@@ -22,6 +23,7 @@ use App\Modules\Events\Enums\RegistrationStatus;
 use App\Modules\Events\Models\Event;
 use App\Modules\Events\Models\EventRegistration;
 use App\Notifications\VerifyEmailNotification;
+use App\Support\Legal\LegalDocuments;
 use App\Support\TwoFactorSession;
 use Database\Factories\Modules\Blog\ArticleFactory;
 use Database\Seeders\RoleSeeder;
@@ -119,7 +121,29 @@ function registrationPayload(array $overrides = []): array
         'password' => 'correct-horse-battery-staple',
         'password_confirmation' => 'correct-horse-battery-staple',
         'account_type' => 'particulier',
+        'legal_documents' => legalDocumentsInForce(),
     ], $overrides);
+}
+
+/**
+ * Versions en vigueur des CGU et de la politique de confidentialité ({"terms": …, "privacy": …}),
+ * créées si la base de test n'en a pas encore (l'inscription les exige).
+ *
+ * @return array<string, string>
+ */
+function legalDocumentsInForce(): array
+{
+    $current = LegalDocuments::current();
+
+    if (! isset($current['terms'])) {
+        $current['terms'] = LegalDocument::factory()->create(['version' => 'cgu-test-1']);
+    }
+
+    if (! isset($current['privacy'])) {
+        $current['privacy'] = LegalDocument::factory()->privacy()->create(['version' => 'confidentialite-test-1']);
+    }
+
+    return ['terms' => $current['terms']->version, 'privacy' => $current['privacy']->version];
 }
 
 /**

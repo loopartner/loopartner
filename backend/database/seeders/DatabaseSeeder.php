@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\LegalDocument;
 use App\Models\User;
 use App\Modules\Accounts\Actions\FindPublishedProvider;
 use App\Modules\Accounts\Actions\GrantPremium;
@@ -36,6 +37,7 @@ use App\Modules\Events\Enums\RegistrationStatus;
 use App\Modules\Events\Models\Event;
 use App\Modules\Events\Models\EventRegistration;
 use App\Modules\Events\Support\EventPublisher;
+use App\Support\Legal\LegalDocuments;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -121,6 +123,33 @@ class DatabaseSeeder extends Seeder
     public const DEMO_ADMIN_TWO_FACTOR_SECRET = 'LOOPARTNERDEMOAD';
 
     /**
+     * Version des documents légaux de démonstration (is_demo : poste local uniquement).
+     */
+    public const DEMO_LEGAL_VERSION = 'demo-1';
+
+    /**
+     * Textes de démonstration, sans valeur juridique.
+     *
+     * @var array<string, array{title: array<string, string>, body: array<string, string>}>
+     */
+    public const DEMO_LEGAL_DOCUMENTS = [
+        'terms' => [
+            'title' => ['fr' => '[Démo] Conditions générales d\'utilisation', 'en' => '[Demo] Terms of use'],
+            'body' => [
+                'fr' => 'Texte de démonstration sans valeur juridique, pour le développement local. Les conditions générales réelles seront rédigées et publiées avec la commande legal:publish.',
+                'en' => 'Demonstration text with no legal value, for local development. The real terms will be written and published with the legal:publish command.',
+            ],
+        ],
+        'privacy' => [
+            'title' => ['fr' => '[Démo] Politique de confidentialité', 'en' => '[Demo] Privacy policy'],
+            'body' => [
+                'fr' => 'Texte de démonstration sans valeur juridique, pour le développement local. La politique de confidentialité réelle sera rédigée et publiée avec la commande legal:publish.',
+                'en' => 'Demonstration text with no legal value, for local development. The real privacy policy will be written and published with the legal:publish command.',
+            ],
+        ],
+    ];
+
+    /**
      * Codes de secours de la double authentification de admin@example.com.
      *
      * @var list<string>
@@ -144,6 +173,7 @@ class DatabaseSeeder extends Seeder
 
         if (DemoDataGuard::allowsSeeding()) {
             $this->seedLocalUsers();
+            $this->seedDemoLegalDocuments();
             $this->seedDemoMatching();
             $this->seedDemoAdminTwoFactor();
             $this->seedDemoEvents();
@@ -410,6 +440,30 @@ class DatabaseSeeder extends Seeder
      * Active et confirme la double authentification du compte admin@example.com avec un secret
      * fixe et documenté (DEMO_ADMIN_TWO_FACTOR_SECRET), sans écraser une 2FA déjà configurée.
      */
+    /**
+     * Versions de démonstration des CGU et de la politique de confidentialité (is_demo, textes
+     * sans valeur juridique, utilisables sur le poste local seulement), acceptées par chaque
+     * compte de démonstration : sans elles, l'inscription locale serait impossible (503) ;
+     * sans acceptation, les comptes seraient bloqués (consent_required).
+     */
+    private function seedDemoLegalDocuments(): void
+    {
+        foreach (self::DEMO_LEGAL_DOCUMENTS as $type => $content) {
+            $exists = LegalDocument::query()->where('type', $type)->where('version', self::DEMO_LEGAL_VERSION)->exists();
+
+            if (! $exists) {
+                LegalDocuments::publish(['type' => $type, 'version' => self::DEMO_LEGAL_VERSION, ...$content], demo: true);
+            }
+        }
+
+        $versions = array_map(fn (LegalDocument $document): string => $document->version, LegalDocuments::current());
+
+        User::query()
+            ->whereIn('email', array_map(fn (string $role): string => "{$role}@example.com", RoleSeeder::ROLES))
+            ->get()
+            ->each(fn (User $user) => LegalDocuments::accept($user, $versions, null));
+    }
+
     private function seedDemoAdminTwoFactor(): void
     {
         $admin = User::query()->where('email', 'admin@example.com')->sole();

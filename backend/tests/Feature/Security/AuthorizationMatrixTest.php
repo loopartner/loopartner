@@ -20,6 +20,8 @@ use Illuminate\Support\Facades\Route;
  */
 const API_ROUTES = [
     'GET api/v1/categories' => 'public',
+    'GET api/v1/legal/documents' => 'public',
+    'GET api/v1/legal/documents/{type}' => 'public',
     'GET api/v1/providers' => 'public',
     'GET api/v1/providers/{slug}' => 'public',
     'GET api/v1/events' => 'public',
@@ -47,6 +49,8 @@ const API_ROUTES = [
     'PATCH api/v1/me' => 'auth',
     'DELETE api/v1/me' => 'auth',
     'GET api/v1/me/entitlements' => 'auth',
+    'GET api/v1/me/legal' => 'auth',
+    'POST api/v1/me/legal/accept' => 'auth',
     'GET api/v1/me/notification-preferences' => 'auth',
     'PUT api/v1/me/notification-preferences' => 'auth',
     'GET api/v1/me/provider-profile' => 'auth',
@@ -217,6 +221,7 @@ function concreteUri(string $uri): string
         '{slug}' => 'un-prestataire',
         '{id}' => '1',
         '{hash}' => str_repeat('a', 40),
+        '{type}' => 'terms',
     ]);
 }
 

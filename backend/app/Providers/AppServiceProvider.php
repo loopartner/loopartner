@@ -149,6 +149,9 @@ class AppServiceProvider extends ServiceProvider
         // Suppression de compte (DELETE /me) : par utilisateur.
         RateLimiter::for('account-deletion', fn (Request $request): Limit => Limit::perMinute(self::limit('account_deletion.per_minute'))->by($this->userOrIp($request)));
 
+        // Acceptation des documents légaux (CGU, confidentialité) : par utilisateur.
+        RateLimiter::for('legal-acceptances', fn (Request $request): Limit => Limit::perHour(self::limit('legal_acceptances.per_hour'))->by($this->userOrIp($request)));
+
         // Demandes de mise en relation envoyées (propositions et contacts confondus) : par
         // utilisateur. Un dépassement est journalisé comme signe de spam.
         RateLimiter::for('match-requests', fn (Request $request): array => [

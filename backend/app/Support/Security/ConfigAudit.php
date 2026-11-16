@@ -5,6 +5,7 @@ namespace App\Support\Security;
 use App\Http\Middleware\EnsureModerator;
 use App\Models\User;
 use App\Support\Database\TimestampSchema;
+use App\Support\Legal\LegalDocumentType;
 use App\Support\Links\ExternalLink;
 use App\Support\LocalHost;
 use Closure;
@@ -53,6 +54,9 @@ class ConfigAudit
     /** @var Closure(): (int|null) */
     private Closure $demoAccounts;
 
+    /** @var Closure(): (array{in_force: list<string>, demo: int}|null) */
+    private Closure $legalDocuments;
+
     /** @var list<ConfigFinding> */
     private array $findings = [];
 
@@ -62,9 +66,15 @@ class ConfigAudit
      * @param  (Closure(): (array{explicit_defaults: bool, on_update_columns: list<string>}|null))|null  $timestampSchema  schéma MySQL/MariaDB (TimestampSchema::inspect)
      * @param  (Closure(): (array{admins_with_two_factor: int, demo_rules: int}|null))|null  $complianceRules  règles administratives en base (null : table absente)
      * @param  (Closure(): (int|null))|null  $demoAccounts  nombre de comptes de démonstration vérifiés en base (null : table absente)
+     * @param  (Closure(): (array{in_force: list<string>, demo: int}|null))|null  $legalDocuments  documents légaux en vigueur (types) et versions de démonstration (null : table absente)
      */
-    public function __construct(?Closure $devDependenciesInstalled = null, ?Closure $ini = null, ?Closure $timestampSchema = null, ?Closure $complianceRules = null, ?Closure $demoAccounts = null)
+    public function __construct(?Closure $devDependenciesInstalled = null, ?Closure $ini = null, ?Closure $timestampSchema = null, ?Closure $complianceRules = null, ?Closure $demoAccounts = null, ?Closure $legalDocuments = null)
     {
+        $this->legalDocuments = $legalDocuments ?? fn (): ?array => Schema::hasTable('legal_documents') ? [
+            'in_force' => DB::table('legal_documents')->where('is_demo', false)->where('effective_at', '<=', now())->distinct()->orderBy('type')->pluck('type')->map(fn (mixed $type): string => (string) $type)->values()->all(),
+            'demo' => DB::table('legal_documents')->where('is_demo', true)->count(),
+        ] : null;
+
         // Seuls les comptes VÉRIFIÉS comptent : n'importe qui peut s'inscrire avec une adresse
         // @example.com sans pouvoir la vérifier, et ne doit pas pouvoir bloquer un déploiement.
         $this->demoAccounts = $demoAccounts ?? fn (): ?int => Schema::hasTable('users')
@@ -100,6 +110,7 @@ class ConfigAudit
         $this->checkTimestampColumns();
         $this->checkDemoAccounts();
         $this->checkComplianceRules();
+        $this->checkLegalDocuments();
 
         return $this->findings;
     }
@@ -352,6 +363,34 @@ class ConfigAudit
 
         if (config('compliance.require_distinct_verifier') !== true && $rules['admins_with_two_factor'] >= 2) {
             $this->warning('COMPLIANCE_REQUIRE_DISTINCT_VERIFIER', 'vaut false alors que '.$rules['admins_with_two_factor'].' admins ont la double authentification : l\'activer pour qu\'une règle administrative soit toujours vérifiée par un autre admin que son dernier auteur.');
+        }
+    }
+
+    /**
+     * Documents légaux : sans version en vigueur des CGU et de la politique de confidentialité,
+     * l'inscription est impossible (503) ; une version de démonstration (texte sans valeur
+     * juridique) signale une base de démonstration copiée. Erreurs bloquantes.
+     */
+    private function checkLegalDocuments(): void
+    {
+        try {
+            $documents = ($this->legalDocuments)();
+        } catch (Throwable) {
+            return; // Base injoignable : déjà signalé par checkTimestampColumns().
+        }
+
+        if ($documents === null) {
+            return;
+        }
+
+        if ($documents['demo'] > 0) {
+            $this->error('legal_documents', 'contient '.$documents['demo'].' version(s) de démonstration (texte sans valeur juridique) : une base de démonstration ne doit jamais être copiée en production.');
+        }
+
+        $missing = array_diff(LegalDocumentType::values(), $documents['in_force']);
+
+        if ($missing !== []) {
+            $this->error('legal_documents', 'aucune version en vigueur pour : '.implode(', ', $missing).'. L\'inscription est impossible : publier les documents avec php artisan legal:publish <fichier.json>.');
         }
     }
 

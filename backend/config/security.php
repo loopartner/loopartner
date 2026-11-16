@@ -81,6 +81,11 @@ return [
             'per_minute' => 6,
         ],
 
+        // Acceptation des documents légaux (POST /me/legal/accept), par utilisateur.
+        'legal_acceptances' => [
+            'per_hour' => 20,
+        ],
+
         // Consultation des projets publiés (GET /projects et GET /projects/{uuid}, comptés
         // ensemble), par prestataire : freine la collecte massive.
         'projects_browse' => [

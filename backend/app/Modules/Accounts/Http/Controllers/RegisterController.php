@@ -19,10 +19,10 @@ class RegisterController extends Controller
 
     public function __invoke(RegisterRequest $request, RegisterAccount $registerAccount): JsonResponse
     {
-        /** @var array{name: string, email: string, password: string, account_type: string, locale?: string, timezone?: string, country?: string|null} $data */
+        /** @var array{name: string, email: string, password: string, account_type: string, locale?: string, timezone?: string, country?: string|null, legal_documents: array<string, string>} $data */
         $data = $request->validated();
 
-        $registerAccount->handle($data);
+        $registerAccount->handle($data, $request->ip());
 
         return new JsonResponse(['message' => self::MESSAGE], 202);
     }

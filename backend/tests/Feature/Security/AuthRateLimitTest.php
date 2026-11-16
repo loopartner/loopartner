@@ -52,6 +52,7 @@ it('applique les limites validées par défaut', function (): void {
 
 it('limite les inscriptions par IP et par heure', function (): void {
     $limit = rateLimit('register.per_hour_per_ip');
+    legalDocumentsInForce();
 
     // Des inscriptions invalides comptent aussi : la limite protège contre l'automatisation.
     hitFrom('10.0.0.1', $limit, fn ($test) => $test->postJson('/api/v1/auth/register', []))->assertUnprocessable();

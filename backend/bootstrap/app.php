@@ -1,9 +1,11 @@
 <?php
 
+use App\Http\Middleware\EnsureLegalConsent;
 use App\Http\Middleware\ForceJsonOnApi;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\TrustConfiguredProxies;
 use App\Support\SecurityLog;
+use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -30,6 +32,12 @@ return Application::configure(basePath: dirname(__DIR__))
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi();
+
+        // CGU et politique de confidentialité : une nouvelle version en vigueur doit être
+        // acceptée avant toute autre action authentifiée (403 consent_required). Placé après
+        // l'authentification pour lire l'utilisateur de la garde sanctum.
+        $middleware->appendToGroup('api', EnsureLegalConsent::class);
+        $middleware->appendToPriorityList(AuthenticatesRequests::class, EnsureLegalConsent::class);
 
         // Proxys de confiance lus dans config/security.php (TRUSTED_PROXIES), à chaque requête.
         $middleware->replace(TrustProxies::class, TrustConfiguredProxies::class);

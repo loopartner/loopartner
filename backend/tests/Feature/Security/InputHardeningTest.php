@@ -4,6 +4,7 @@ use App\Actions\Fortify\ResetUserPassword;
 use App\Actions\Fortify\UpdateUserPassword;
 use App\Models\User;
 use App\Modules\Accounts\Actions\RegisterAccount;
+use App\Support\Legal\LegalDocuments;
 use Illuminate\Support\Facades\Notification;
 
 /*
@@ -54,6 +55,7 @@ describe('caractères invisibles et de contrôle', function (): void {
 
         $this->postJson('/api/v1/auth/register', registrationPayload(['name' => "Cam\u{202E}ille"]))
             ->assertUnprocessable()->assertJsonValidationErrors(['name']);
+        LegalDocuments::accept($user, legalDocumentsInForce(), null);
         $this->actingAs($user)->patchJson('/api/v1/me', ['name' => "Cam\u{200B}ille"])
             ->assertUnprocessable()->assertJsonValidationErrors(['name']);
 
