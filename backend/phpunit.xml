@@ -23,7 +23,14 @@
     <php>
         <!-- Toute la suite tourne dans un seul processus, avec des images GD en mémoire : 128 Mo ne suffisent plus. -->
         <ini name="memory_limit" value="512M"/>
+        <!-- Les tests ne lisent jamais backend/.env (tests/TestCase.php) : tout est défini ici.
+             Une variable d'environnement déjà présente l'emporte (intégration continue : DB_*). -->
         <env name="APP_ENV" value="testing"/>
+        <!-- Clé publique, réservée aux tests (aucune donnée réelle n'est chiffrée avec). -->
+        <env name="APP_KEY" value="base64:LyJwAsZ7QCzY/P16286EvGLlxTECLeHfnD6p26GUb2I="/>
+        <env name="APP_DEBUG" value="false"/>
+        <env name="APP_URL" value="http://localhost"/>
+        <env name="FRONTEND_URL" value="http://localhost:3000"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>

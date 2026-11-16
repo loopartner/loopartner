@@ -1,0 +1,164 @@
+# Intégration continue de Loopartner (décision 13, docs/v1/DECISIONS.md).
+#
+# Déclenchée à chaque push, sur toutes les branches (le projet n'utilise pas de pull request :
+# la fusion se fait en local, après un résultat vert). Aucun fichier .env n'existe ici : les
+# tests lisent phpunit.xml (tests/TestCase.php) et les commandes Artisan les variables
+# ci-dessous. Résultat : onglet « Actions » du dépôt GitHub.
+#
+# 1. qualite : Pint, PHPStan, composer audit, tests sur SQLite.
+# 2. bases (après qualite) : sur MariaDB 10.4 (XAMPP), une MariaDB récente et MySQL 8 :
+#    migrations réelles, données de référence, données de démonstration, puis toute la suite de
+#    tests. Raison : un nom d'index de 65 caractères (erreur 1059) n'était visible que sur
+#    MariaDB ; SQLite ne voit ni cette limite ni le piège des colonnes TIMESTAMP.
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: backend
+
+env:
+  PHP_VERSION: '8.4'
+  PHP_EXTENSIONS: gd, exif, fileinfo, mbstring, pdo_sqlite, sqlite3, pdo_mysql
+  # Clé publique réservée aux tests et aux commandes de ce workflow (identique à phpunit.xml).
+  APP_KEY: 'base64:LyJwAsZ7QCzY/P16286EvGLlxTECLeHfnD6p26GUb2I='
+
+jobs:
+  qualite:
+    name: Qualité et tests (SQLite)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: PHP ${{ env.PHP_VERSION }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+          tools: composer:v2
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache/files
+          key: composer-${{ runner.os }}-${{ hashFiles('backend/composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
+
+      - name: Dépendances
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: GD avec WebP
+        run: php -r 'exit(gd_info()["WebP Support"] ? 0 : 1);'
+
+      - name: Style (Pint)
+        run: vendor/bin/pint --test
+
+      - name: Analyse statique (PHPStan)
+        run: vendor/bin/phpstan analyse --memory-limit=1G --no-progress
+
+      - name: Vulnérabilités connues (composer audit)
+        run: composer security
+
+      - name: Tests (SQLite en mémoire)
+        run: php artisan test --compact
+
+  bases:
+    name: Migrations et tests (${{ matrix.name }})
+    needs: qualite
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: MariaDB 10.4
+            image: mariadb:10.4
+            connection: mariadb
+            health: mysqladmin ping -h 127.0.0.1 -uroot -proot
+          - name: MariaDB 11.8
+            image: mariadb:11.8
+            connection: mariadb
+            health: healthcheck.sh --connect --innodb_initialized
+          - name: MySQL 8.0
+            image: mysql:8.0
+            connection: mysql
+            health: mysqladmin ping -h 127.0.0.1 -uroot -proot
+    services:
+      db:
+        image: ${{ matrix.image }}
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: testing
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="${{ matrix.health }}"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=30
+    env:
+      APP_ENV: testing
+      DB_CONNECTION: ${{ matrix.connection }}
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      # Le nom « testing » est exigé par tests/TestCase.php hors SQLite.
+      DB_DATABASE: testing
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: PHP ${{ env.PHP_VERSION }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+          tools: composer:v2
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache/files
+          key: composer-${{ runner.os }}-${{ hashFiles('backend/composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
+
+      - name: Dépendances
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Version du serveur
+        run: php -r '$pdo = new PDO("mysql:host=127.0.0.1;port=3306;dbname=testing", "root", "root"); echo $pdo->query("SELECT VERSION()")->fetchColumn(), PHP_EOL, "explicit_defaults_for_timestamp=", $pdo->query("SELECT @@explicit_defaults_for_timestamp")->fetchColumn(), PHP_EOL;'
+
+      - name: Migrations réelles
+        run: php artisan migrate --no-interaction
+
+      - name: Données de référence
+        run: php artisan db:seed --class="Database\Seeders\ReferenceDataSeeder" --no-interaction
+
+      - name: Données de démonstration (conditions de DemoDataGuard)
+        env:
+          APP_ENV: local
+          APP_DEBUG: 'true'
+          APP_URL: http://localhost:8000
+          SEED_DEMO_DATA: 'true'
+        run: php artisan db:seed --no-interaction
+
+      - name: Tests (base réelle, recréée par RefreshDatabase)
+        run: php artisan test --compact
