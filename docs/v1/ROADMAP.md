@@ -22,8 +22,9 @@ en parallèle des lots 2 et suivants (accessibilité RGAA, parcours de bout en b
 
 | Lot | État |
 |---|---|
-| 0. Stabiliser Compliance | terminé le 2026-11-16, en attente de validation (branche `feature/compliance-core`, non fusionnée) |
-| 1 à 10 | à planifier |
+| 0. Stabiliser Compliance | **terminé et fusionné dans `main`** le 2026-11-16 (avec la correction des noms d'index, `8e12edb`) |
+| 1. Socle transverse | plan validé le 2026-11-16, en cours (branche `feature/lot1-socle`) |
+| 2 à 11 | à planifier |
 
 ## Lot 0 — Stabiliser le module Compliance
 
@@ -43,13 +44,17 @@ pas faite, aucun pays n'est proposé et le module reste invisible des utilisateu
 
 ## Lot 1 — Socle transverse
 
-Intégration continue (tests sur SQLite **et sur un vrai serveur MariaDB**, Pint, PHPStan, audit
-des dépendances) ; consentements et CGU versionnées ; brique de notifications et préférences
-(noyau) ; droits par fonctionnalité (`Entitlements`) derrière `IsPremium`, sans changer le
-comportement du Blog ni de Compliance ; double authentification obligatoire pour l'équipe.
+Intégration continue (tests sur SQLite **et sur de vrais serveurs MariaDB et MySQL**, Pint,
+PHPStan, audit des dépendances) ; consentements et CGU versionnées ; brique de notifications et
+préférences (noyau) ; droits par fonctionnalité (`GetEntitlements`, modèle de la décision 5
+révisée) derrière `IsPremium`, sans changer le comportement du Blog ni de Compliance ; double
+authentification obligatoire pour l'équipe. Décisions 13 à 17.
 
 **Critères d'acceptation**
-- L'intégration continue bloque une pull request en échec ; les migrations passent sur MariaDB.
+- L'intégration continue (GitHub Actions) s'exécute à **chaque push, sur toutes les branches**, et
+  signale tout échec ; le projet n'utilise pas de pull request : l'utilisateur fusionne lui-même
+  en local, après un résultat vert. Les migrations réelles et les tests passent sur MariaDB 10.4,
+  une version récente de MariaDB et MySQL 8.
 - L'inscription est impossible sans accepter la version en vigueur des CGU et de la politique de
   confidentialité ; chaque acceptation est datée et versionnée.
 - Blog et Compliance inchangés (tous leurs tests existants verts).
@@ -95,14 +100,23 @@ une annonce Directory ; parcours d'onboarding.
 
 ## Lot 6 — Billing
 
-Choix du prestataire de paiement (après vérification du calendrier de la facturation électronique
-française) ; plans Entrepreneur Free/Plus et Prestataire Free/Pro/Business (prix, quotas, droits en
-données) ; abonnements, webhooks, factures, relances ; droits liés aux plans.
+Offre de la décision 5 révisée : **Gratuit et un seul Premium**, au même prix pour tous les rôles,
+avantages adaptés au rôle (`GetEntitlements`, déjà en configuration depuis le lot 1). Choix du
+prestataire de paiement, **marchand de référence (Paddle ou équivalent) privilégié** face à
+Stripe (TVA de chaque pays de l'UE et factures), après vérification du calendrier de la
+facturation électronique française ; aucun paquet installé avant ce lot. Plans et prix en base
+(mensuel et annuel), **offre de lancement** (2 premiers mois à 2 €, une seule fois par personne,
+protection contre les comptes multiples), abonnements, webhooks, factures, relances ; périodes
+premium `source = payment` à côté des attributions manuelles.
 
 **Critères d'acceptation**
 - Un webhook rejoué n'a aucun effet en double (traitement idempotent, signature vérifiée).
 - La fin d'un paiement ramène aux droits gratuits sans perte de données.
-- Aucun prix, quota ni taux dans le code.
+- Aucun prix, durée ou montant d'offre de lancement, quota ni taux dans le code.
+- Le prix après la promotion est affiché clairement avant le paiement ; l'utilisateur est informé
+  avant le passage au prix normal ; la résiliation se fait en ligne en quelques clics.
+- Une personne ne bénéficie qu'une fois de l'offre de lancement (règle testée, y compris avec un
+  second compte).
 
 ## Lot 7 — Avis, ressources et coffre-fort documentaire
 
@@ -131,7 +145,25 @@ cookie de suivi.
 **Critères d'acceptation**
 - Aucune donnée personnelle dans les indicateurs ; chaque action d'administration est auditée.
 
-## Lot 10 — Durcissement avant la bêta
+## Lot 10 — Compliance : évolutions du moteur avant vérification
+
+À terminer **avant la bêta** et avant la vérification des règles 2027 par l'expert-comptable :
+le moteur doit savoir représenter les règles réelles. Limites relevées au lot 0 :
+
+1. Seuils appréciés sur l'année **N-1 ou N-2** (aujourd'hui : cumul de l'année en cours).
+2. **Première déclaration de la micro-entreprise** (période particulière après la création).
+3. Échéance au **« 31 décembre de l'année de création »** (ou de l'année suivante).
+4. **Échéance qui dépend d'une autre** (date calculée à partir d'une autre échéance).
+5. **Délai d'approbation fixé par les statuts** (date propre à l'entreprise).
+6. **Report d'une échéance tombant un week-end ou un jour férié** (aujourd'hui : pas de report,
+   la date vient de la règle).
+
+**Critères d'acceptation**
+- Chaque cas est représentable par des données (aucune date, aucun seuil dans le code) et testé.
+- Les échéances déjà faites ou ignorées ne sont jamais modifiées par le recalcul.
+- Les brouillons `fr-2027.draft.json` concernés sont mis à jour (valeurs lues avec leur source).
+
+## Lot 11 — Durcissement avant la bêta
 
 Performance (requêtes N+1, index, recherche), tests de charge, sauvegardes et restauration,
 supervision, revue de sécurité externe ; préparation du VPS ou de l'hébergement Laravel géré.
