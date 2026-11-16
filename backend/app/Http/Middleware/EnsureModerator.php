@@ -4,8 +4,9 @@ namespace App\Http\Middleware;
 
 use App\Models\User;
 use App\Support\SecurityLog;
-use App\Support\TwoFactorSession;
+use App\Support\TeamTwoFactor;
 use Closure;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -19,6 +20,9 @@ use Symfony\Component\HttpFoundation\Response;
  * - Modérateur sans 2FA activée et confirmée : 403, avec un message qui demande de l'activer.
  * - Modérateur dont la session n'a pas été ouverte avec un code 2FA (session antérieure à
  *   l'activation, par exemple) : 403, avec un message qui demande de se reconnecter.
+ *
+ * Les deux 403 portent "code": "two_factor_required" et "reason" ("not_enabled" ou
+ * "session") : le frontend envoie vers l'activation ou la reconnexion (TeamTwoFactor).
  *
  * Chaque refus est journalisé (moderation.access_denied, avec reason). À placer après
  * auth:sanctum (l'anonyme reçoit 401) et verified.
@@ -37,17 +41,28 @@ class EnsureModerator
             abort(404);
         }
 
-        if (! TwoFactorSession::isEnabledFor($user)) {
+        $missing = TeamTwoFactor::missing($user, $request);
+
+        if ($missing === 'not_enabled') {
             $this->deny($request, 'two_factor_disabled');
-            abort(403, 'La modération exige la double authentification : activez-la et confirmez-la dans votre compte, puis reconnectez-vous.');
+            $this->refuse('La modération exige la double authentification : activez-la et confirmez-la dans votre compte, puis reconnectez-vous.', $missing);
         }
 
-        if (! TwoFactorSession::passed($request)) {
+        if ($missing === 'session') {
             $this->deny($request, 'two_factor_session');
-            abort(403, 'Reconnectez-vous en saisissant votre code de double authentification pour accéder à la modération.');
+            $this->refuse('Reconnectez-vous en saisissant votre code de double authentification pour accéder à la modération.', $missing);
         }
 
         return $next($request);
+    }
+
+    private function refuse(string $message, string $reason): never
+    {
+        throw new HttpResponseException(response()->json([
+            'message' => $message,
+            'code' => TeamTwoFactor::CODE,
+            'reason' => $reason,
+        ], 403));
     }
 
     private function deny(Request $request, string $reason): void

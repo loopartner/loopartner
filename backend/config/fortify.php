@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\ProtectTeamTwoFactor;
 use App\Http\Middleware\ThrottleAuthRoutes;
 use Laravel\Fortify\Features;
 
@@ -104,7 +105,7 @@ return [
 
     // ThrottleAuthRoutes ajoute une limite de débit aux routes que Fortify ne limite pas
     // (inscription, mot de passe oublié, réinitialisation, changement et confirmation du mot de passe).
-    'middleware' => ['web', ThrottleAuthRoutes::class],
+    'middleware' => ['web', ThrottleAuthRoutes::class, ProtectTeamTwoFactor::class],
 
     /*
     |--------------------------------------------------------------------------

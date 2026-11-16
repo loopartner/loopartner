@@ -157,6 +157,20 @@ class DatabaseSeeder extends Seeder
     public const DEMO_ADMIN_RECOVERY_CODES = ['demo-secours-0001', 'demo-secours-0002', 'demo-secours-0003', 'demo-secours-0004'];
 
     /**
+     * Secret TOTP de démonstration de redacteur@example.com (base32, 16 caractères), public
+     * comme celui de l'admin : la 2FA est obligatoire pour l'équipe. Ajouter un compte « Loopartner
+     * rédacteur (démo) » dans une application d'authentification, en saisie manuelle de la clé.
+     */
+    public const DEMO_REDACTEUR_TWO_FACTOR_SECRET = 'LOOPARTNERDEMORD';
+
+    /**
+     * Codes de secours de la double authentification de redacteur@example.com.
+     *
+     * @var list<string>
+     */
+    public const DEMO_REDACTEUR_RECOVERY_CODES = ['demo-redaction-0001', 'demo-redaction-0002', 'demo-redaction-0003', 'demo-redaction-0004'];
+
+    /**
      * Motif du refus de l'événement de démonstration refusé.
      */
     public const DEMO_REJECTION_REASON = 'Le titre promet des gains irréalistes : décrivez plutôt le contenu concret de l\'atelier.';
@@ -175,7 +189,7 @@ class DatabaseSeeder extends Seeder
             $this->seedLocalUsers();
             $this->seedDemoLegalDocuments();
             $this->seedDemoMatching();
-            $this->seedDemoAdminTwoFactor();
+            $this->seedDemoTeamTwoFactor();
             $this->seedDemoEvents();
             $this->seedDemoArticles();
             // Après les articles : le prestataire y reçoit son statut premium (deux entreprises).
@@ -437,10 +451,6 @@ class DatabaseSeeder extends Seeder
     }
 
     /**
-     * Active et confirme la double authentification du compte admin@example.com avec un secret
-     * fixe et documenté (DEMO_ADMIN_TWO_FACTOR_SECRET), sans écraser une 2FA déjà configurée.
-     */
-    /**
      * Versions de démonstration des CGU et de la politique de confidentialité (is_demo, textes
      * sans valeur juridique, utilisables sur le poste local seulement), acceptées par chaque
      * compte de démonstration : sans elles, l'inscription locale serait impossible (503) ;
@@ -464,19 +474,32 @@ class DatabaseSeeder extends Seeder
             ->each(fn (User $user) => LegalDocuments::accept($user, $versions, null));
     }
 
-    private function seedDemoAdminTwoFactor(): void
+    /**
+     * Active et confirme la double authentification, obligatoire pour l'équipe, des comptes
+     * admin@example.com et redacteur@example.com avec un secret fixe et documenté
+     * (DEMO_ADMIN_TWO_FACTOR_SECRET, DEMO_REDACTEUR_TWO_FACTOR_SECRET), sans écraser une 2FA
+     * déjà configurée.
+     */
+    private function seedDemoTeamTwoFactor(): void
     {
-        $admin = User::query()->where('email', 'admin@example.com')->sole();
+        $team = [
+            'admin@example.com' => [self::DEMO_ADMIN_TWO_FACTOR_SECRET, self::DEMO_ADMIN_RECOVERY_CODES],
+            'redacteur@example.com' => [self::DEMO_REDACTEUR_TWO_FACTOR_SECRET, self::DEMO_REDACTEUR_RECOVERY_CODES],
+        ];
 
-        if ($admin->two_factor_confirmed_at !== null) {
-            return;
+        foreach ($team as $email => [$secret, $recoveryCodes]) {
+            $member = User::query()->where('email', $email)->sole();
+
+            if ($member->two_factor_confirmed_at !== null) {
+                continue;
+            }
+
+            $member->forceFill([
+                'two_factor_secret' => encrypt($secret),
+                'two_factor_recovery_codes' => encrypt((string) json_encode($recoveryCodes)),
+                'two_factor_confirmed_at' => now(),
+            ])->save();
         }
-
-        $admin->forceFill([
-            'two_factor_secret' => encrypt(self::DEMO_ADMIN_TWO_FACTOR_SECRET),
-            'two_factor_recovery_codes' => encrypt((string) json_encode(self::DEMO_ADMIN_RECOVERY_CODES)),
-            'two_factor_confirmed_at' => now(),
-        ])->save();
     }
 
     /**

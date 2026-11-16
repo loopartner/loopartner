@@ -28,6 +28,7 @@ describe('GET /me', function (): void {
                     'avatar_url' => null,
                     'email_verified' => true,
                     'two_factor_enabled' => false,
+                    'two_factor_required' => false,
                     'premium' => ['active' => false, 'source' => null, 'starts_at' => null, 'ends_at' => null],
                     'article_quota' => ['premium' => false, 'limit' => 2, 'used' => 0, 'remaining' => 2],
                 ],
