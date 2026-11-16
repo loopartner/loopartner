@@ -17,15 +17,23 @@ Lots de développement de la V1 commercialisable, issus de l'audit du 2026-11-16
   n'est présenté comme terminé s'il ne l'est pas.
 - Commits séparés et lisibles ; jamais de commit sur `main`, jamais de push sans demande.
 
-**Frontend** : Next.js et TypeScript dans `frontend/`, **démarré après le lot 1**, puis développé
-en parallèle des lots 2 et suivants (accessibilité RGAA, parcours de bout en bout).
+**Frontend** : Next.js et TypeScript dans `frontend/`, **démarré une fois tous les lots backend
+terminés, Billing compris** (décision 2 modifiée le 2026-11-16), puis accessibilité RGAA et
+parcours de bout en bout.
+
+**Plans de lot** : un plan est toujours présenté avant de coder. Les décisions purement techniques
+y sont tranchées et notées ; seules les questions d'argent, de droit, de durées de conservation,
+de nouveaux paquets et ce que les utilisateurs voient ou subissent attendent une validation
+(décision 20).
 
 | Lot | État |
 |---|---|
 | 0. Stabiliser Compliance | **terminé et fusionné dans `main`** le 2026-11-16 (avec la correction des noms d'index, `8e12edb`) |
 | 1. Socle transverse | **terminé et fusionné dans `main`** le 2026-11-16 |
-| 2. Billing | plan détaillé en attente de validation (branche `feature/billing`) |
-| 3 à 11 | à planifier |
+| 2. Signalements et modération (DSA) | **prochain lot**, à planifier |
+| 3 à 9 | à planifier |
+| 10. Billing | plan validé dans son principe le 2026-11-16 ; développé à la fin du backend, juste avant le durcissement |
+| 11. Durcissement avant la bêta | à planifier |
 
 ## Lot 0 — Stabiliser le module Compliance
 
@@ -61,9 +69,93 @@ authentification obligatoire pour l'équipe. Décisions 13 à 17.
 - Blog et Compliance inchangés (tous leurs tests existants verts).
 - Un membre de l'équipe sans 2FA ne peut pas utiliser une fonction d'administration.
 
-## Lot 2 — Billing
+## Lot 2 — Signalements et modération (DSA)
 
-Prochain lot après le lot 1 (décisions 4 et 5 révisées, 18). Offre **Gratuit et un seul
+Signalement générique de tout contenu public ; file d'administration ; décisions motivées ;
+recours ; journal d'audit ; alignement d'Events sur les briques de modération du noyau.
+
+**Critères d'acceptation**
+- Tout contenu public (profil, offre, événement, article, avis) est signalable.
+- Chaque décision est motivée, notifiée à l'auteur, auditée, et peut faire l'objet d'un recours.
+- 401, 403 et 404 testés sur chaque route ; aucune donnée personnelle dans le canal security.
+
+## Lot 3 — Marketplace
+
+Offres des prestataires ; traçabilité des professionnels de la place de marché (DSA art. 30) ;
+devis structurés (lignes, quantités, prix en centimes, validité, acceptation, PDF), TVA lue dans
+des règles en base.
+
+**Critères d'acceptation**
+- Devis calculé en entiers ; taux de TVA issu d'une règle vérifiée, jamais du code.
+- Le PDF d'un devis ne contient aucune donnée d'un autre utilisateur ; 404 sur le devis d'autrui.
+
+## Lot 4 — Rendez-vous et agenda
+
+Rendez-vous natifs (créneaux, confirmation, annulation, rappels, `.ics`) ; agenda personnel unifié
+(événements, échéances, rendez-vous) ; abonnement `.ics` unique.
+
+**Critères d'acceptation**
+- Aucun créneau réservé deux fois, même en cas de demandes simultanées.
+- L'abonnement ne contient aucune donnée privée au-delà des titres et des dates.
+
+## Lot 5 — Workspaces et onboarding
+
+Module Workspaces (privé par défaut) : objectifs, étapes, tâches, avancement, lien facultatif vers
+une annonce Directory ; parcours d'onboarding.
+
+**Critères d'acceptation**
+- Parcours complet de l'inscription à la première tâche.
+- Aucune donnée d'un workspace n'est publique sans action explicite ; 404 sur le workspace d'autrui.
+
+## Lot 6 — Avis, ressources et coffre-fort documentaire
+
+Avis après une interaction professionnelle vérifiable (droit de réponse, signalement,
+modération) ; ressources (guides, modèles) et téléchargements signés ; coffre-fort documentaire
+privé du module Compliance (disque privé, URL signées).
+
+**Critères d'acceptation**
+- Un avis est impossible sans interaction vérifiable ; la méthode de vérification est affichée.
+- Un document du coffre-fort n'est accessible qu'à son propriétaire (404 sinon), jamais par une
+  URL publique, et il est supprimé avec le compte.
+
+## Lot 7 — Recommandations
+
+Règles simples et explicables (catégorie d'une tâche, prestataires, articles, événements,
+parcours), possibilité de les désactiver.
+
+**Critères d'acceptation**
+- Chaque recommandation affiche sa raison ; l'utilisateur peut les désactiver.
+
+## Lot 8 — Back-office et analytics
+
+Gestion des utilisateurs, des catégories et des plans ; indicateurs agrégés côté serveur, sans
+cookie de suivi.
+
+**Critères d'acceptation**
+- Aucune donnée personnelle dans les indicateurs ; chaque action d'administration est auditée.
+
+## Lot 9 — Compliance : évolutions du moteur avant vérification
+
+À terminer **avant la bêta** et avant la vérification des règles 2027 par l'expert-comptable :
+le moteur doit savoir représenter les règles réelles. Limites relevées au lot 0 :
+
+1. Seuils appréciés sur l'année **N-1 ou N-2** (aujourd'hui : cumul de l'année en cours).
+2. **Première déclaration de la micro-entreprise** (période particulière après la création).
+3. Échéance au **« 31 décembre de l'année de création »** (ou de l'année suivante).
+4. **Échéance qui dépend d'une autre** (date calculée à partir d'une autre échéance).
+5. **Délai d'approbation fixé par les statuts** (date propre à l'entreprise).
+6. **Report d'une échéance tombant un week-end ou un jour férié** (aujourd'hui : pas de report,
+   la date vient de la règle).
+
+**Critères d'acceptation**
+- Chaque cas est représentable par des données (aucune date, aucun seuil dans le code) et testé.
+- Les échéances déjà faites ou ignorées ne sont jamais modifiées par le recalcul.
+- Les brouillons `fr-2027.draft.json` concernés sont mis à jour (valeurs lues avec leur source).
+
+## Lot 10 — Billing
+
+Dernier lot fonctionnel, juste avant le durcissement (décisions 4 et 5 révisées, 18 et
+19 ; reporté le 2026-11-16 : Stripe est mis en place à la fin du backend). Offre **Gratuit et un seul
 Premium**, au même prix pour tous les rôles, mensuel ou annuel ; avantages selon le rôle
 (`GetEntitlements`). **Stripe** : Checkout hébergé (carte et 3-D Secure chez Stripe), portail
 client, factures Stripe ; Loopartner vendeur (TVA OSS et factures, à valider avec
@@ -76,6 +168,82 @@ compte, webhooks idempotents, suppression du compte avec annulation immédiate d
 Premiers avantages Premium des particuliers (limites de projets et de demandes en
 configuration). Brouillon des textes destinés aux utilisateurs : `docs/v1/billing-rules.md`
 (à faire valider par un juriste).
+
+**Plan détaillé** (validé dans son principe le 2026-11-16, à reprendre tel quel ; décisions
+du plan : décision 19)
+
+- **Paquet** : `stripe/stripe-php` seul (SDK officiel), derrière une interface `StripeGateway`
+  simulée dans les tests ; installé seulement au début de ce lot. Pas de `laravel/cashier`
+  (trait `Billable` et colonnes sur `User`, tables et route `/stripe/webhook` propres, webhook
+  synchrone sans idempotence par identifiant d'événement).
+- **Module `Billing`** (ajouté au test d'architecture), activé par `BILLING_ENABLED` (false par
+  défaut : routes en 404 tant que les CGV et les clés de production ne sont pas prêtes).
+- **Premium payé** : Action publique d'Accounts `SyncPaidPremium` qui alimente `premium_grants`
+  (`source` `trial` (nouvelle valeur) ou `payment`, `external_reference` = abonnement Stripe,
+  `ends_at` = fin de l'essai ou de la période payée, plus le délai de grâce). `IsPremium`,
+  `GetEntitlements` et la fin du premium restent inchangés.
+- **Montants** : lus sur le prix Stripe (TVA incluse), en cache une heure ; configuration :
+  `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY`, `billing.trial_days` (30),
+  `billing.trial_reminder_days` (7), `billing.renewal_notice_days` (45, entre 31 et 89 :
+  article L215-1), `billing.grace_days` (3).
+- **Tables** (datetime UTC, noms de moins de 64 caractères) : `billing_customers` (`user_id`
+  unique, null à la suppression du compte, `stripe_customer_id`) ; `billing_subscriptions`
+  (`uuid`, `user_id`, identifiants Stripe de l'abonnement, du client et du prix, `interval`,
+  `status`, `trial_ends_at`, `current_period_end`, `cancel_at_period_end`, `canceled_at`,
+  `ended_at`, `withdrawal_ends_at`) ; `billing_trial_claims` (empreinte de carte hachée
+  SHA-256, index unique, `user_id`, `claimed_at`) ; `billing_webhook_events` (`stripe_event_id`
+  unique, `type`, `object_id`, `status`, `attempts`, sans le contenu ; purge à 90 jours) ;
+  `billing_notices` (index unique abonnement, type, période : aucun email en double).
+- **CGV** : nouveau type `sales` de `LegalDocumentType`, exigé avant tout abonnement, pas à
+  l'inscription ; le blocage `consent_required` reste limité aux CGU et à la politique de
+  confidentialité.
+- **Endpoints** (`auth:sanctum` et `verified` sauf mention) : `GET /billing/plans` (public) ;
+  `GET /me/billing/preview?interval=` (prix TTC, périodicité, droit à l'essai, `charged_now`,
+  date du premier prélèvement, date du rappel, reconduction, comment annuler, CGV en vigueur) ;
+  `POST /me/billing/checkout` (`interval`, `sales_terms_version` acceptée et tracée,
+  `immediate_execution` exigé sans essai ; URL de Stripe Checkout ; 409 si un abonnement est en
+  cours) ; `GET /me/billing` ; `POST /me/billing/cancel` et `/resume` ; `POST /me/billing/withdraw`
+  (fonction de rétractation en ligne, 14 jours) ; `POST /me/billing/portal` ;
+  `GET /me/billing/invoices` (factures Stripe) ; `POST /billing/stripe/webhook` (public,
+  signature, limiteur par IP, corps de 256 Ko au plus).
+- **Stripe Checkout** : mode abonnement, `trial_period_days` si l'utilisateur y a droit, carte
+  toujours demandée, acceptation des CGV obligatoire, texte du brouillon au-dessus du bouton,
+  Stripe Tax et numéro de TVA des professionnels, langue de l'utilisateur, clé d'idempotence.
+- **Un essai par personne** : aucun essai pour un compte qui a déjà eu un essai ou un abonnement
+  payé ; à `checkout.session.completed`, une carte dont l'empreinte a déjà servi à un essai
+  entraîne l'annulation immédiate de l'abonnement (rien n'est prélevé) et un email qui propose
+  de souscrire sans essai.
+- **Webhooks** : signature vérifiée, insertion par identifiant d'événement (doublon ignoré),
+  tâche en file d'attente qui relit l'objet à jour chez Stripe puis synchronise (ordre
+  d'arrivée sans importance, rejeu sans effet). Événements : `checkout.session.completed` et
+  `.expired`, `customer.subscription.created`, `.updated`, `.deleted`, `invoice.paid`,
+  `invoice.payment_failed`, `charge.refunded`, `charge.dispute.created`, `customer.deleted`.
+- **Tâches planifiées** : `billing:send-notices` (rappel de fin d'essai, information avant
+  renouvellement annuel), `billing:sync` (webhooks manqués), `billing:prune`.
+- **Échec de paiement** : relances de Stripe ; Premium jusqu'à la fin de la période payée plus
+  `billing.grace_days`, puis plan gratuit sans perte de données.
+- **Suppression du compte** : `DeleteAccount` appelle l'Action publique Billing
+  `CancelForAccountDeletion` avant sa transaction (annulation immédiate et suppression du client
+  Stripe ; factures conservées chez Stripe) ; Stripe injoignable : 503, compte non supprimé.
+- **Notifications** : catégorie obligatoire `billing.account` (rappel, renouvellement,
+  résiliation, rétractation, échec de paiement, essai refusé). Textes : `docs/v1/billing-rules.md`.
+- **Avantages des particuliers** : `Project::MAX_PUBLISHED_PER_USER`,
+  `MatchRequest::MAX_PENDING_SENT` et la limite de demandes par jour passent dans
+  `config/entitlements.php` (gratuit : 10, 30, 20 ; premium : 25, 60, 50). La limite par jour est
+  comptée dans l'Action de Directory (le noyau ne dépend d'aucun module).
+- **Sécurité** : uniquement des identifiants Stripe et l'empreinte hachée en base ; clés
+  `STRIPE_SECRET` (`sk_live_` ou `rk_live_`), `STRIPE_WEBHOOK_SECRET` et prix dans `.env.example` ;
+  `security:check-config` échoue sur une clé manquante, une clé de test en production ou
+  l'absence de CGV en vigueur avec Billing activé ; limiteurs `billing-checkout`,
+  `billing-actions`, `billing-invoices`, `stripe-webhook` ; canal security sans carte,
+  empreinte ni montant ; tests sans réseau (`StripeGateway` simulé, signatures calculées
+  localement, échec si le vrai client est appelé).
+- **Factures et TVA** : factures Stripe ; Stripe Tax activé, prix TTC identique dans toute l'UE ;
+  conservation des données de facturation proposée à 10 ans, détachées du compte supprimé ;
+  facturation électronique des clients professionnels et e-reporting : à valider avec
+  l'expert-comptable.
+- **Rétractation et remboursement** : proposition du § 8 de `docs/v1/billing-rules.md`, à faire
+  valider par le juriste.
 
 **Critères d'acceptation**
 - Aucun prix, montant, durée d'essai, quota ni taux dans le code ; identifiants des prix Stripe
@@ -99,89 +267,6 @@ configuration). Brouillon des textes destinés aux utilisateurs : `docs/v1/billi
   compte annule l'abonnement chez Stripe immédiatement.
 - `security:check-config` échoue sur une clé Stripe manquante ou une clé de test en production.
 - Aucun appel réseau réel à Stripe dans les tests.
-
-## Lot 3 — Signalements et modération (DSA)
-
-Signalement générique de tout contenu public ; file d'administration ; décisions motivées ;
-recours ; journal d'audit ; alignement d'Events sur les briques de modération du noyau.
-
-**Critères d'acceptation**
-- Tout contenu public (profil, offre, événement, article, avis) est signalable.
-- Chaque décision est motivée, notifiée à l'auteur, auditée, et peut faire l'objet d'un recours.
-- 401, 403 et 404 testés sur chaque route ; aucune donnée personnelle dans le canal security.
-
-## Lot 4 — Marketplace
-
-Offres des prestataires ; traçabilité des professionnels de la place de marché (DSA art. 30) ;
-devis structurés (lignes, quantités, prix en centimes, validité, acceptation, PDF), TVA lue dans
-des règles en base.
-
-**Critères d'acceptation**
-- Devis calculé en entiers ; taux de TVA issu d'une règle vérifiée, jamais du code.
-- Le PDF d'un devis ne contient aucune donnée d'un autre utilisateur ; 404 sur le devis d'autrui.
-
-## Lot 5 — Rendez-vous et agenda
-
-Rendez-vous natifs (créneaux, confirmation, annulation, rappels, `.ics`) ; agenda personnel unifié
-(événements, échéances, rendez-vous) ; abonnement `.ics` unique.
-
-**Critères d'acceptation**
-- Aucun créneau réservé deux fois, même en cas de demandes simultanées.
-- L'abonnement ne contient aucune donnée privée au-delà des titres et des dates.
-
-## Lot 6 — Workspaces et onboarding
-
-Module Workspaces (privé par défaut) : objectifs, étapes, tâches, avancement, lien facultatif vers
-une annonce Directory ; parcours d'onboarding.
-
-**Critères d'acceptation**
-- Parcours complet de l'inscription à la première tâche.
-- Aucune donnée d'un workspace n'est publique sans action explicite ; 404 sur le workspace d'autrui.
-
-## Lot 7 — Avis, ressources et coffre-fort documentaire
-
-Avis après une interaction professionnelle vérifiable (droit de réponse, signalement,
-modération) ; ressources (guides, modèles) et téléchargements signés ; coffre-fort documentaire
-privé du module Compliance (disque privé, URL signées).
-
-**Critères d'acceptation**
-- Un avis est impossible sans interaction vérifiable ; la méthode de vérification est affichée.
-- Un document du coffre-fort n'est accessible qu'à son propriétaire (404 sinon), jamais par une
-  URL publique, et il est supprimé avec le compte.
-
-## Lot 8 — Recommandations
-
-Règles simples et explicables (catégorie d'une tâche, prestataires, articles, événements,
-parcours), possibilité de les désactiver.
-
-**Critères d'acceptation**
-- Chaque recommandation affiche sa raison ; l'utilisateur peut les désactiver.
-
-## Lot 9 — Back-office et analytics
-
-Gestion des utilisateurs, des catégories et des plans ; indicateurs agrégés côté serveur, sans
-cookie de suivi.
-
-**Critères d'acceptation**
-- Aucune donnée personnelle dans les indicateurs ; chaque action d'administration est auditée.
-
-## Lot 10 — Compliance : évolutions du moteur avant vérification
-
-À terminer **avant la bêta** et avant la vérification des règles 2027 par l'expert-comptable :
-le moteur doit savoir représenter les règles réelles. Limites relevées au lot 0 :
-
-1. Seuils appréciés sur l'année **N-1 ou N-2** (aujourd'hui : cumul de l'année en cours).
-2. **Première déclaration de la micro-entreprise** (période particulière après la création).
-3. Échéance au **« 31 décembre de l'année de création »** (ou de l'année suivante).
-4. **Échéance qui dépend d'une autre** (date calculée à partir d'une autre échéance).
-5. **Délai d'approbation fixé par les statuts** (date propre à l'entreprise).
-6. **Report d'une échéance tombant un week-end ou un jour férié** (aujourd'hui : pas de report,
-   la date vient de la règle).
-
-**Critères d'acceptation**
-- Chaque cas est représentable par des données (aucune date, aucun seuil dans le code) et testé.
-- Les échéances déjà faites ou ignorées ne sont jamais modifiées par le recalcul.
-- Les brouillons `fr-2027.draft.json` concernés sont mis à jour (valeurs lues avec leur source).
 
 ## Lot 11 — Durcissement avant la bêta
 
