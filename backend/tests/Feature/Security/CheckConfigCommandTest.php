@@ -1,8 +1,11 @@
 <?php
 
+use App\Models\User;
 use App\Modules\Compliance\Models\ComplianceRule;
 use App\Support\Database\TimestampSchema;
 use App\Support\Security\ConfigAudit;
+use Database\Seeders\DatabaseSeeder;
+use Database\Seeders\RoleSeeder;
 
 /*
 | security:check-config, lancée à chaque déploiement : échoue (code 1) dès qu'une valeur est
@@ -256,4 +259,30 @@ it('lit les règles administratives par défaut sur la base de test', function (
     $this->artisan('security:check-config')
         ->expectsOutputToContain('compliance_rules')
         ->assertFailed();
+});
+
+it('échoue si la base de production contient les données de démonstration (comptes, règles, tous modules)', function (): void {
+    allowDemoSeeding();
+    $this->seed(DatabaseSeeder::class);
+
+    safeProductionConfig();
+
+    $this->artisan('security:check-config')
+        ->expectsOutputToContain('compte(s) de démonstration')
+        ->expectsOutputToContain('compliance_rules')
+        ->assertFailed();
+});
+
+it('ne se laisse pas bloquer par une inscription non vérifiée avec une adresse de démonstration', function (): void {
+    safeProductionConfig();
+    User::factory()->unverified()->create(['email' => 'admin@example.com']);
+
+    $this->artisan('security:check-config')
+        ->expectsOutputToContain('Aucun problème')
+        ->assertSuccessful();
+});
+
+it('connaît l\'adresse de chaque compte de démonstration créé par le seeder', function (): void {
+    expect(ConfigAudit::DEMO_ACCOUNT_EMAILS)
+        ->toBe(array_map(fn (string $role): string => "{$role}@example.com", RoleSeeder::ROLES));
 });

@@ -36,6 +36,23 @@ class ConfigAudit
     /** @var Closure(): (array{admins_with_two_factor: int, demo_rules: int}|null) */
     private Closure $complianceRules;
 
+    /**
+     * Adresses des comptes de démonstration (DatabaseSeeder : un compte vérifié par rôle, mot de
+     * passe connu). Tenue à jour avec RoleSeeder::ROLES (vérifié par un test).
+     *
+     * @var list<string>
+     */
+    public const DEMO_ACCOUNT_EMAILS = [
+        'particulier@example.com',
+        'prestataire@example.com',
+        'entrepreneur@example.com',
+        'redacteur@example.com',
+        'admin@example.com',
+    ];
+
+    /** @var Closure(): (int|null) */
+    private Closure $demoAccounts;
+
     /** @var list<ConfigFinding> */
     private array $findings = [];
 
@@ -44,9 +61,15 @@ class ConfigAudit
      * @param  (Closure(string): (string|false))|null  $ini  lecture d'un réglage php.ini
      * @param  (Closure(): (array{explicit_defaults: bool, on_update_columns: list<string>}|null))|null  $timestampSchema  schéma MySQL/MariaDB (TimestampSchema::inspect)
      * @param  (Closure(): (array{admins_with_two_factor: int, demo_rules: int}|null))|null  $complianceRules  règles administratives en base (null : table absente)
+     * @param  (Closure(): (int|null))|null  $demoAccounts  nombre de comptes de démonstration vérifiés en base (null : table absente)
      */
-    public function __construct(?Closure $devDependenciesInstalled = null, ?Closure $ini = null, ?Closure $timestampSchema = null, ?Closure $complianceRules = null)
+    public function __construct(?Closure $devDependenciesInstalled = null, ?Closure $ini = null, ?Closure $timestampSchema = null, ?Closure $complianceRules = null, ?Closure $demoAccounts = null)
     {
+        // Seuls les comptes VÉRIFIÉS comptent : n'importe qui peut s'inscrire avec une adresse
+        // @example.com sans pouvoir la vérifier, et ne doit pas pouvoir bloquer un déploiement.
+        $this->demoAccounts = $demoAccounts ?? fn (): ?int => Schema::hasTable('users')
+            ? User::query()->whereIn('email', self::DEMO_ACCOUNT_EMAILS)->whereNotNull('email_verified_at')->count()
+            : null;
         $this->devDependenciesInstalled = $devDependenciesInstalled
             ?? fn (): bool => collect(InstalledVersions::getAllRawData())->contains(fn (array $data): bool => $data['root']['dev']);
         $this->ini = $ini ?? fn (string $key): string|false => ini_get($key);
@@ -75,6 +98,7 @@ class ConfigAudit
         $this->checkLinks();
         $this->checkPhp();
         $this->checkTimestampColumns();
+        $this->checkDemoAccounts();
         $this->checkComplianceRules();
 
         return $this->findings;
@@ -281,6 +305,25 @@ class ConfigAudit
 
         foreach ($schema['on_update_columns'] as $column) {
             $this->error($column, 'a ON UPDATE CURRENT_TIMESTAMP : sa valeur est réécrite à chaque modification de la ligne. La passer en DATETIME par une nouvelle migration, puis vérifier les données déjà enregistrées.');
+        }
+    }
+
+    /**
+     * Base de démonstration copiée en production : les comptes <rôle>@example.com créés par
+     * DatabaseSeeder ont un mot de passe connu (« password ») et l'admin de démonstration un
+     * secret 2FA public. Ils entraînent avec eux toutes les données de démonstration des modules
+     * (projets, événements, articles, entreprises…). Erreur bloquante.
+     */
+    private function checkDemoAccounts(): void
+    {
+        try {
+            $count = ($this->demoAccounts)();
+        } catch (Throwable) {
+            return; // Base injoignable : déjà signalé par checkTimestampColumns().
+        }
+
+        if ($count !== null && $count > 0) {
+            $this->error('users', 'contient '.$count.' compte(s) de démonstration vérifié(s) (<rôle>@example.com, mot de passe connu) : une base de démonstration ne doit jamais être copiée en production. Repartir d\'une base vide, puis lancer ReferenceDataSeeder.');
         }
     }
 
