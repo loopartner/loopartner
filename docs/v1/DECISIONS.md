@@ -287,6 +287,38 @@ entrepreneurs) sont **validées le 2026-11-16**.
 | Entrepreneur | Radar d'opportunités chaque semaine et complet | un email par mois | lot 7 (Recommandations) |
 | Entrepreneur | Plus d'événements publiés ou en attente | 3 en attente, 20 publiés à venir | en configuration, lot à fixer |
 
+## Décisions du lot 3 : Marketplace (validées le 2026-11-17)
+
+Plan validé avec les recommandations 1 à 15 et les précisions de l'utilisateur. Analyse des
+textes (devis, place de marché, DSA art. 29 à 32, TVA, acceptation en ligne) et points à faire
+valider : `docs/v1/marketplace-rules.md`.
+
+| # | Sujet | Décision |
+|---|---|---|
+| 36 | Moment du devis | Un devis ne s'envoie **qu'après l'acceptation de la demande de mise en relation** : le nom du client et le lieu d'exécution sont des mentions obligatoires du devis (arrêté du 24 janvier 2017, art. 4), et le nom du porteur de projet n'est révélé au prestataire qu'à l'acceptation. Le porteur accepte plusieurs propositions, reçoit leurs devis et les compare. |
+| 37 | Traçabilité des professionnels | Seuls des **professionnels déclarés** publient des offres et envoient des devis : identité professionnelle (dénomination, forme juridique, SIREN, registre, adresse, coordonnées, assurance, médiateur) et **autocertification** datée et versionnée. **Pas d'art. 30 DSA complet** (ni pièce d'identité, ni coordonnées bancaires) : l'art. 29 en dispense une petite entreprise (à faire valider par le juriste, statut consolidé compris). Le SIREN est **contrôlé dans sa forme** (9 chiffres, clé de Luhn) ; la vérification par l'API publique de l'État et le badge « Entreprise immatriculée vérifiée » restent au lot 6, mais leurs colonnes sont créées dès le lot 3. |
+| 38 | Affichage de la qualité | Sur l'offre : « Professionnel (statut déclaré) », dénomination et SIREN (Code de la consommation, D111-8 II) ; l'identité complète n'apparaît que sur le devis. À faire valider par le juriste. |
+| 39 | Publication des offres | Sans validation préalable, comme les profils, mais **signalables et masquables** (adaptateur `offer`). 20 offres publiées et 30 offres au total par prestataire ; pas d'image en V1. |
+| 40 | Prix des offres | Prix **indicatif saisi TTC** par le prestataire, avec la mention « prix indicatif, seul le devis engage » ; aucun calcul de TVA sur les offres. Affichage TTC envers les consommateurs à faire valider par le juriste. |
+| 41 | Acceptation en ligne | Récapitulatif puis confirmation (« double clic », C. civ. 1127-2), case d'acceptation, **demande expresse d'exécution immédiate** facultative pour un consommateur (L221-25), preuve (date, IP, empreinte du contenu). Pas de signature électronique qualifiée. Mention « Loopartner n'est pas partie au contrat ». À faire valider par le juriste. |
+| 42 | Rétractation en ligne | Fonction de rétractation en ligne (L221-21, en vigueur le 19 juin 2026) fournie par Loopartner pour les devis acceptés par un consommateur, au nom du prestataire, pendant `marketplace.withdrawal_days` (14). À faire valider par le juriste (titulaire de l'obligation, décret d'application). |
+| 43 | Lecture de la décision 35 | Le **PDF de chaque devis est gratuit pour les deux parties** (support durable). Premium du client : comparateur et **export PDF de la comparaison** ; Premium du prestataire : logo et mentions personnalisées sur ses devis. |
+| 44 | Accès anticipé | Fenêtre de 24 heures (configurable) **ouverte à chaque publication ou republication** ; le porteur voit sa date de fin dans son projet ; ordre des résultats identique pour tous. Texte des CGU (P2B art. 3 et 5 §3) à faire valider par le juriste. |
+| 45 | Signalement des devis | Le client peut signaler un devis reçu (contenu privé, comme les messages : adaptateur `quote`, non signalable par le formulaire public). |
+| 46 | Emails | « Devis reçu » et « devis refusé » : catégorie facultative `marketplace.quotes`. « Devis accepté » (confirmation au client et au prestataire) et rétractation : catégorie obligatoire `marketplace.quote_decisions`. **La confirmation d'acceptation contient le PDF du devis accepté en pièce jointe**, généré au moment de l'envoi, pour que chaque partie garde le contrat sur un support durable même sans accès à son compte ; le corps de l'email reste sans montant ni ligne. À noter pour le juriste. |
+| 47 | Durées de conservation | Brouillons : 12 mois sans modification. Devis refusés, retirés, expirés ou remplacés : 12 mois après ce changement. Devis acceptés et preuve d'acceptation : tant que la conversation existe, donc 12 mois après la suppression d'un des deux comptes (règle actuelle des conversations). Les parties gardent leur PDF. |
+| 48 | Paquet PDF | `dompdf/dompdf` ^3.1, version exacte fixée dans `composer.lock`, installé seulement au commit des PDF, `composer security` avant et après l'installation ; ressources distantes, PHP et JavaScript désactivés. |
+| 49 | TVA | Nouveau type de règle Compliance `vat_rate` (taux, libellé, champ d'application, mention, certification du client, caractère exclusif) ; brouillons des taux 2027 **sans valeur** tant qu'elle n'est pas lue pour 2027 ; arrondi au centime par taux, à faire valider. **V1 limitée aux prestataires établis en France, en euros**. Aucun devis ne peut être envoyé tant qu'aucun taux n'est vérifié par l'expert-comptable. |
+| 50 | Règles et limites visibles | Validité d'un devis de 1 à 180 jours (30 par défaut) ; 100 lignes ; 20 brouillons par prestataire ; un seul devis envoyé à la fois par demande (une nouvelle version remplace la précédente) ; 10 devis comparés au plus ; règles du comparateur et seuils (forfait unique au-delà de 80 % du total, écart de 30 % à la médiane à partir de 3 devis, validité de moins de 7 jours) en configuration ; avertissement « comparaison automatique fondée sur des règles, ni avis sur la qualité ni conseil ». |
+
+Décisions techniques du plan (décision 20) : nouveau module `Marketplace` (identité
+professionnelle, offres, devis, comparateur, PDF) ; Actions publiques de lecture dans Directory
+(`GetMatchRequestContext`, `FindOwnProject`), Compliance (`GetVatRates`) et Accounts
+(`PublishedProviderConstraint`) ; clé étrangère en cascade du devis vers sa demande de mise en
+relation ; montants en centimes, quantités en millièmes, taux en points de base, aucun décimal ;
+contenu figé à l'envoi avec une empreinte SHA-256 contrôlée à l'acceptation ; identités chiffrées
+en base ; accès anticipé par un scope de Directory (`config/directory.php`).
+
 ## Décisions antérieures toujours en vigueur (rappel)
 
 - Compliance, quatre yeux : `compliance.require_distinct_verifier` à **false par défaut** tant que

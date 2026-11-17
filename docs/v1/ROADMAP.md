@@ -31,7 +31,7 @@ de nouveaux paquets et ce que les utilisateurs voient ou subissent attendent une
 | 0. Stabiliser Compliance | **terminé et fusionné dans `main`** le 2026-11-16 (avec la correction des noms d'index, `8e12edb`) |
 | 1. Socle transverse | **terminé et fusionné dans `main`** le 2026-11-16 |
 | 2. Signalements et modération (DSA) | **terminé et fusionné dans `main`** le 2026-11-16 (décisions 21 à 31) |
-| 3. Marketplace | à planifier ; **c'est le prochain lot** |
+| 3. Marketplace | plan validé le 2026-11-17 (décisions 36 à 50) ; **en cours** sur `feature/marketplace` |
 | 4 à 9 | à planifier |
 | 10. Billing | plan validé dans son principe le 2026-11-16 ; développé à la fin du backend, juste avant le durcissement |
 | 11. Durcissement avant la bêta | à planifier |
@@ -122,6 +122,46 @@ des règles en base. Premium (décision 33) : **comparateur de devis** pour le p
   visible que des prestataires Premium (liste, détail et propositions ; testé dans les deux
   sens) ; l'ordre des résultats est le même pour tous (aucun classement payant, décision 18) ;
   annonce dans les CGU et information du porteur de projet validées par le juriste.
+
+**Plan détaillé** (validé le 2026-11-17 ; décisions 36 à 50 ; textes et points à faire valider :
+`docs/v1/marketplace-rules.md`)
+
+- **Module `Marketplace`** (ajouté au test d'architecture) : identité professionnelle, offres,
+  devis, comparateur, PDF. Actions publiques de lecture : Directory `GetMatchRequestContext` et
+  `FindOwnProject`, Compliance `GetVatRates`, Accounts `PublishedProviderConstraint`.
+- **Identité professionnelle** (`marketplace_seller_profiles`, `GET|PUT /me/seller-profile`) :
+  dénomination, forme juridique, SIREN (forme contrôlée), registre, capital, TVA, adresse,
+  coordonnées, assurance, médiateur, profession réglementée, autocertification versionnée ;
+  colonnes de la vérification du lot 6 créées dès maintenant ; chiffrée en base ; champs manquants
+  annoncés (`missing_for_offers`, `missing_for_quotes`, `missing_for_consumer_quotes`).
+- **Offres** (`marketplace_offers`) : `/me/offers` (CRUD, `publish`, `unpublish`) ; public
+  `GET /offers`, `GET /offers/{slug}`, `GET /providers/{slug}/offers` ; prix indicatif TTC ;
+  qualité déclarée affichée ; visibles si l'offre et le profil sont publiés et non masqués ;
+  adaptateur `offer` ; 20 publiées et 30 au total.
+- **Devis** (`marketplace_quotes`, `marketplace_quote_lines`) : seulement dans une demande
+  acceptée ; brouillon, envoi, révision (nouvelle version), retrait, acceptation (empreinte lue,
+  double clic, demande expresse, certifications), refus, rétractation en ligne (consommateur,
+  14 jours) ; numéro `D-AAAA-NNNN` par prestataire ; calcul en entiers (arrondi par taux) ; taux
+  choisis par ligne parmi les règles `vat_rate` vérifiées ; snapshot et empreinte SHA-256 ; PDF
+  (`GET /me/quotes/{uuid}/pdf`, les deux parties ; logo et mentions en Premium) ; signalement
+  (adaptateur privé `quote`).
+- **Comparateur** : `GET /me/projects/{uuid}/quotes` (gratuit), `…/quotes/comparison` et
+  `…/comparison.pdf` (Premium) ; constats avec règle, gravité, raison et question.
+- **Accès anticipé** : `config/directory.php` (`early_access_hours`), scope `browsableBy()` sur la
+  liste, le détail, les propositions et le signalement ; `early_access_ends_at` pour le porteur.
+- **Droits** (`config/entitlements.php`) : `marketplace.quote_comparison`,
+  `marketplace.quote_comparison_export` (particulier, entrepreneur), `directory.project_early_access`,
+  `marketplace.quote_branding` (prestataire).
+- **TVA** : type de règle `vat_rate`, brouillons `fr-2027-vat.draft.json` sans valeur ; sans taux
+  vérifié, 409 `vat_rates_unavailable`.
+- **Emails** : `marketplace.quotes` (facultative), `marketplace.quote_decisions` (obligatoire, PDF
+  du devis accepté en pièce jointe) ; jamais de montant ni de ligne dans le corps.
+- **Tâches** : `marketplace:expire-quotes` (chaque heure), `marketplace:prune` (05:15).
+- **Suppression de compte** (`ForgetUserMarketplace`) et minimisation (décision 47).
+- **Paquet** : `dompdf/dompdf` ^3.1, installé au commit des PDF.
+- **Commits** : Compliance (TVA) ; Directory (accès anticipé) ; identité professionnelle ;
+  offres ; devis ; acceptation et emails ; PDF ; comparateur ; signalement, suppression, purge ;
+  tests de sécurité ; démonstration ; documentation.
 
 ## Lot 4 — Rendez-vous et agenda
 
