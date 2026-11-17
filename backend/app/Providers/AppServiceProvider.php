@@ -236,6 +236,17 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('moderation-appeals', fn (Request $request): Limit => Limit::perDay(self::limit('moderation_appeals.per_day'))->by($this->userOrIp($request)));
         RateLimiter::for('moderation-admin', fn (Request $request): Limit => Limit::perHour(self::limit('moderation_admin.per_hour'))->by($this->userOrIp($request)));
 
+        // Marketplace (lot 3) : par utilisateur.
+        RateLimiter::for('seller-profile-writes', fn (Request $request): Limit => Limit::perHour(self::limit('seller_profile_writes.per_hour'))->by($this->userOrIp($request)));
+        foreach (['offer-writes' => 'offer_writes', 'quote-writes' => 'quote_writes', 'quote-sends' => 'quote_sends', 'quote-pdfs' => 'quote_pdfs'] as $name => $key) {
+            RateLimiter::for($name, fn (Request $request): array => [
+                Limit::perHour(self::limit($key.'.per_hour'))->by('hour:'.$this->userOrIp($request)),
+                Limit::perDay(self::limit($key.'.per_day'))->by('day:'.$this->userOrIp($request)),
+            ]);
+        }
+        RateLimiter::for('quote-decisions', fn (Request $request): Limit => Limit::perHour(self::limit('quote_decisions.per_hour'))->by($this->userOrIp($request)));
+        RateLimiter::for('quote-comparisons', fn (Request $request): Limit => Limit::perHour(self::limit('quote_comparisons.per_hour'))->by($this->userOrIp($request)));
+
         // Abonnement au calendrier (route publique) : par abonnement, compté sur le sélecteur du
         // jeton (sa partie publique, jamais le secret), et par IP.
         RateLimiter::for('compliance-feed', fn (Request $request): array => [

@@ -221,6 +221,9 @@ const API_ROUTES = [
     'POST api/v1/admin/moderation/targets/{type}/{ref}/decisions' => 'auth',
     'POST api/v1/admin/moderation/decisions/{uuid}/lift' => 'auth',
     'POST api/v1/admin/moderation/notices/{uuid}/referral' => 'auth',
+    // Marketplace (lot 3).
+    'GET api/v1/me/seller-profile' => 'auth',
+    'PUT api/v1/me/seller-profile' => 'auth',
 ];
 
 /**

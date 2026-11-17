@@ -256,6 +256,37 @@ return [
             'per_hour' => 60,
         ],
 
+        // Marketplace (lot 3), par utilisateur : identité professionnelle, offres, devis.
+        'seller_profile_writes' => [
+            'per_hour' => 20,
+        ],
+        'offer_writes' => [
+            'per_hour' => 60,
+            'per_day' => 300,
+        ],
+        // Brouillons de devis (création, modification, suppression, nouvelle version).
+        'quote_writes' => [
+            'per_hour' => 120,
+            'per_day' => 600,
+        ],
+        // Envoi d'un devis au client (email) : plus strict, signe de démarchage au-delà.
+        'quote_sends' => [
+            'per_hour' => 20,
+            'per_day' => 60,
+        ],
+        // Acceptation, refus, retrait et rétractation.
+        'quote_decisions' => [
+            'per_hour' => 30,
+        ],
+        // PDF générés à la demande (devis et comparaison) : coûteux en mémoire.
+        'quote_pdfs' => [
+            'per_hour' => 30,
+            'per_day' => 200,
+        ],
+        'quote_comparisons' => [
+            'per_hour' => 60,
+        ],
+
     ],
 
     /*

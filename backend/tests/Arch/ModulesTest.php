@@ -5,7 +5,7 @@
 | autre module. App\Models\User, modèle partagé du projet, reste autorisé partout.
 */
 
-const MODULES = ['Accounts', 'Directory', 'Events', 'Blog', 'Compliance', 'Moderation'];
+const MODULES = ['Accounts', 'Directory', 'Events', 'Blog', 'Compliance', 'Moderation', 'Marketplace'];
 
 foreach (MODULES as $module) {
     $otherModulesModels = array_map(

@@ -22,6 +22,7 @@ use App\Modules\Directory\Models\Project;
 use App\Modules\Events\Enums\RegistrationStatus;
 use App\Modules\Events\Models\Event;
 use App\Modules\Events\Models\EventRegistration;
+use App\Modules\Marketplace\Models\SellerProfile;
 use App\Notifications\VerifyEmailNotification;
 use App\Support\Legal\LegalDocuments;
 use App\Support\Moderation\ModerationTargets;
@@ -773,4 +774,55 @@ function restrictContent(string $type, string $ref): string
 function restrictContentWith(string $type, string $ref, string $decisionUuid): void
 {
     ModerationTargets::get($type)->restrict($ref, $decisionUuid);
+}
+
+/*
+|--------------------------------------------------------------------------
+| Marketplace (offres, devis, comparateur)
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * Identité professionnelle valide (micro-entreprise fictive, SIREN de forme valide).
+ *
+ * @param  array<string, mixed>  $overrides
+ * @return array<string, mixed>
+ */
+function sellerProfilePayload(array $overrides = []): array
+{
+    return [
+        'legal_name' => 'Camille Exemple',
+        'trade_name' => 'Atelier Exemple',
+        'legal_form' => 'ei_micro',
+        'registration_number' => '123 456 782',
+        'registry' => 'rne',
+        'vat_number' => 'FR 11 123456782',
+        'address_line1' => '1 rue de l\'Exemple',
+        'postal_code' => '75001',
+        'city' => 'Paris',
+        'country' => 'FR',
+        'phone' => '+33 1 23 45 67 89',
+        'email' => 'contact@atelier-exemple.test',
+        'insurer_name' => 'Assurance Exemple',
+        'insurer_contact' => '10 avenue de l\'Assureur, 69001 Lyon',
+        'insurance_coverage' => 'France métropolitaine',
+        'mediator_name' => 'Médiateur Exemple',
+        'mediator_url' => 'https://www.mediateur-exemple.fr',
+        'self_certification' => true,
+        'self_certification_version' => (string) config('marketplace.self_certification.version'),
+        ...$overrides,
+    ];
+}
+
+/**
+ * Prestataire au profil publié, avec une identité professionnelle complète.
+ *
+ * @param  array<string, mixed>  $sellerAttributes
+ */
+function marketplaceProvider(array $sellerAttributes = []): User
+{
+    $provider = browsingProvider();
+    SellerProfile::factory()->create(['user_id' => $provider->id, ...$sellerAttributes]);
+
+    return $provider;
 }
