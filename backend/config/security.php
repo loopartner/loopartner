@@ -287,6 +287,47 @@ return [
             'per_hour' => 60,
         ],
 
+        // Rendez-vous (lot 4), par utilisateur sauf mention.
+        // Réglages, types, plages et exceptions du prestataire.
+        'appointment_settings_writes' => [
+            'per_hour' => 60,
+            'per_day' => 300,
+        ],
+        // Créneaux calculés à la demande (aperçu, relation) : par utilisateur ; page publique :
+        // par IP (collecte de l'emploi du temps d'un prestataire).
+        'appointment_slots' => [
+            'per_minute' => 60,
+            'per_day' => 1000,
+            'public_per_minute_per_ip' => 30,
+        ],
+        // Réservations, propositions et reports (emails à l'autre partie). La limite par jour
+        // fixe aussi le plafond des propositions en attente d'un prestataire (30, décision 54).
+        'appointment_bookings' => [
+            'per_hour' => 10,
+            'per_day' => 30,
+        ],
+        // Confirmation, refus, annulation, réponse à un report.
+        'appointment_decisions' => [
+            'per_hour' => 60,
+        ],
+        // Fichier .ics d'un rendez-vous.
+        'appointment_ics' => [
+            'per_hour' => 30,
+        ],
+        // Agenda unifié (GET /me/agenda).
+        'agenda' => [
+            'per_minute' => 60,
+        ],
+        // Abonnement unique à l'agenda : création, remplacement, révocation.
+        'agenda_feed_manage' => [
+            'per_day' => 10,
+        ],
+        // Abonnement unique (route publique à jeton) : par abonnement et par IP.
+        'agenda_feed' => [
+            'per_hour_per_feed' => 30,
+            'per_hour_per_ip' => 120,
+        ],
+
     ],
 
     /*

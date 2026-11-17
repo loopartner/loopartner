@@ -5,6 +5,9 @@ use App\Models\ServiceCategory;
 use App\Models\User;
 use App\Modules\Accounts\Models\PremiumGrant;
 use App\Modules\Accounts\Models\ProviderProfile;
+use App\Modules\Appointments\Models\AppointmentType;
+use App\Modules\Appointments\Models\AvailabilityRule;
+use App\Modules\Appointments\Models\Calendar;
 use App\Modules\Blog\Enums\AuthorKind;
 use App\Modules\Blog\Models\Article;
 use App\Modules\Blog\Models\ArticleQuotaEntry;
@@ -923,4 +926,55 @@ function sentQuote(string $clientRole = 'particulier', array $overrides = [], ?U
     test()->actingAs($provider)->postJson("/api/v1/me/quotes/{$uuid}/send")->assertOk();
 
     return [$client, $provider, Quote::query()->where('uuid', $uuid)->sole()];
+}
+
+/*
+|--------------------------------------------------------------------------
+| Rendez-vous (module Appointments)
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * Prestataire au profil publié dont le calendrier est ouvert aux réservations (Europe/Paris,
+ * créneaux de 30 minutes, sans marge ni délai de prévenance, horizon de 30 jours).
+ *
+ * @param  array<string, mixed>  $calendar
+ */
+function appointmentProvider(array $calendar = []): User
+{
+    $provider = browsingProvider();
+    Calendar::factory()->create(['user_id' => $provider->id, ...$calendar]);
+
+    return $provider;
+}
+
+function appointmentCalendarOf(User $provider): Calendar
+{
+    return Calendar::query()->where('user_id', $provider->id)->sole();
+}
+
+/**
+ * Type de rendez-vous d'un prestataire (premier échange de 30 minutes en visio par défaut).
+ *
+ * @param  array<string, mixed>  $attributes
+ */
+function appointmentTypeOf(User $provider, array $attributes = []): AppointmentType
+{
+    return AppointmentType::factory()->create(['calendar_id' => appointmentCalendarOf($provider)->id, ...$attributes]);
+}
+
+/**
+ * Plages hebdomadaires du prestataire, en heure locale : [jour ISO, début, fin] en minutes.
+ * Par défaut, tous les jours de 09:00 à 12:00.
+ *
+ * @param  list<array{0: int, 1: int, 2: int}>|null  $ranges
+ */
+function weeklyAvailability(User $provider, ?array $ranges = null): void
+{
+    $calendar = appointmentCalendarOf($provider);
+    $ranges ??= array_map(fn (int $day): array => [$day, 9 * 60, 12 * 60], range(1, 7));
+
+    foreach ($ranges as [$weekday, $start, $end]) {
+        (new AvailabilityRule)->forceFill(['calendar_id' => $calendar->id, 'weekday' => $weekday, 'start_minute' => $start, 'end_minute' => $end])->save();
+    }
 }

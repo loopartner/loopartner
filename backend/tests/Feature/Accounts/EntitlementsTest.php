@@ -77,6 +77,14 @@ describe('GET /me/entitlements', function (): void {
                 'compliance.export' => true,
                 'directory.project_early_access' => true,
                 'marketplace.quote_branding' => true,
+                'appointments.public_booking_page' => true,
+                'appointments.active_types' => 10,
+                'appointments.weekly_ranges' => 40,
+                'appointments.upcoming_exceptions' => 100,
+                'appointments.horizon_days' => 90,
+                'appointments.upcoming_appointments' => 200,
+                'appointments.reminder_offsets' => [120, 1440, 2880],
+                'appointments.max_reminder_offsets' => 2,
             ]);
     });
 

@@ -247,6 +247,27 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('quote-decisions', fn (Request $request): Limit => Limit::perHour(self::limit('quote_decisions.per_hour'))->by($this->userOrIp($request)));
         RateLimiter::for('quote-comparisons', fn (Request $request): Limit => Limit::perHour(self::limit('quote_comparisons.per_hour'))->by($this->userOrIp($request)));
 
+        // Rendez-vous (lot 4) : par utilisateur ; créneaux de la page publique : par IP.
+        foreach (['appointment-settings-writes' => 'appointment_settings_writes', 'appointment-bookings' => 'appointment_bookings'] as $name => $key) {
+            RateLimiter::for($name, fn (Request $request): array => [
+                Limit::perHour(self::limit($key.'.per_hour'))->by('hour:'.$this->userOrIp($request)),
+                Limit::perDay(self::limit($key.'.per_day'))->by('day:'.$this->userOrIp($request)),
+            ]);
+        }
+        RateLimiter::for('appointment-slots', fn (Request $request): array => [
+            Limit::perMinute(self::limit('appointment_slots.per_minute'))->by('minute:'.$this->userOrIp($request)),
+            Limit::perDay(self::limit('appointment_slots.per_day'))->by('day:'.$this->userOrIp($request)),
+        ]);
+        RateLimiter::for('appointment-public-slots', fn (Request $request): Limit => Limit::perMinute(self::limit('appointment_slots.public_per_minute_per_ip'))->by('ip:'.$request->ip()));
+        RateLimiter::for('appointment-decisions', fn (Request $request): Limit => Limit::perHour(self::limit('appointment_decisions.per_hour'))->by($this->userOrIp($request)));
+        RateLimiter::for('appointment-ics', fn (Request $request): Limit => Limit::perHour(self::limit('appointment_ics.per_hour'))->by($this->userOrIp($request)));
+        RateLimiter::for('agenda', fn (Request $request): Limit => Limit::perMinute(self::limit('agenda.per_minute'))->by($this->userOrIp($request)));
+        RateLimiter::for('agenda-feed-manage', fn (Request $request): Limit => Limit::perDay(self::limit('agenda_feed_manage.per_day'))->by($this->userOrIp($request)));
+        RateLimiter::for('agenda-feed', fn (Request $request): array => [
+            Limit::perHour(self::limit('agenda_feed.per_hour_per_feed'))->by('feed:'.substr((string) $request->route('token'), 0, 16)),
+            Limit::perHour(self::limit('agenda_feed.per_hour_per_ip'))->by('ip:'.$request->ip()),
+        ]);
+
         // Abonnement au calendrier (route publique) : par abonnement, compté sur le sélecteur du
         // jeton (sa partie publique, jamais le secret), et par IP.
         RateLimiter::for('compliance-feed', fn (Request $request): array => [

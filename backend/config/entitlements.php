@@ -60,10 +60,28 @@ $provider = [
         // Devis PDF personnalisés (logo et mentions, décisions 35 et 43) ; le PDF standard
         // reste gratuit.
         'marketplace.quote_branding' => false,
+        // Rendez-vous (décisions 52 et 54) : page de réservation publique et quotas
+        // (config/appointments.php, plans).
+        'appointments.public_booking_page' => false,
+        'appointments.active_types' => ['config' => 'appointments.plans.free.active_types'],
+        'appointments.weekly_ranges' => ['config' => 'appointments.plans.free.weekly_ranges'],
+        'appointments.upcoming_exceptions' => ['config' => 'appointments.plans.free.upcoming_exceptions'],
+        'appointments.horizon_days' => ['config' => 'appointments.plans.free.horizon_days'],
+        'appointments.upcoming_appointments' => ['config' => 'appointments.plans.free.upcoming_appointments'],
+        'appointments.reminder_offsets' => ['config' => 'appointments.plans.free.reminder_offsets'],
+        'appointments.max_reminder_offsets' => ['config' => 'appointments.plans.free.max_reminder_offsets'],
     ],
     'premium' => [
         'directory.project_early_access' => true,
         'marketplace.quote_branding' => true,
+        'appointments.public_booking_page' => true,
+        'appointments.active_types' => ['config' => 'appointments.plans.premium.active_types'],
+        'appointments.weekly_ranges' => ['config' => 'appointments.plans.premium.weekly_ranges'],
+        'appointments.upcoming_exceptions' => ['config' => 'appointments.plans.premium.upcoming_exceptions'],
+        'appointments.horizon_days' => ['config' => 'appointments.plans.premium.horizon_days'],
+        'appointments.upcoming_appointments' => ['config' => 'appointments.plans.premium.upcoming_appointments'],
+        'appointments.reminder_offsets' => ['config' => 'appointments.plans.premium.reminder_offsets'],
+        'appointments.max_reminder_offsets' => ['config' => 'appointments.plans.premium.max_reminder_offsets'],
     ],
 ];
 

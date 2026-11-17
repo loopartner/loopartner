@@ -250,6 +250,20 @@ const API_ROUTES = [
     'GET api/v1/offers' => 'public',
     'GET api/v1/offers/{slug}' => 'public',
     'GET api/v1/providers/{slug}/offers' => 'public',
+    // Rendez-vous (voir aussi AppointmentsAuthorizationTest).
+    'GET api/v1/me/appointments/calendar' => 'auth',
+    'PUT api/v1/me/appointments/calendar' => 'auth',
+    'GET api/v1/me/appointments/slots' => 'auth',
+    'GET api/v1/me/appointment-types' => 'auth',
+    'POST api/v1/me/appointment-types' => 'auth',
+    'GET api/v1/me/appointment-types/{uuid}' => 'auth',
+    'PATCH api/v1/me/appointment-types/{uuid}' => 'auth',
+    'DELETE api/v1/me/appointment-types/{uuid}' => 'auth',
+    'GET api/v1/me/appointments/availability/rules' => 'auth',
+    'PUT api/v1/me/appointments/availability/rules' => 'auth',
+    'GET api/v1/me/appointments/availability/exceptions' => 'auth',
+    'POST api/v1/me/appointments/availability/exceptions' => 'auth',
+    'DELETE api/v1/me/appointments/availability/exceptions/{uuid}' => 'auth',
 ];
 
 /**

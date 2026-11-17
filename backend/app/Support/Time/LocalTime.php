@@ -6,7 +6,6 @@ use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use DateTimeImmutable;
 use DateTimeZone;
-use Throwable;
 
 /**
  * Heure locale et UTC (brique du noyau). Les dates sont stockées en UTC ; une heure saisie en
@@ -93,11 +92,7 @@ final class LocalTime
             return $timezone === 'UTC';
         }
 
-        try {
-            return in_array($timezone, DateTimeZone::listIdentifiers(), true) && new DateTimeZone($timezone) instanceof DateTimeZone;
-        } catch (Throwable) {
-            return false;
-        }
+        return in_array($timezone, DateTimeZone::listIdentifiers(), true);
     }
 
     private static function offsetAt(DateTimeZone $zone, int $timestamp): int
