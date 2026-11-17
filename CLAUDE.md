@@ -1311,8 +1311,9 @@ composer security            # composer audit : vulnérabilités connues des dé
   données de démonstration, toute la suite (base `testing`). Sur ces serveurs,
   `tests/Feature/Core/TestEnvironmentTest.php` contrôle aussi le schéma réel (aucune colonne
   `ON UPDATE CURRENT_TIMESTAMP` hors `updated_at`). Résultat : onglet **Actions** du dépôt GitHub.
-- La limite mémoire par défaut de PHP (128 Mo) ne suffit plus : `phpunit.xml` fixe 512 Mo pour les
-  tests, et PHPStan se lance avec `--memory-limit=1G`.
+- La limite mémoire par défaut de PHP (128 Mo) ne suffit plus : `phpunit.xml` fixe 1 Go pour les
+  tests (512 Mo ne suffisaient plus pour toute la suite au lot 4 : la mémoire s'accumule d'un test
+  à l'autre), et PHPStan se lance avec `--memory-limit=1G`.
 - Les helpers de test partagés (`serviceCategory()`, `projectOwner()`, `browsingProvider()`,
   `projectPayload()`, `publishedProjectOf()`, `pendingProposal()`, `acceptedConversation()`,
   `postMessage()`, `expectNoPrivateFields()`, `userWithTwoFactor()`, `verificationUrlFor()`, `securityLog()`,

@@ -264,6 +264,14 @@ const API_ROUTES = [
     'GET api/v1/me/appointments/availability/exceptions' => 'auth',
     'POST api/v1/me/appointments/availability/exceptions' => 'auth',
     'DELETE api/v1/me/appointments/availability/exceptions/{uuid}' => 'auth',
+    'GET api/v1/me/match-requests/{uuid}/booking' => 'auth',
+    'GET api/v1/me/match-requests/{uuid}/appointments' => 'auth',
+    'POST api/v1/me/match-requests/{uuid}/appointments' => 'auth',
+    'GET api/v1/me/appointments' => 'auth',
+    'GET api/v1/me/appointments/{uuid}' => 'auth',
+    'POST api/v1/me/appointments/{uuid}/confirm' => 'auth',
+    'POST api/v1/me/appointments/{uuid}/decline' => 'auth',
+    'POST api/v1/me/appointments/{uuid}/cancel' => 'auth',
 ];
 
 /**

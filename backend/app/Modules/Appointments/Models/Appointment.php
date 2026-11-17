@@ -62,6 +62,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property CarbonInterface|null $created_at
  * @property CarbonInterface|null $updated_at
  * @property-read AppointmentType|null $type
+ * @property-read User|null $provider
+ * @property-read User|null $client
  * @property-read Calendar|null $calendar
  * @property-read Collection<int, AppointmentNote> $notes
  */

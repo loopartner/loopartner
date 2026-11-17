@@ -138,3 +138,11 @@ it('planifie les tâches du module Marketplace, sans chevauchement', function (s
     'expiration' => ['marketplace:expire-quotes', '0 * * * *'],
     'purge' => ['marketplace:prune', '15 5 * * *'],
 ]);
+
+it('fait expirer les demandes et les reports de rendez-vous toutes les 15 minutes, sans chevauchement', function (): void {
+    $event = scheduledEvent('appointments:expire');
+
+    expect($event)->not->toBeNull()
+        ->and($event->expression)->toBe('*/15 * * * *')
+        ->and($event->withoutOverlapping)->toBeTrue();
+});

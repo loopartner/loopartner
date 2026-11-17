@@ -978,3 +978,19 @@ function weeklyAvailability(User $provider, ?array $ranges = null): void
         (new AvailabilityRule)->forceFill(['calendar_id' => $calendar->id, 'weekday' => $weekday, 'start_minute' => $start, 'end_minute' => $end])->save();
     }
 }
+
+/**
+ * Demande de mise en relation acceptée entre un porteur de projet et un prestataire dont le
+ * calendrier est ouvert : [client, prestataire, demande].
+ *
+ * @param  array<string, mixed>  $calendar
+ * @return array{0: User, 1: User, 2: MatchRequest}
+ */
+function appointmentRelation(string $clientRole = 'particulier', array $calendar = [], ?User $client = null): array
+{
+    $client ??= projectOwner($clientRole);
+    $provider = appointmentProvider($calendar);
+    $matchRequest = app(AcceptMatchRequest::class)->handle(pendingProposal($provider, publishedProjectOf($client)));
+
+    return [$client, $provider, $matchRequest];
+}

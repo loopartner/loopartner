@@ -126,6 +126,12 @@ Schedule::command('marketplace:prune')
     ->dailyAt('05:15')
     ->withoutOverlapping();
 
+// Rendez-vous (module Appointments) : demandes, propositions et reports restés sans réponse
+// expirés (48 heures, ou le délai de prévenance avant le début), créneaux libérés.
+Schedule::command('appointments:expire')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping(10);
+
 // File d'attente (driver database) : traitée chaque minute, sans worker permanent.
 // Le worker s'arrête dès que la file est vide, et au plus tard après 50 secondes pour ne pas
 // déborder sur le schedule:run suivant. Le verrou anti-chevauchement expire après 5 minutes

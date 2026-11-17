@@ -59,6 +59,19 @@ return [
             'label' => ['fr' => 'Devis acceptés et rétractations', 'en' => 'Accepted quotes and withdrawals'],
         ],
 
+        // Rendez-vous (décision 56) : demandes, confirmations, refus, annulations, reports et
+        // expirations (engagement pris : toujours envoyés) ; rappels (facultatifs).
+        'appointments.bookings' => [
+            'mandatory' => true,
+            'roles' => $members,
+            'label' => ['fr' => 'Rendez-vous (demande, confirmation, annulation, report)', 'en' => 'Appointments (request, confirmation, cancellation, change)'],
+        ],
+        'appointments.reminders' => [
+            'mandatory' => false,
+            'roles' => $members,
+            'label' => ['fr' => 'Rappels avant un rendez-vous', 'en' => 'Reminders before an appointment'],
+        ],
+
         // Events : participant.
         'events.participation' => [
             'mandatory' => true,
