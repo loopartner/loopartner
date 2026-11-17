@@ -23,6 +23,8 @@ final class TargetTypes
         'article' => ['fr' => 'article', 'en' => 'article'],
         'offer' => ['fr' => 'offre de prestataire', 'en' => 'provider offer'],
         'quote' => ['fr' => 'devis', 'en' => 'quote'],
+        'appointment_type' => ['fr' => 'type de rendez-vous', 'en' => 'appointment type'],
+        'appointment_note' => ['fr' => 'message d\'un rendez-vous', 'en' => 'appointment message'],
     ];
 
     public static function label(string $type, ?string $locale = null): string

@@ -3,6 +3,7 @@
 namespace App\Modules\Appointments\Http\Requests;
 
 use App\Models\User;
+use App\Modules\Appointments\Actions\BookFromPublicPage;
 use App\Modules\Appointments\Enums\AppointmentStatus;
 use App\Modules\Appointments\Enums\CancellationReason;
 use App\Modules\Appointments\Models\Appointment;
@@ -18,8 +19,9 @@ use Illuminate\Validation\Rule;
  * Entrées des routes de rendez-vous, selon le nom de la route.
  *
  * L'accès est vérifié **avant la validation** : rendez-vous inconnu ou d'un autre utilisateur,
- * demande de mise en relation dont l'utilisateur n'est pas participant : 404, même avec un
- * corps invalide. La partie attendue (confirmation, refus…) est vérifiée par les Actions (403).
+ * demande de mise en relation dont l'utilisateur n'est pas participant, page de réservation
+ * publique fermée : 404, même avec un corps invalide. La partie attendue (confirmation,
+ * refus…) est vérifiée par les Actions (403).
  */
 class AppointmentInputRequest extends FormRequest
 {
@@ -42,6 +44,12 @@ class AppointmentInputRequest extends FormRequest
             /** @var User $user */
             $user = $this->user();
             abort_if(app(GetMatchRequestContext::class)->handle($uuid, $user) === null, 404, 'Demande de mise en relation introuvable.');
+
+            return Response::allow();
+        }
+
+        if ($name === 'appointments.public.store') {
+            app(BookFromPublicPage::class)->openPage((string) $this->route('slug'));
 
             return Response::allow();
         }

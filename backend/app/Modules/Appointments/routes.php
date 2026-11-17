@@ -11,6 +11,7 @@ use App\Modules\Appointments\Http\Controllers\AppointmentController;
 use App\Modules\Appointments\Http\Controllers\AppointmentTypeController;
 use App\Modules\Appointments\Http\Controllers\AvailabilityController;
 use App\Modules\Appointments\Http\Controllers\CalendarController;
+use App\Modules\Appointments\Http\Controllers\PublicBookingController;
 use App\Modules\Appointments\Http\Controllers\RelationAppointmentController;
 use Illuminate\Support\Facades\Route;
 
@@ -80,3 +81,17 @@ Route::middleware(['auth:sanctum', 'verified'])
             ->middleware(['throttle:appointment-bookings', LimitRequestBody::class.':32768'])
             ->name('reschedule');
     });
+
+/*
+| Page de réservation publique d'un prestataire Premium (décision 52) : lecture publique,
+| limitée par IP ; réservation par un particulier ou un entrepreneur avec un email vérifié, avec
+| une demande de contact (limites des demandes de mise en relation comprises).
+*/
+Route::get('providers/{slug}/booking', [PublicBookingController::class, 'show'])
+    ->where('slug', '[a-z0-9]+(?:-[a-z0-9]+)*')
+    ->middleware('throttle:appointment-public-slots')
+    ->name('appointments.public.show');
+Route::post('providers/{slug}/appointments', [PublicBookingController::class, 'store'])
+    ->where('slug', '[a-z0-9]+(?:-[a-z0-9]+)*')
+    ->middleware(['auth:sanctum', 'verified', 'throttle:appointment-bookings', 'throttle:match-requests', LimitRequestBody::class.':32768'])
+    ->name('appointments.public.store');

@@ -10,6 +10,7 @@ use App\Modules\Appointments\Models\Appointment;
 use App\Modules\Appointments\Models\AppointmentType;
 use App\Modules\Appointments\Support\AppointmentPresenter;
 use App\Modules\Appointments\Support\BookableTypes;
+use App\Modules\Appointments\Support\BookingNotices;
 use App\Modules\Appointments\Support\Plan;
 use App\Modules\Appointments\Support\Relation;
 use App\Modules\Appointments\Support\SlotGenerator;
@@ -48,7 +49,7 @@ class RelationAppointmentController extends Controller
         $calendar = $this->relation->openCalendarOf((int) $context['provider_id']);
         $types = $bookableTypes->of($calendar);
         $data = ['types' => $types->map(fn (AppointmentType $type): array => AppointmentPresenter::publicType($type))->values()->all(), 'slots' => []];
-        $meta = ['timezone' => $calendar->timezone];
+        $meta = ['timezone' => $calendar->timezone, 'notices' => BookingNotices::for(['note_warning'], Locale::fromRequest($request))];
 
         if ($request->filled('type')) {
             $type = $types->firstWhere('uuid', $request->string('type')->toString());

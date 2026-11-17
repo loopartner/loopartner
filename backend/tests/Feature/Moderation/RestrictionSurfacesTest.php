@@ -28,6 +28,7 @@ const PUBLIC_CONTENT_ROUTES = [
     'api/v1/events/{slug}' => 'event',
     'api/v1/articles/{slug}' => 'article',
     'api/v1/offers/{slug}' => 'offer',
+    'api/v1/providers/{slug}/booking' => 'appointment_type',
 ];
 
 /**

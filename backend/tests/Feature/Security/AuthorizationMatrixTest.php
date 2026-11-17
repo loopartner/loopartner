@@ -275,6 +275,8 @@ const API_ROUTES = [
     'POST api/v1/me/appointments/{uuid}/reschedule' => 'auth',
     'POST api/v1/me/appointments/{uuid}/accept-change' => 'auth',
     'POST api/v1/me/appointments/{uuid}/decline-change' => 'auth',
+    'GET api/v1/providers/{slug}/booking' => 'public',
+    'POST api/v1/providers/{slug}/appointments' => 'auth',
 ];
 
 /**
