@@ -377,6 +377,9 @@ Module Marketplace (lot 3, décisions 36 à 50 ; textes et points à faire valid
   ressource distante, sans PHP ni JavaScript, à partir d'un HTML construit par l'application dont
   tout texte saisi est échappé ; jamais enregistrés ; `Cache-Control: private, no-store`. Le PDF
   du devis accepté est joint à l'email de confirmation des deux parties (support durable).
+- **Logo Premium figé** (décision 51) : copie PNG réduite gardée dans la ligne du devis
+  (256 Ko au plus), intégrée au seul PDF des deux parties, sans URL ni fichier, jamais renvoyée
+  par l'API ni écrite dans le journal ; supprimée avec le devis (même conservation).
 - **Emails** : numéro du devis seulement, ni montant, ni ligne, ni nom, ni titre de projet.
 - **Signalement** : offres (formulaire public) et devis (par le client) rejoignent le module
   Moderation ; un devis masqué n'est plus lisible, acceptable ni téléchargeable par le client.

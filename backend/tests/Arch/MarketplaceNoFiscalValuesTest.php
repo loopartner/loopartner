@@ -13,9 +13,9 @@
 /**
  * Plafonds techniques : prix unitaire, quantité et total HT d'un devis (calcul sans
  * dépassement de capacité), capital social saisi, numéro de devis annuel, taille du corps
- * d'une requête de devis.
+ * d'une requête de devis, taille de la copie figée du logo.
  */
-const MARKETPLACE_ALLOWED_LARGE_INTEGERS = [1_000_000_000, 10_000_000, 100_000_000_000, 10_000_000_000_000, 99_999, 131_072];
+const MARKETPLACE_ALLOWED_LARGE_INTEGERS = [1_000_000_000, 10_000_000, 100_000_000_000, 10_000_000_000_000, 99_999, 131_072, 262_144];
 
 it('n\'écrit aucune valeur fiscale (décimal ou grand nombre) dans le code du module Marketplace', function (): void {
     $root = dirname(__DIR__, 2);

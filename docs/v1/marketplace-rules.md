@@ -82,6 +82,11 @@ des services conformes au droit applicable. »
 - **Mention sur chaque devis et dans les emails** : « Loopartner met en relation les parties et
   fournit l'outil de devis, mais n'est pas partie au contrat conclu entre le prestataire et le
   client. »
+- **Logo figé** (décision 51) : le logo Premium du prestataire est copié dans le devis au
+  moment de l'envoi, avec les mentions personnalisées. **Il fait partie du contenu accepté** (son
+  empreinte entre dans l'empreinte du devis) : changer ou supprimer le logo du profil, ou perdre
+  le Premium, ne change pas un devis envoyé ou accepté. Un logo trop lourd, même réduit, n'est
+  pas copié : le devis part sans logo.
 - **Emails** : « devis reçu » et « devis refusé » (désactivables) ; confirmation d'acceptation
   aux deux parties **avec le PDF du devis accepté en pièce jointe**, généré au moment de l'envoi,
   et rétractation (toujours envoyées). Le corps des emails ne contient ni montant ni ligne.

@@ -42,7 +42,7 @@ class ReviseQuote
             $latestVersion = (int) Quote::query()->where('match_request_id', $quote->match_request_id)->where('number', $quote->number)->max('version');
 
             $revision = $quote->replicate([
-                'uuid', 'status', 'issuer_snapshot', 'content_hash', 'valid_until', 'expires_at', 'sent_at',
+                'uuid', 'status', 'issuer_snapshot', 'issuer_logo', 'content_hash', 'valid_until', 'expires_at', 'sent_at',
                 'accepted_at', 'acceptance_ip', 'acceptance_data', 'declined_at', 'decline_reason', 'decline_comment',
                 'withdrawn_at', 'expired_at', 'superseded_at', 'withdrawal_exercised_at',
                 'moderation_restricted_at', 'moderation_decision_uuid',

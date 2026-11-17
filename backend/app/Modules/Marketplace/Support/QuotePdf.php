@@ -2,25 +2,21 @@
 
 namespace App\Modules\Marketplace\Support;
 
-use App\Modules\Accounts\Actions\GetProviderLogo;
 use App\Modules\Marketplace\Enums\ClientKind;
 use App\Modules\Marketplace\Enums\QuoteStatus;
 use App\Modules\Marketplace\Enums\QuoteUnit;
 use App\Modules\Marketplace\Models\Quote;
 use App\Modules\Marketplace\Models\QuoteLine;
-use Illuminate\Support\Facades\Storage;
-use Intervention\Image\Decoders\BinaryImageDecoder;
-use Intervention\Image\ImageManager;
-use Throwable;
 
 /**
  * PDF d'un devis envoyé (décision 43 : gratuit pour les deux parties), construit uniquement à
  * partir du contenu figé du devis : identité de l'émetteur, bloc client, lignes, taux copiés,
  * totaux, conditions, mentions et preuve d'acceptation. Aucune donnée d'un autre utilisateur.
  *
- * Personnalisation Premium (marketplace.quote_branding, figée à l'envoi dans
- * issuer_snapshot.branding) : mentions personnalisées en pied de page et logo actuel du profil
- * prestataire (converti en PNG et intégré ; un logo absent ou illisible est simplement omis).
+ * Personnalisation Premium (marketplace.quote_branding), figée à l'envoi : mentions
+ * personnalisées (issuer_snapshot.branding) et copie du logo (issuer_logo, décision 51). Le PDF
+ * ne relit jamais le profil : changer ou supprimer son logo, ou perdre le Premium, ne change pas
+ * un devis envoyé. Un devis envoyé avant la décision 51 n'a pas de copie et sort sans logo.
  *
  * Tout texte vient du devis et est échappé : le PDF ne contient aucun HTML d'utilisateur.
  */
@@ -70,8 +66,6 @@ final class QuotePdf
         ],
     ];
 
-    public function __construct(private GetProviderLogo $providerLogo) {}
-
     public function render(Quote $quote, string $locale): string
     {
         return Pdf::fromHtml($this->html($quote, $locale === 'en' ? 'en' : 'fr'));
@@ -95,7 +89,7 @@ final class QuotePdf
         $money = fn (int $cents): string => Formats::money($cents, $quote->currency, $locale);
         $e = fn (mixed $value): string => e((string) $value);
 
-        $logo = ($branding['logo'] ?? false) && $quote->provider_id !== null ? $this->logoDataUri($quote->provider_id) : null;
+        $logo = ($branding['logo'] ?? false) && $quote->issuer_logo !== null ? 'data:image/png;base64,'.$quote->issuer_logo : null;
 
         $html = '<!doctype html><html><head><meta charset="utf-8"><style>'
             .'body{font-family:"DejaVu Sans",sans-serif;font-size:9pt;color:#222}h1{font-size:15pt;margin:0 0 4pt}'
@@ -234,32 +228,5 @@ final class QuotePdf
         }
 
         return array_values(array_filter($texts));
-    }
-
-    /**
-     * Logo du profil prestataire converti en PNG (dompdf ne lit pas toujours le WebP), en data
-     * URI. Absent ou illisible : null, le PDF se fait sans logo.
-     */
-    private function logoDataUri(int $providerId): ?string
-    {
-        $media = $this->providerLogo->handle($providerId);
-
-        if ($media === null) {
-            return null;
-        }
-
-        try {
-            $contents = Storage::disk($media->disk)->get($media->path);
-
-            if ($contents === null) {
-                return null;
-            }
-
-            $image = ImageManager::gd(strip: true)->read($contents, BinaryImageDecoder::class);
-
-            return 'data:image/png;base64,'.base64_encode((string) $image->toPng());
-        } catch (Throwable) {
-            return null;
-        }
     }
 }

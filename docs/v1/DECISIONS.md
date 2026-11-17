@@ -319,6 +319,16 @@ relation ; montants en centimes, quantités en millièmes, taux en points de bas
 contenu figé à l'envoi avec une empreinte SHA-256 contrôlée à l'acceptation ; identités chiffrées
 en base ; accès anticipé par un scope de Directory (`config/directory.php`).
 
+## Correction du lot 3 : logo figé des devis (validée le 2026-11-18)
+
+| # | Sujet | Décision |
+|---|---|---|
+| 51 | Logo Premium des devis | Le logo est **figé à l'envoi** de chaque devis et de chaque nouvelle version, comme les mentions personnalisées : copie PNG réduite, encodée en base64 dans la ligne du devis (`marketplace_quotes.issuer_logo`), **256 Ko au plus** une fois encodée (côtés de 400, 300, 200 puis 128 px essayés dans l'ordre ; au-delà, le devis part **sans logo** plutôt que d'échouer). Son empreinte SHA-256 entre dans le contenu accepté (`content_hash`). Le PDF d'un devis envoyé ou accepté n'utilise que cette copie : changer ou supprimer le logo du profil, ou perdre le Premium, ne change plus un devis envoyé. La copie suit la conservation du devis (purge, conversation, suppression de compte), n'a ni URL ni fichier, et n'est jamais renvoyée par l'API. **Les devis envoyés avant la correction sortent sans logo** ; pas de commande de reprise. Raison : un devis accepté est un contrat, son PDF doit rester celui que le client a accepté. |
+
+Décisions techniques : copie en base plutôt que fichier sur un disque privé (elle disparaît avec
+la ligne, sans code de nettoyage, et n'est servable par aucune URL) ; limite de taille choisie
+sous `max_allowed_packet` (souvent 1 Mo sur XAMPP, parfois limité chez l'hébergeur).
+
 ## Décisions antérieures toujours en vigueur (rappel)
 
 - Compliance, quatre yeux : `compliance.require_distinct_verifier` à **false par défaut** tant que

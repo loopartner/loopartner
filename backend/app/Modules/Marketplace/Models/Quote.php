@@ -47,6 +47,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $offer_title
  * @property \ArrayObject<string, mixed> $client_snapshot
  * @property \ArrayObject<string, mixed>|null $issuer_snapshot
+ * @property string|null $issuer_logo copie figée du logo Premium (base64 d'un PNG), jamais exposée
  * @property string $currency
  * @property int $total_ht_cents
  * @property int $total_vat_cents
@@ -90,6 +91,14 @@ class Quote extends Model
     use HasFactory;
 
     protected $table = 'marketplace_quotes';
+
+    /**
+     * La copie figée du logo n'est jamais sérialisée (réponses, journal) : elle n'est lue que
+     * par le PDF.
+     *
+     * @var list<string>
+     */
+    protected $hidden = ['issuer_logo'];
 
     /**
      * @var array<string, mixed>

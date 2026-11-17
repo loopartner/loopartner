@@ -955,9 +955,15 @@ durées dans `config/security.php`. Textes destinés aux utilisateurs, sources c
   409) : `Support/QuotePdf` construit un HTML échappé à partir du contenu figé, converti par
   `Support/Pdf` (paquet `dompdf/dompdf`, décision 48 : ressources distantes, PHP et JavaScript
   désactivés, `data://` seul, chroot sur les polices, cache dans `storage/framework/cache/dompdf`).
-  Premium (`marketplace.quote_branding`) : logo du profil (Action publique
-  `Accounts\Actions\GetProviderLogo`, converti en PNG) et mentions personnalisées, **figés à
-  l'envoi**. Aucune vue n'est servie par l'API.
+  Premium (`marketplace.quote_branding`) : logo et mentions personnalisées **figés à l'envoi**
+  (décision 51). Le logo du profil (Action publique `Accounts\Actions\GetProviderLogo`) est
+  copié par `Support/QuoteLogo` : PNG réduit (400, 300, 200 puis 128 px) en base64 dans
+  `marketplace_quotes.issuer_logo`, 256 Ko au plus (`marketplace.quotes.logo`), sinon devis sans
+  logo ; empreinte dans `issuer_snapshot.branding.logo_sha256`, donc dans `content_hash`. Le PDF
+  n'utilise que cette copie (jamais le profil) ; `issuer_logo` est `$hidden` et n'apparaît dans
+  aucune réponse ni dans le journal (`QuoteLogoSnapshotTest`). Une nouvelle version refait la
+  copie à son envoi. Un devis envoyé avant la décision 51 sort sans logo. Aucune vue n'est
+  servie par l'API.
 - **Comparateur** (`ProjectQuotesController`, `Support/QuoteComparison`) :
   `GET /me/projects/{uuid}/quotes` (gratuit, paginé), `…/quotes/comparison` et
   `…/comparison.pdf` (Premium : `marketplace.quote_comparison`, `quote_comparison_export` ;

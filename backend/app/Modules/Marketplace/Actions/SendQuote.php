@@ -13,6 +13,7 @@ use App\Modules\Marketplace\Notifications\QuoteNotification;
 use App\Modules\Marketplace\Support\QuoteCalculator;
 use App\Modules\Marketplace\Support\QuoteDocument;
 use App\Modules\Marketplace\Support\QuoteGuards;
+use App\Modules\Marketplace\Support\QuoteLogo;
 use App\Support\SecurityLog;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
@@ -35,7 +36,7 @@ use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
  */
 class SendQuote
 {
-    public function __construct(private QuoteGuards $guards, private GetEntitlements $entitlements) {}
+    public function __construct(private QuoteGuards $guards, private GetEntitlements $entitlements, private QuoteLogo $logo) {}
 
     public function handle(User $provider, Quote $quote): Quote
     {
@@ -47,8 +48,10 @@ class SendQuote
         $seller = $this->guards->seller($provider, $quote->client_kind);
         $rates = $this->guards->vatRates($seller, now());
         $branded = $this->entitlements->handle($provider)->allows('marketplace.quote_branding');
+        // Copie figée du logo (décision 51), préparée hors de la transaction (conversion d'image).
+        $logo = $branded ? $this->logo->capture($provider->id) : null;
 
-        $quote = DB::transaction(function () use ($quote, $seller, $rates, $branded): Quote {
+        $quote = DB::transaction(function () use ($quote, $seller, $rates, $branded, $logo): Quote {
             $seller = SellerProfile::query()->whereKey($seller->id)->lockForUpdate()->firstOrFail();
             $quote = Quote::query()->with('lines')->whereKey($quote->id)->lockForUpdate()->firstOrFail();
 
@@ -87,11 +90,17 @@ class SendQuote
 
             $quote->forceFill([
                 'number' => $quote->number ?? self::nextNumber($seller),
-                // Personnalisation Premium figée à l'envoi : logo et mentions du prestataire.
+                // Personnalisation Premium figée à l'envoi : copie du logo et mentions du prestataire.
+                // L'empreinte du logo entre dans content_hash : le client accepte aussi ce logo.
                 'issuer_snapshot' => [
                     ...QuoteDocument::issuer($seller),
-                    'branding' => $branded ? ['logo' => true, 'footer' => $seller->quote_footer] : null,
+                    'branding' => $branded ? [
+                        'logo' => $logo !== null,
+                        'logo_sha256' => $logo === null ? null : QuoteLogo::fingerprint($logo),
+                        'footer' => $seller->quote_footer,
+                    ] : null,
                 ],
+                'issuer_logo' => $logo,
                 'total_ht_cents' => $totals['total_ht_cents'],
                 'total_vat_cents' => $totals['total_vat_cents'],
                 'total_ttc_cents' => $totals['total_ttc_cents'],

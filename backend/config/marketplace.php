@@ -55,6 +55,13 @@ return [
         'max_unit_price_cents' => 1_000_000_000,
         'max_quantity_milli' => 10_000_000,
         'max_total_cents' => 100_000_000_000,
+        // Logo Premium figé à l'envoi (décision 51) : taille maximale une fois encodé en base64
+        // (256 Ko, marge sous max_allowed_packet), et côtés maximaux essayés dans l'ordre, en
+        // pixels ; au-delà, le devis part sans logo.
+        'logo' => [
+            'max_encoded_bytes' => 262_144,
+            'dimensions' => [400, 300, 200, 128],
+        ],
     ],
 
     /*
