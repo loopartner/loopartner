@@ -194,6 +194,8 @@ class DatabaseSeeder extends Seeder
             $this->seedDemoArticles();
             // Après les articles : le prestataire y reçoit son statut premium (deux entreprises).
             $this->call(ComplianceDemoSeeder::class);
+            // Après la mise en relation et le premium du prestataire : offres et devis.
+            $this->call(MarketplaceDemoSeeder::class);
         }
     }
 

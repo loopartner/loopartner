@@ -23,8 +23,12 @@ use App\Modules\Directory\Models\Project;
 use App\Modules\Events\Enums\EventStatus;
 use App\Modules\Events\Models\Event;
 use App\Modules\Events\Models\EventRegistration;
+use App\Modules\Marketplace\Models\Offer;
+use App\Modules\Marketplace\Models\Quote;
+use App\Modules\Marketplace\Models\SellerProfile;
 use Database\Seeders\ComplianceDemoSeeder;
 use Database\Seeders\DatabaseSeeder;
+use Database\Seeders\MarketplaceDemoSeeder;
 use Database\Seeders\ServiceCategorySeeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -268,4 +272,29 @@ it('ne crée aucune règle ni entreprise de démonstration hors du poste local',
         ->and(Company::query()->count())->toBe(0);
 
     expect(fn () => $this->seed(ComplianceDemoSeeder::class))->toThrow(RuntimeException::class);
+});
+
+it('crée les offres et le devis de démonstration avec un taux fictif, sans email, et peut être relancé', function (): void {
+    allowDemoSeeding();
+    Carbon::setTestNow('2026-11-17 10:00:00');
+    config(['queue.default' => 'database']);
+
+    $this->seed(DatabaseSeeder::class);
+    $this->seed(DatabaseSeeder::class);
+
+    $provider = User::query()->where('email', 'prestataire@example.com')->sole();
+    $particulier = User::query()->where('email', 'particulier@example.com')->sole();
+    $quote = Quote::query()->sole();
+
+    expect(SellerProfile::query()->where('user_id', $provider->id)->count())->toBe(1)
+        ->and(Offer::query()->where('user_id', $provider->id)->where('status', 'published')->count())->toBe(count(MarketplaceDemoSeeder::DEMO_OFFERS))
+        ->and(ComplianceRule::query()->where('code', MarketplaceDemoSeeder::DEMO_VAT_CODE)->sole()->is_demo)->toBeTrue()
+        ->and($quote->status->value)->toBe('sent')
+        ->and($quote->client_id)->toBe($particulier->id)
+        ->and($quote->issuer_snapshot['branding']['footer'] ?? null)->toBe('[Démo] Mentions personnalisées du prestataire.');
+
+    $this->getJson('/api/v1/offers')->assertOk()->assertJsonCount(count(MarketplaceDemoSeeder::DEMO_OFFERS), 'data');
+    $this->actingAs($particulier)->getJson('/api/v1/me/quotes?box=received')->assertOk()->assertJsonCount(1, 'data');
+
+    expect(DB::table('jobs')->count())->toBe(0);
 });
