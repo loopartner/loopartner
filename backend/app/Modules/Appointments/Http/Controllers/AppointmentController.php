@@ -4,9 +4,11 @@ namespace App\Modules\Appointments\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Modules\Appointments\Actions\AnswerReschedule;
 use App\Modules\Appointments\Actions\CancelAppointment;
 use App\Modules\Appointments\Actions\ConfirmAppointment;
 use App\Modules\Appointments\Actions\DeclineAppointment;
+use App\Modules\Appointments\Actions\RescheduleAppointment;
 use App\Modules\Appointments\Enums\AppointmentStatus;
 use App\Modules\Appointments\Enums\CancellationReason;
 use App\Modules\Appointments\Http\Requests\AppointmentInputRequest;
@@ -85,6 +87,23 @@ class AppointmentController extends Controller
         $reason = CancellationReason::from((string) $request->validated('reason'));
 
         return $this->respond($request, $cancel->handle($this->user($request), $appointment, $reason, $request->validated('message')));
+    }
+
+    public function reschedule(AppointmentInputRequest $request, string $uuid, RescheduleAppointment $reschedule): JsonResponse
+    {
+        $appointment = $this->find($uuid);
+
+        return $this->respond($request, $reschedule->handle($this->user($request), $appointment, (string) $request->validated('starts_at'), $request->validated('message')));
+    }
+
+    public function acceptChange(Request $request, string $uuid, AnswerReschedule $answer): JsonResponse
+    {
+        return $this->respond($request, $answer->accept($this->user($request), $this->find($uuid)));
+    }
+
+    public function declineChange(Request $request, string $uuid, AnswerReschedule $answer): JsonResponse
+    {
+        return $this->respond($request, $answer->decline($this->user($request), $this->find($uuid)));
     }
 
     /**

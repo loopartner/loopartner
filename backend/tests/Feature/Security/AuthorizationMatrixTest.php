@@ -272,6 +272,9 @@ const API_ROUTES = [
     'POST api/v1/me/appointments/{uuid}/confirm' => 'auth',
     'POST api/v1/me/appointments/{uuid}/decline' => 'auth',
     'POST api/v1/me/appointments/{uuid}/cancel' => 'auth',
+    'POST api/v1/me/appointments/{uuid}/reschedule' => 'auth',
+    'POST api/v1/me/appointments/{uuid}/accept-change' => 'auth',
+    'POST api/v1/me/appointments/{uuid}/decline-change' => 'auth',
 ];
 
 /**

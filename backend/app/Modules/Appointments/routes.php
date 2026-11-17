@@ -71,5 +71,12 @@ Route::middleware(['auth:sanctum', 'verified'])
             Route::post('{uuid}/confirm', [AppointmentController::class, 'confirm'])->whereUuid('uuid')->name('confirm');
             Route::post('{uuid}/decline', [AppointmentController::class, 'decline'])->whereUuid('uuid')->name('decline');
             Route::post('{uuid}/cancel', [AppointmentController::class, 'cancel'])->whereUuid('uuid')->name('cancel');
+            Route::post('{uuid}/accept-change', [AppointmentController::class, 'acceptChange'])->whereUuid('uuid')->name('accept-change');
+            Route::post('{uuid}/decline-change', [AppointmentController::class, 'declineChange'])->whereUuid('uuid')->name('decline-change');
         });
+
+        Route::post('{uuid}/reschedule', [AppointmentController::class, 'reschedule'])
+            ->whereUuid('uuid')
+            ->middleware(['throttle:appointment-bookings', LimitRequestBody::class.':32768'])
+            ->name('reschedule');
     });
