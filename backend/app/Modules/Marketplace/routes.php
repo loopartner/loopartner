@@ -8,6 +8,7 @@
 
 use App\Http\Middleware\LimitRequestBody;
 use App\Modules\Marketplace\Http\Controllers\OwnOfferController;
+use App\Modules\Marketplace\Http\Controllers\ProjectQuotesController;
 use App\Modules\Marketplace\Http\Controllers\PublicOfferController;
 use App\Modules\Marketplace\Http\Controllers\QuoteController;
 use App\Modules\Marketplace\Http\Controllers\SellerProfileController;
@@ -75,6 +76,24 @@ Route::middleware(['auth:sanctum', 'verified'])
             ->whereUuid('uuid')
             ->middleware('throttle:quote-sends')
             ->name('send');
+    });
+
+/*
+| Devis reçus pour un projet du porteur connecté : liste gratuite ; comparaison et export PDF
+| Premium (décisions 33 et 43). Le projet d'un autre utilisateur donne 404.
+*/
+Route::middleware(['auth:sanctum', 'verified'])
+    ->prefix('me/projects/{uuid}/quotes')
+    ->whereUuid('uuid')
+    ->name('marketplace.project-quotes.')
+    ->group(function (): void {
+        Route::get('/', [ProjectQuotesController::class, 'index'])->name('index');
+        Route::get('comparison', [ProjectQuotesController::class, 'comparison'])
+            ->middleware('throttle:quote-comparisons')
+            ->name('comparison');
+        Route::get('comparison.pdf', [ProjectQuotesController::class, 'comparisonPdf'])
+            ->middleware('throttle:quote-pdfs')
+            ->name('comparison-pdf');
     });
 
 // Offres publiques, sans authentification.

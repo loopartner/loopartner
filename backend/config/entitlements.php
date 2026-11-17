@@ -67,25 +67,41 @@ $provider = [
     ],
 ];
 
+/*
+| Avantages du porteur de projet (particulier, entrepreneur ; décisions 33, 35 et 43) :
+| comparateur de devis et export PDF de la comparaison. La lecture de chaque devis reçu et son
+| PDF restent gratuits.
+*/
+$client = [
+    'free' => [
+        'marketplace.quote_comparison' => false,
+        'marketplace.quote_comparison_export' => false,
+    ],
+    'premium' => [
+        'marketplace.quote_comparison' => true,
+        'marketplace.quote_comparison_export' => true,
+    ],
+];
+
 return [
 
     'plans' => ['free', 'premium'],
 
     /*
     | Avantages par rôle et par plan. Les rôles de l'équipe (redacteur, admin) n'ont aucun
-    | avantage d'abonnement. Le particulier n'a encore aucun avantage premium : la liste
-    | proposée attend sa validation (lot Billing).
+    | avantage d'abonnement. Les limites de projets et de demandes des particuliers passeront ici
+    | au lot Billing (décision 19).
     */
     'roles' => [
-        'particulier' => [
-            'free' => [],
-            'premium' => [],
-        ],
+        'particulier' => $client,
         'prestataire' => [
             'free' => [...$professional['free'], ...$provider['free']],
             'premium' => [...$professional['premium'], ...$provider['premium']],
         ],
-        'entrepreneur' => $professional,
+        'entrepreneur' => [
+            'free' => [...$professional['free'], ...$client['free']],
+            'premium' => [...$professional['premium'], ...$client['premium']],
+        ],
     ],
 
 ];

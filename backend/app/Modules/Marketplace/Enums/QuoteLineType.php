@@ -16,6 +16,21 @@ enum QuoteLineType: string
     case Service = 'service';
     case Other = 'other';
 
+    public function label(string $locale): string
+    {
+        $labels = match ($this) {
+            self::Labour => ['Main d\'œuvre', 'Labour'],
+            self::Materials => ['Fournitures et matériaux', 'Materials'],
+            self::Travel => ['Déplacement', 'Travel'],
+            self::Equipment => ['Matériel', 'Equipment'],
+            self::Disposal => ['Évacuation des déchets', 'Waste disposal'],
+            self::Service => ['Prestation', 'Service'],
+            self::Other => ['Autre', 'Other'],
+        };
+
+        return $locale === 'en' ? $labels[1] : $labels[0];
+    }
+
     /**
      * @return list<string>
      */

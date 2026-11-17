@@ -50,6 +50,8 @@ describe('GET /me/entitlements', function (): void {
                     'compliance.estimate' => false,
                     'compliance.calendar_feed' => true,
                     'compliance.export' => true,
+                    'marketplace.quote_comparison' => false,
+                    'marketplace.quote_comparison_export' => false,
                 ],
             ]]);
     });
@@ -78,12 +80,23 @@ describe('GET /me/entitlements', function (): void {
             ]);
     });
 
-    it('renvoie un objet vide pour un particulier et pour l\'équipe', function (string $role): void {
+    it('renvoie un objet vide pour l\'équipe', function (string $role): void {
         $response = $this->actingAs(entitledUser($role))->getJson('/api/v1/me/entitlements')->assertOk();
 
         expect($response->getContent())->toContain('"features":{}')
             ->and($response->json('data.plan'))->toBe('free');
-    })->with(['particulier', 'redacteur', 'admin']);
+    })->with(['redacteur', 'admin']);
+
+    it('donne au particulier le comparateur de devis en Premium seulement', function (): void {
+        $user = entitledUser('particulier');
+
+        $this->actingAs($user)->getJson('/api/v1/me/entitlements')
+            ->assertJsonPath('data.features', ['marketplace.quote_comparison' => false, 'marketplace.quote_comparison_export' => false]);
+
+        makePremium($user);
+        $this->actingAs($user)->getJson('/api/v1/me/entitlements')
+            ->assertJsonPath('data.features', ['marketplace.quote_comparison' => true, 'marketplace.quote_comparison_export' => true]);
+    });
 
     it('ne renvoie aucun identifiant ni donnée personnelle', function (): void {
         $response = $this->actingAs(entitledUser('entrepreneur'))->getJson('/api/v1/me/entitlements');
