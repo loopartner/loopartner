@@ -132,6 +132,12 @@ Schedule::command('appointments:expire')
     ->everyFifteenMinutes()
     ->withoutOverlapping(10);
 
+// Rendez-vous : rappels aux deux parties (24 h avant par défaut, délais Premium), en durée
+// réelle, sans doublon (réservation dans appointment_reminders avant l'envoi).
+Schedule::command('appointments:send-reminders')
+    ->everyFiveMinutes()
+    ->withoutOverlapping(10);
+
 // File d'attente (driver database) : traitée chaque minute, sans worker permanent.
 // Le worker s'arrête dès que la file est vide, et au plus tard après 50 secondes pour ne pas
 // déborder sur le schedule:run suivant. Le verrou anti-chevauchement expire après 5 minutes

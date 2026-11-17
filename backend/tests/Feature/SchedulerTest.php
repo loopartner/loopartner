@@ -146,3 +146,11 @@ it('fait expirer les demandes et les reports de rendez-vous toutes les 15 minute
         ->and($event->expression)->toBe('*/15 * * * *')
         ->and($event->withoutOverlapping)->toBeTrue();
 });
+
+it('envoie les rappels de rendez-vous toutes les 5 minutes, sans chevauchement', function (): void {
+    $event = scheduledEvent('appointments:send-reminders');
+
+    expect($event)->not->toBeNull()
+        ->and($event->expression)->toBe('*/5 * * * *')
+        ->and($event->withoutOverlapping)->toBeTrue();
+});
