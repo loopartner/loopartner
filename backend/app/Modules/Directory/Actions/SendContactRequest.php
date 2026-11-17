@@ -21,8 +21,9 @@ class SendContactRequest
 
     /**
      * @param  array{message: string}  $data
+     * @param  bool  $notify  false : le module appelant prévient lui-même le prestataire
      */
-    public function handle(User $author, int $providerUserId, ?Project $project, array $data): MatchRequest
+    public function handle(User $author, int $providerUserId, ?Project $project, array $data, bool $notify = true): MatchRequest
     {
         return $this->createMatchRequest->handle(
             $author,
@@ -31,6 +32,7 @@ class SendContactRequest
             $project,
             ['message' => $data['message']],
             'Vous avez déjà une demande en cours avec ce prestataire.',
+            $notify,
         );
     }
 }

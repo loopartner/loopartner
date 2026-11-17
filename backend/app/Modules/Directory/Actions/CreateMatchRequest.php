@@ -31,16 +31,18 @@ class CreateMatchRequest
 {
     /**
      * @param  array{message: string, price_amount?: int|null, price_currency?: string|null}  $data
+     * @param  bool  $notify  false quand le module appelant prévient lui-même le destinataire
+     *                        (réservation d'un rendez-vous sur la page publique d'un prestataire)
      *
      * @throws AccessDeniedHttpException
      * @throws ConflictHttpException
      */
-    public function handle(User $author, MatchRequestType $type, int $recipientId, ?Project $project, array $data, string $duplicateMessage): MatchRequest
+    public function handle(User $author, MatchRequestType $type, int $recipientId, ?Project $project, array $data, string $duplicateMessage, bool $notify = true): MatchRequest
     {
         $key = MatchRequest::activeKey($type, $author->id, $type === MatchRequestType::Proposal && $project !== null ? $project->id : $recipientId);
 
         try {
-            $matchRequest = DB::transaction(function () use ($author, $type, $recipientId, $project, $data, $key, $duplicateMessage): MatchRequest {
+            $matchRequest = DB::transaction(function () use ($author, $type, $recipientId, $project, $data, $key, $duplicateMessage, $notify): MatchRequest {
                 User::query()->whereKey($author->id)->lockForUpdate()->first();
 
                 if (UserBlock::existsBetween($author->id, $recipientId)) {
@@ -82,8 +84,10 @@ class CreateMatchRequest
                     'expires_at' => now()->addDays(MatchRequest::EXPIRATION_DAYS),
                 ])->save();
 
-                $recipient = User::query()->findOrFail($recipientId);
-                MatchingNotification::sendTo($recipient, new MatchRequestReceivedNotification($matchRequest));
+                if ($notify) {
+                    $recipient = User::query()->findOrFail($recipientId);
+                    MatchingNotification::sendTo($recipient, new MatchRequestReceivedNotification($matchRequest));
+                }
 
                 return $matchRequest;
             });

@@ -26,11 +26,14 @@ use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 class AcceptMatchRequest
 {
     /**
+     * @param  bool  $notify  false quand le module appelant prévient lui-même l'auteur
+     *                        (confirmation d'un rendez-vous réservé sur la page publique)
+     *
      * @throws ConflictHttpException
      */
-    public function handle(MatchRequest $matchRequest): MatchRequest
+    public function handle(MatchRequest $matchRequest, bool $notify = true): MatchRequest
     {
-        return DB::transaction(function () use ($matchRequest): MatchRequest {
+        return DB::transaction(function () use ($matchRequest, $notify): MatchRequest {
             $matchRequest = PendingMatchRequest::lock($matchRequest);
 
             if ($matchRequest->type === MatchRequestType::Proposal && ($matchRequest->project === null || ! $matchRequest->project->isLive())) {
@@ -61,7 +64,9 @@ class AcceptMatchRequest
 
             $matchRequest->setRelation('conversation', $conversation);
 
-            MatchingNotification::sendTo($matchRequest->author, new MatchRequestAcceptedNotification($matchRequest));
+            if ($notify) {
+                MatchingNotification::sendTo($matchRequest->author, new MatchRequestAcceptedNotification($matchRequest));
+            }
 
             return $matchRequest;
         });
