@@ -27,6 +27,7 @@ const PUBLIC_CONTENT_ROUTES = [
     'api/v1/projects/{uuid}' => 'project',
     'api/v1/events/{slug}' => 'event',
     'api/v1/articles/{slug}' => 'article',
+    'api/v1/offers/{slug}' => 'offer',
 ];
 
 /**
@@ -39,6 +40,7 @@ const NON_CONTENT_ROUTES = [
     'api/v1/compliance/calendar/{token}.ics',
     'api/v1/events/{slug}/calendar.ics',
     'api/v1/providers/{slug}/articles',
+    'api/v1/providers/{slug}/offers',
     'api/v1/auth/email/verify/{id}/{hash}',
 ];
 
@@ -209,6 +211,34 @@ describe('article', function (): void {
 
         ModerationTargets::get('article')->lift($article->slug, $decision);
         $this->getJson("/api/v1/articles/{$article->slug}")->assertOk();
+    });
+});
+
+describe('offre', function (): void {
+    it('la retire de la recherche, de sa page et de la page du prestataire sans changer son statut', function (): void {
+        $provider = marketplaceProvider();
+        $offer = publishedOfferOf($provider);
+        $decision = restrictContent('offer', (string) $offer->slug);
+
+        $this->getJson('/api/v1/offers')->assertOk()->assertJsonCount(0, 'data');
+        $this->getJson("/api/v1/offers/{$offer->slug}")->assertNotFound();
+        $this->getJson('/api/v1/providers/'.providerSlug($provider).'/offers')->assertOk()->assertJsonCount(0, 'data');
+        $this->actingAs($provider)->getJson("/api/v1/me/offers/{$offer->uuid}")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'published')
+            ->assertJsonPath('data.moderation.restricted', true);
+
+        ModerationTargets::get('offer')->lift((string) $offer->slug, $decision);
+        $this->getJson("/api/v1/offers/{$offer->slug}")->assertOk();
+    });
+
+    it('cache les offres d\'un profil prestataire masqué', function (): void {
+        $provider = marketplaceProvider();
+        $offer = publishedOfferOf($provider);
+        restrictContent('provider_profile', providerSlug($provider));
+
+        $this->getJson('/api/v1/offers')->assertOk()->assertJsonCount(0, 'data');
+        $this->getJson("/api/v1/offers/{$offer->slug}")->assertNotFound();
     });
 });
 

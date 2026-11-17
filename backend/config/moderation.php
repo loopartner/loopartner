@@ -7,6 +7,7 @@ use App\Modules\Directory\Support\Moderation\MessageModerationTarget;
 use App\Modules\Directory\Support\Moderation\ProjectModerationTarget;
 use App\Modules\Events\Support\AnnouncementModerationTarget;
 use App\Modules\Events\Support\EventModerationTarget;
+use App\Modules\Marketplace\Support\OfferModerationTarget;
 
 /*
 |--------------------------------------------------------------------------
@@ -34,6 +35,7 @@ return [
         'event' => EventModerationTarget::class,
         'event_announcement' => AnnouncementModerationTarget::class,
         'article' => ArticleModerationTarget::class,
+        'offer' => OfferModerationTarget::class,
     ],
 
     /*

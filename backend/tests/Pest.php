@@ -22,6 +22,7 @@ use App\Modules\Directory\Models\Project;
 use App\Modules\Events\Enums\RegistrationStatus;
 use App\Modules\Events\Models\Event;
 use App\Modules\Events\Models\EventRegistration;
+use App\Modules\Marketplace\Models\Offer;
 use App\Modules\Marketplace\Models\SellerProfile;
 use App\Notifications\VerifyEmailNotification;
 use App\Support\Legal\LegalDocuments;
@@ -825,4 +826,36 @@ function marketplaceProvider(array $sellerAttributes = []): User
     SellerProfile::factory()->create(['user_id' => $provider->id, ...$sellerAttributes]);
 
     return $provider;
+}
+
+/**
+ * @param  array<string, mixed>  $overrides
+ * @return array<string, mixed>
+ */
+function offerPayload(array $overrides = []): array
+{
+    $category = ServiceCategory::query()->where('slug', 'sites-web')->first() ?? serviceCategory('sites-web', 'Sites web');
+
+    return [
+        'title' => 'Création de site vitrine',
+        'summary' => 'Un site vitrine responsive de cinq pages, livré en trois semaines avec sa mise en ligne.',
+        'description' => 'Maquette, intégration, formulaire de contact, référencement de base et formation à la mise à jour.',
+        'category' => $category->slug,
+        'pricing_mode' => 'from',
+        'price_cents' => 150000,
+        'delivery_mode' => 'remote',
+        'country' => 'FR',
+        'city' => 'Lyon',
+        ...$overrides,
+    ];
+}
+
+/**
+ * Offre publiée d'un prestataire (créée par la factory, sans passer par l'API).
+ *
+ * @param  array<string, mixed>  $attributes
+ */
+function publishedOfferOf(User $provider, array $attributes = []): Offer
+{
+    return Offer::factory()->published()->create(['user_id' => $provider->id, ...$attributes]);
 }

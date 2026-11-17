@@ -224,6 +224,16 @@ const API_ROUTES = [
     // Marketplace (lot 3).
     'GET api/v1/me/seller-profile' => 'auth',
     'PUT api/v1/me/seller-profile' => 'auth',
+    'GET api/v1/me/offers' => 'auth',
+    'POST api/v1/me/offers' => 'auth',
+    'GET api/v1/me/offers/{uuid}' => 'auth',
+    'PATCH api/v1/me/offers/{uuid}' => 'auth',
+    'DELETE api/v1/me/offers/{uuid}' => 'auth',
+    'POST api/v1/me/offers/{uuid}/publish' => 'auth',
+    'POST api/v1/me/offers/{uuid}/unpublish' => 'auth',
+    'GET api/v1/offers' => 'public',
+    'GET api/v1/offers/{slug}' => 'public',
+    'GET api/v1/providers/{slug}/offers' => 'public',
 ];
 
 /**
