@@ -138,6 +138,12 @@ Schedule::command('appointments:send-reminders')
     ->everyFiveMinutes()
     ->withoutOverlapping(10);
 
+// Rendez-vous : minimisation (durées dans config/security.php, retention : lieux et notes
+// effacés après 3 mois, rendez-vous clos supprimés après 12 mois, passés après 24 mois).
+Schedule::command('appointments:prune')
+    ->dailyAt('04:45')
+    ->withoutOverlapping();
+
 // File d'attente (driver database) : traitée chaque minute, sans worker permanent.
 // Le worker s'arrête dès que la file est vide, et au plus tard après 50 secondes pour ne pas
 // déborder sur le schedule:run suivant. Le verrou anti-chevauchement expire après 5 minutes

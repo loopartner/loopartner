@@ -154,3 +154,11 @@ it('envoie les rappels de rendez-vous toutes les 5 minutes, sans chevauchement',
         ->and($event->expression)->toBe('*/5 * * * *')
         ->and($event->withoutOverlapping)->toBeTrue();
 });
+
+it('purge les données des rendez-vous chaque jour à 04:45, sans chevauchement', function (): void {
+    $event = scheduledEvent('appointments:prune');
+
+    expect($event)->not->toBeNull()
+        ->and($event->expression)->toBe('45 4 * * *')
+        ->and($event->withoutOverlapping)->toBeTrue();
+});

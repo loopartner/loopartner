@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Accounts\Support\ProviderProfileModerationTarget;
+use App\Modules\Appointments\Support\AppointmentNoteModerationTarget;
 use App\Modules\Appointments\Support\AppointmentTypeModerationTarget;
 use App\Modules\Blog\Support\ArticleModerationTarget;
 use App\Modules\Directory\Support\Moderation\MatchRequestModerationTarget;
@@ -40,6 +41,7 @@ return [
         'offer' => OfferModerationTarget::class,
         'quote' => QuoteModerationTarget::class,
         'appointment_type' => AppointmentTypeModerationTarget::class,
+        'appointment_note' => AppointmentNoteModerationTarget::class,
     ],
 
     /*

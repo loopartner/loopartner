@@ -412,6 +412,18 @@ return [
         // acceptés restent tant que leur conversation existe.
         'marketplace_closed_quotes_months' => 12,
 
+        // Rendez-vous (module Appointments, purge quotidienne appointments:prune, décision 57).
+        // Lieu (adresse, téléphone, lien de visio) et notes libres : effacés après cette durée,
+        // comptée depuis la fin du rendez-vous ou sa clôture (refus, annulation, expiration).
+        'appointment_details_months' => 3,
+        // Rendez-vous refusés, annulés ou expirés : supprimés après cette durée.
+        'closed_appointments_months' => 12,
+        // Rendez-vous passés : supprimés après cette durée (ou avant, avec leur conversation).
+        'past_appointments_months' => 24,
+        // Traces des rappels envoyés et exceptions de disponibilité passées.
+        'appointment_reminders_months' => 3,
+        'past_availability_exceptions_months' => 3,
+
     ],
 
     /*

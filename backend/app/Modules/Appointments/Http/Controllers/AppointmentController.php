@@ -8,11 +8,13 @@ use App\Modules\Appointments\Actions\AnswerReschedule;
 use App\Modules\Appointments\Actions\CancelAppointment;
 use App\Modules\Appointments\Actions\ConfirmAppointment;
 use App\Modules\Appointments\Actions\DeclineAppointment;
+use App\Modules\Appointments\Actions\ReportAppointmentNote;
 use App\Modules\Appointments\Actions\RescheduleAppointment;
 use App\Modules\Appointments\Enums\AppointmentStatus;
 use App\Modules\Appointments\Enums\CancellationReason;
 use App\Modules\Appointments\Enums\Party;
 use App\Modules\Appointments\Http\Requests\AppointmentInputRequest;
+use App\Modules\Appointments\Http\Requests\ReportAppointmentNoteRequest;
 use App\Modules\Appointments\Models\Appointment;
 use App\Modules\Appointments\Support\AppointmentIcs;
 use App\Modules\Appointments\Support\AppointmentPresenter;
@@ -123,6 +125,24 @@ class AppointmentController extends Controller
             'Content-Disposition' => 'attachment; filename="rendez-vous.ics"',
             'Cache-Control' => 'private, no-store',
         ]);
+    }
+
+    /**
+     * Signalement d'un texte libre écrit par l'autre partie (adaptateur appointment_note).
+     */
+    public function reportNote(ReportAppointmentNoteRequest $request, ReportAppointmentNote $reportNote): JsonResponse
+    {
+        /** @var array{category: string, comment?: string|null} $data */
+        $data = $request->validated();
+        $receipt = $reportNote->handle($this->user($request), $request->note(), $data);
+
+        return response()->json(['data' => [
+            'uuid' => $receipt->uuid,
+            'target_type' => 'appointment_note',
+            'category' => $data['category'],
+            'status' => $receipt->status,
+            'created_at' => $receipt->createdAt?->toIso8601ZuluString(),
+        ]], 201);
     }
 
     /**

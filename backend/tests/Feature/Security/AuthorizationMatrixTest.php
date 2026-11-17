@@ -276,6 +276,7 @@ const API_ROUTES = [
     'POST api/v1/me/appointments/{uuid}/reschedule' => 'auth',
     'POST api/v1/me/appointments/{uuid}/accept-change' => 'auth',
     'POST api/v1/me/appointments/{uuid}/decline-change' => 'auth',
+    'POST api/v1/me/appointments/{uuid}/notes/{noteUuid}/report' => 'auth',
     'GET api/v1/providers/{slug}/booking' => 'public',
     'POST api/v1/providers/{slug}/appointments' => 'auth',
     // Agenda unifié et abonnement unique (noyau).
@@ -301,6 +302,7 @@ function concreteUri(string $uri): string
         '{token}' => str_repeat('a', 56),
         '{country}' => 'FR',
         '{messageUuid}' => '1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed',
+        '{noteUuid}' => '5a2b6c0e-1d2f-4c3b-9e8f-7a6b5c4d3e2f',
         '{registrationUuid}' => '6ec0bd7f-11c0-43da-975e-2a8ad9ebae0b',
         '{slug}' => 'un-prestataire',
         '{id}' => '1',

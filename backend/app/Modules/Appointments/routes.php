@@ -80,6 +80,11 @@ Route::middleware(['auth:sanctum', 'verified'])
             Route::post('{uuid}/decline-change', [AppointmentController::class, 'declineChange'])->whereUuid('uuid')->name('decline-change');
         });
 
+        Route::post('{uuid}/notes/{noteUuid}/report', [AppointmentController::class, 'reportNote'])
+            ->whereUuid(['uuid', 'noteUuid'])
+            ->middleware('throttle:reports')
+            ->name('report-note');
+
         Route::post('{uuid}/reschedule', [AppointmentController::class, 'reschedule'])
             ->whereUuid('uuid')
             ->middleware(['throttle:appointment-bookings', LimitRequestBody::class.':32768'])
