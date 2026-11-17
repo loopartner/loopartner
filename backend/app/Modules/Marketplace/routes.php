@@ -6,8 +6,10 @@
 | avec les middlewares "api" et "throttle:api".
 */
 
+use App\Http\Middleware\LimitRequestBody;
 use App\Modules\Marketplace\Http\Controllers\OwnOfferController;
 use App\Modules\Marketplace\Http\Controllers\PublicOfferController;
+use App\Modules\Marketplace\Http\Controllers\QuoteController;
 use App\Modules\Marketplace\Http\Controllers\SellerProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -34,6 +36,34 @@ Route::middleware('auth:sanctum')
             Route::post('{uuid}/publish', [OwnOfferController::class, 'publish'])->whereUuid('uuid')->name('publish');
             Route::post('{uuid}/unpublish', [OwnOfferController::class, 'unpublish'])->whereUuid('uuid')->name('unpublish');
         });
+    });
+
+/*
+| Devis : seulement dans une demande de mise en relation acceptée (décision 36). Utilisateurs
+| connectés avec un email vérifié ; seules les deux parties voient un devis (404 sinon).
+*/
+Route::middleware(['auth:sanctum', 'verified'])
+    ->prefix('me/quotes')
+    ->name('marketplace.quotes.')
+    ->group(function (): void {
+        Route::get('/', [QuoteController::class, 'index'])->name('index');
+        Route::get('{uuid}', [QuoteController::class, 'show'])->whereUuid('uuid')->name('show');
+
+        Route::middleware(['throttle:quote-writes', LimitRequestBody::class.':131072'])->group(function (): void {
+            Route::post('/', [QuoteController::class, 'store'])->name('store');
+            Route::put('{uuid}', [QuoteController::class, 'update'])->whereUuid('uuid')->name('update');
+        });
+
+        Route::middleware('throttle:quote-writes')->group(function (): void {
+            Route::delete('{uuid}', [QuoteController::class, 'destroy'])->whereUuid('uuid')->name('destroy');
+            Route::post('{uuid}/revise', [QuoteController::class, 'revise'])->whereUuid('uuid')->name('revise');
+            Route::post('{uuid}/withdraw', [QuoteController::class, 'withdraw'])->whereUuid('uuid')->name('withdraw');
+        });
+
+        Route::post('{uuid}/send', [QuoteController::class, 'send'])
+            ->whereUuid('uuid')
+            ->middleware('throttle:quote-sends')
+            ->name('send');
     });
 
 // Offres publiques, sans authentification.

@@ -46,6 +46,19 @@ return [
             'label' => ['fr' => 'Nouveaux messages', 'en' => 'New messages'],
         ],
 
+        // Marketplace : devis (décision 46).
+        'marketplace.quotes' => [
+            'mandatory' => false,
+            'roles' => $members,
+            'label' => ['fr' => 'Devis reçus et refusés', 'en' => 'Quotes received and declined'],
+        ],
+        // Acceptation d'un devis (contrat, PDF joint) et rétractation : toujours envoyés.
+        'marketplace.quote_decisions' => [
+            'mandatory' => true,
+            'roles' => $members,
+            'label' => ['fr' => 'Devis acceptés et rétractations', 'en' => 'Accepted quotes and withdrawals'],
+        ],
+
         // Events : participant.
         'events.participation' => [
             'mandatory' => true,

@@ -23,6 +23,7 @@ use App\Modules\Events\Enums\RegistrationStatus;
 use App\Modules\Events\Models\Event;
 use App\Modules\Events\Models\EventRegistration;
 use App\Modules\Marketplace\Models\Offer;
+use App\Modules\Marketplace\Models\Quote;
 use App\Modules\Marketplace\Models\SellerProfile;
 use App\Notifications\VerifyEmailNotification;
 use App\Support\Legal\LegalDocuments;
@@ -858,4 +859,68 @@ function offerPayload(array $overrides = []): array
 function publishedOfferOf(User $provider, array $attributes = []): Offer
 {
     return Offer::factory()->published()->create(['user_id' => $provider->id, ...$attributes]);
+}
+
+/**
+ * Demande de mise en relation acceptée entre un porteur de projet et un prestataire doté d'une
+ * identité professionnelle : [client, prestataire, demande].
+ *
+ * @param  array<string, mixed>  $sellerAttributes
+ * @return array{0: User, 1: User, 2: MatchRequest}
+ */
+function acceptedQuoteRequest(string $clientRole = 'particulier', array $sellerAttributes = [], ?User $client = null): array
+{
+    $client ??= projectOwner($clientRole);
+    $provider = marketplaceProvider($sellerAttributes);
+    $matchRequest = app(AcceptMatchRequest::class)->handle(pendingProposal($provider, publishedProjectOf($client)));
+
+    return [$client, $provider, $matchRequest];
+}
+
+/**
+ * Brouillon de devis valide (deux lignes au taux de test fr.vat.rate.standard).
+ *
+ * @param  array<string, mixed>  $overrides
+ * @return array<string, mixed>
+ */
+function quotePayload(?string $matchRequestUuid = null, array $overrides = []): array
+{
+    return [
+        ...($matchRequestUuid === null ? [] : ['match_request' => $matchRequestUuid]),
+        'title' => 'Création d\'un site vitrine',
+        'scope' => 'Conception et réalisation d\'un site vitrine de cinq pages, avec mise en ligne et formation.',
+        'client' => [
+            'name' => 'Alex Martin',
+            'address' => '5 place du Marché, 69002 Lyon',
+            'execution_place' => 'À distance',
+        ],
+        'validity_days' => 30,
+        'start_date' => '2027-04-01',
+        'duration' => 'Trois semaines',
+        'payment_terms' => 'Paiement à réception de facture, sous 30 jours.',
+        'lines' => [
+            ['line_type' => 'labour', 'designation' => 'Conception et intégration', 'quantity_milli' => 3500, 'unit' => 'day', 'unit_price_cents' => 45000, 'vat_rate_code' => 'fr.vat.rate.standard'],
+            ['line_type' => 'service', 'designation' => 'Mise en ligne et formation', 'quantity_milli' => 1000, 'unit' => 'lump_sum', 'unit_price_cents' => 30000, 'vat_rate_code' => 'fr.vat.rate.standard'],
+        ],
+        ...$overrides,
+    ];
+}
+
+/**
+ * Devis envoyé par l'API : [client, prestataire, devis].
+ *
+ * @param  array<string, mixed>  $overrides
+ * @return array{0: User, 1: User, 2: Quote}
+ */
+function sentQuote(string $clientRole = 'particulier', array $overrides = [], ?User $client = null): array
+{
+    if (! ComplianceRule::query()->where('code', 'fr.vat.rate.standard')->exists()) {
+        verifiedVatRate('fr.vat.rate.standard', 2000);
+    }
+
+    [$client, $provider, $matchRequest] = acceptedQuoteRequest($clientRole, client: $client);
+    $uuid = test()->actingAs($provider)->postJson('/api/v1/me/quotes', quotePayload($matchRequest->uuid, $overrides))->assertCreated()->json('data.uuid');
+    test()->actingAs($provider)->postJson("/api/v1/me/quotes/{$uuid}/send")->assertOk();
+
+    return [$client, $provider, Quote::query()->where('uuid', $uuid)->sole()];
 }

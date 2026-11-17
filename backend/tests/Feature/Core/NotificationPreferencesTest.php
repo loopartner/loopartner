@@ -5,6 +5,8 @@ use App\Models\User;
 use App\Modules\Blog\Notifications\ModerationDigestNotification;
 use App\Modules\Events\Enums\EventNotice;
 use App\Modules\Events\Notifications\EventNotification;
+use App\Modules\Marketplace\Enums\QuoteNotice;
+use App\Modules\Marketplace\Notifications\QuoteNotification;
 use App\Modules\Moderation\Notifications\ModerationNotification;
 use App\Notifications\VerifyEmailNotification;
 use App\Support\Notifications\CategorizedNotification;
@@ -78,7 +80,7 @@ describe('catégories', function (): void {
             $reflection = new ReflectionClass($class);
 
             // Catégorie fixée à la construction (destinataire) : vérifiée à part ci-dessous.
-            if ($reflection->isAbstract() || in_array($class, [EventNotification::class, ModerationNotification::class], true)) {
+            if ($reflection->isAbstract() || in_array($class, [EventNotification::class, ModerationNotification::class, QuoteNotification::class], true)) {
                 continue;
             }
 
@@ -94,6 +96,13 @@ describe('catégories', function (): void {
         foreach (['moderation.notices', 'moderation.decisions'] as $category) {
             expect(NotificationCategories::isMandatory($category))->toBeTrue($category);
         }
+
+        foreach (QuoteNotice::cases() as $notice) {
+            expect(NotificationCategories::exists($notice->category()))->toBeTrue($notice->value);
+        }
+
+        expect(NotificationCategories::isMandatory('marketplace.quote_decisions'))->toBeTrue()
+            ->and(NotificationCategories::isMandatory('marketplace.quotes'))->toBeFalse();
     });
 
     it('garde obligatoires la sécurité du compte, les inscriptions et les décisions de modération', function (): void {
@@ -150,10 +159,10 @@ describe('GET|PUT /me/notification-preferences', function (): void {
 
         expect(array_column($response->json('data'), 'category'))->toBe([
             'account.security', 'directory.match_requests', 'directory.messages',
-            'events.participation', 'events.reminders', 'events.announcements',
+            'marketplace.quotes', 'marketplace.quote_decisions', 'events.participation', 'events.reminders', 'events.announcements',
             'moderation.notices', 'moderation.decisions',
         ]);
-        $response->assertJsonPath('data.4', [
+        $response->assertJsonPath('data.6', [
             'category' => 'events.reminders',
             'label' => 'Reminder the day before an event',
             'mandatory' => false,
