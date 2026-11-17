@@ -26,6 +26,7 @@ use App\Modules\Events\Models\EventRegistration;
 use App\Modules\Marketplace\Models\Offer;
 use App\Modules\Marketplace\Models\Quote;
 use App\Modules\Marketplace\Models\SellerProfile;
+use Database\Seeders\AppointmentsDemoSeeder;
 use Database\Seeders\ComplianceDemoSeeder;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\MarketplaceDemoSeeder;
@@ -297,4 +298,30 @@ it('crée les offres et le devis de démonstration avec un taux fictif, sans ema
     $this->actingAs($particulier)->getJson('/api/v1/me/quotes?box=received')->assertOk()->assertJsonCount(1, 'data');
 
     expect(DB::table('jobs')->count())->toBe(0);
+});
+
+it('crée le calendrier et les rendez-vous de démonstration, sans email, et peut être relancé', function (): void {
+    allowDemoSeeding();
+    Carbon::setTestNow('2026-11-17 10:00:00');
+    config(['queue.default' => 'database']);
+
+    $this->seed(DatabaseSeeder::class);
+    $this->seed(DatabaseSeeder::class);
+
+    $provider = User::query()->where('email', 'prestataire@example.com')->sole();
+    $particulier = User::query()->where('email', 'particulier@example.com')->sole();
+    $slug = (string) DB::table('provider_profiles')->where('user_id', $provider->id)->value('slug');
+
+    expect(DB::table('appointment_calendars')->count())->toBe(1)
+        ->and(DB::table('appointment_types')->count())->toBe(count(AppointmentsDemoSeeder::DEMO_TYPES))
+        ->and(DB::table('appointments')->orderBy('starts_at')->pluck('status')->all())->toBe(['confirmed', 'proposed']);
+
+    $this->getJson("/api/v1/providers/{$slug}/booking")->assertOk()->assertJsonCount(1, 'data.types');
+    $this->actingAs($particulier)->getJson('/api/v1/me/appointments')->assertOk()->assertJsonCount(2, 'data');
+
+    expect(DB::table('jobs')->count())->toBe(0);
+});
+
+it('refuse les rendez-vous de démonstration hors du poste local', function (): void {
+    expect(fn () => $this->seed(AppointmentsDemoSeeder::class))->toThrow(RuntimeException::class);
 });

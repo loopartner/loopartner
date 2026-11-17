@@ -196,6 +196,8 @@ class DatabaseSeeder extends Seeder
             $this->call(ComplianceDemoSeeder::class);
             // Après la mise en relation et le premium du prestataire : offres et devis.
             $this->call(MarketplaceDemoSeeder::class);
+            // Après la mise en relation et le premium du prestataire : calendrier et rendez-vous.
+            $this->call(AppointmentsDemoSeeder::class);
         }
     }
 
