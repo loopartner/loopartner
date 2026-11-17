@@ -269,6 +269,7 @@ const API_ROUTES = [
     'POST api/v1/me/match-requests/{uuid}/appointments' => 'auth',
     'GET api/v1/me/appointments' => 'auth',
     'GET api/v1/me/appointments/{uuid}' => 'auth',
+    'GET api/v1/me/appointments/{uuid}/calendar.ics' => 'auth',
     'POST api/v1/me/appointments/{uuid}/confirm' => 'auth',
     'POST api/v1/me/appointments/{uuid}/decline' => 'auth',
     'POST api/v1/me/appointments/{uuid}/cancel' => 'auth',

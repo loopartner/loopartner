@@ -67,6 +67,10 @@ Route::middleware(['auth:sanctum', 'verified'])
     ->group(function (): void {
         Route::get('/', [AppointmentController::class, 'index'])->name('index');
         Route::get('{uuid}', [AppointmentController::class, 'show'])->whereUuid('uuid')->name('show');
+        Route::get('{uuid}/calendar.ics', [AppointmentController::class, 'calendar'])
+            ->whereUuid('uuid')
+            ->middleware('throttle:appointment-ics')
+            ->name('calendar');
 
         Route::middleware(['throttle:appointment-decisions', LimitRequestBody::class.':32768'])->group(function (): void {
             Route::post('{uuid}/confirm', [AppointmentController::class, 'confirm'])->whereUuid('uuid')->name('confirm');

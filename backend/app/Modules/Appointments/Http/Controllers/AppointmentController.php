@@ -11,14 +11,17 @@ use App\Modules\Appointments\Actions\DeclineAppointment;
 use App\Modules\Appointments\Actions\RescheduleAppointment;
 use App\Modules\Appointments\Enums\AppointmentStatus;
 use App\Modules\Appointments\Enums\CancellationReason;
+use App\Modules\Appointments\Enums\Party;
 use App\Modules\Appointments\Http\Requests\AppointmentInputRequest;
 use App\Modules\Appointments\Models\Appointment;
+use App\Modules\Appointments\Support\AppointmentIcs;
 use App\Modules\Appointments\Support\AppointmentPresenter;
 use App\Support\Locale;
 use App\Support\Pagination;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Gate;
 
 /**
@@ -104,6 +107,22 @@ class AppointmentController extends Controller
     public function declineChange(Request $request, string $uuid, AnswerReschedule $answer): JsonResponse
     {
         return $this->respond($request, $answer->decline($this->user($request), $this->find($uuid)));
+    }
+
+    /**
+     * GET /me/appointments/{uuid}/calendar.ics : fichier du rendez-vous pour une partie
+     * connectée, avec le lieu ou le lien une fois confirmé (jamais dans les emails).
+     */
+    public function calendar(Request $request, string $uuid): Response
+    {
+        $appointment = $this->find($uuid);
+        $party = $appointment->partyOf($this->user($request)) ?? Party::Client;
+
+        return response(AppointmentIcs::forParty($appointment, $party, Locale::fromRequest($request)), 200, [
+            'Content-Type' => 'text/calendar; charset=utf-8',
+            'Content-Disposition' => 'attachment; filename="rendez-vous.ics"',
+            'Cache-Control' => 'private, no-store',
+        ]);
     }
 
     /**
