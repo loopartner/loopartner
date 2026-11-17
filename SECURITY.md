@@ -408,6 +408,79 @@ Module Marketplace (lot 3, décisions 36 à 50 ; textes et points à faire valid
 > de la place de marché et les clauses des CGU (accès anticipé, Loopartner non partie au contrat) ;
 > reprendre ce tableau dans la politique de confidentialité.
 
+## Rendez-vous et agenda : données personnelles et durées de conservation
+
+Module Appointments et agenda unifié (lot 4, décisions 52 à 59 ; sources, textes et points à
+faire valider : `docs/v1/appointments-rules.md`).
+
+- **Visibilité** : un rendez-vous n'est visible que de ses deux parties (404 pour tout autre
+  utilisateur, **administrateurs compris**). Le nom du client n'est montré au prestataire qu'une
+  fois la demande de mise en relation acceptée ; le lieu (adresse, téléphone, lien de visio)
+  seulement une fois le rendez-vous confirmé. Aucune réponse ne contient d'email, de téléphone
+  d'un compte ni d'identifiant interne.
+- **Chiffrement en base** (`APP_KEY`) : lieu des rendez-vous, adresse ou lien saisis sur les types
+  de rendez-vous, textes libres (motif, messages d'annulation, de refus, de report).
+- **Double réservation** : verrou de la ligne du calendrier du prestataire pendant la
+  vérification, puis index unique sur les créneaux retenus (409 `slot_unavailable`, journalisé
+  `appointments.slot_conflict`).
+- **Emails** : titre du type de rendez-vous et date seulement, chiffrés dans la file ; le `.ics`
+  joint à la confirmation ne contient que le titre et les dates. Rappels dans une catégorie
+  facultative.
+- **Abonnement à l'agenda** : URL privée à jeton (même mécanisme que l'abonnement du suivi
+  administratif : sélecteur public, secret dont seule l'empreinte HMAC est stockée, comparaison
+  en temps constant), révocable et régénérable, limitée en débit ; **titres et dates seulement**
+  (ni lieu, ni lien, ni note, ni nom) ; jeton invalide journalisé au plus une fois par heure et par
+  IP, jamais le jeton.
+- **Note libre** : 500 caractères au plus, avertissement près du champ (pas de donnée de santé ni
+  d'autre donnée sensible), signalable par l'autre partie.
+- **Journal security** : uuids, statut, motif en liste fermée, fonctionnalité Premium ; jamais une
+  note, un lieu, un téléphone, un lien de visio, un nom ou un titre de rendez-vous
+  (`tests/Feature/Security/AppointmentsPrivacyTest.php`).
+- **Limites de débit** : `appointment-settings-writes`, `appointment-slots`,
+  `appointment-public-slots` (par IP), `appointment-bookings`, `appointment-decisions`,
+  `appointment-ics`, `agenda`, `agenda-feed-manage`, `agenda-feed` (`config/security.php`) ; corps
+  des requêtes limité à 32 Ko ; la réservation sur la page publique compte aussi dans
+  `match-requests`.
+
+| Données | Conservation | Ensuite |
+|---|---|---|
+| Lieu d'un rendez-vous (adresse, téléphone, lien de visio) et textes libres | 3 mois après la fin du rendez-vous ou sa clôture (refus, annulation, expiration) | effacés (le rendez-vous reste) |
+| Rendez-vous refusé, annulé ou expiré | 12 mois après la clôture | supprimé |
+| Rendez-vous passé (dates, type, statut) | 24 mois après sa fin, ou avant avec sa demande de mise en relation | supprimé |
+| Trace d'un rappel envoyé, exception de disponibilité passée | 3 mois | supprimées |
+| Calendrier, types, plages, abonnement à l'agenda | tant que le compte existe | supprimés avec le compte |
+
+- **Suppression de compte** : rendez-vous à venir annulés (l'autre partie est prévenue
+  sobrement), lieu donné par la personne effacé, calendrier, types, plages, exceptions et
+  abonnement supprimés ; rendez-vous passés et textes déjà écrits conservés pour l'autre partie,
+  sans lien avec le compte, jusqu'à leur durée de conservation.
+- **Base légale proposée** (à faire valider par le juriste) : exécution du service demandé
+  (art. 6.1.b) ; intérêt légitime (art. 6.1.f) pour la conservation après la date et après la
+  suppression d'un compte.
+- **Réglage** : durées dans `backend/config/security.php` (`retention.appointment_details_months`,
+  `closed_appointments_months`, `past_appointments_months`, `appointment_reminders_months`,
+  `past_availability_exceptions_months`), appliquées chaque nuit par `appointments:prune`.
+
+### Inventaire pour l'export général des données (lot 11)
+
+L'export général (droit d'accès et portabilité, RGPD art. 15 et 20) est prévu au lot 11
+(décision 59). Données du lot 4 rattachées à un utilisateur :
+
+| Table | Rattachement | Contenu personnel | Repris par |
+|---|---|---|---|
+| `appointment_calendars` | `user_id` (unique) | réglages du calendrier | `AppointmentsPersonalData` |
+| `appointment_types` | calendrier | titre, description, lieu (chiffré) | `AppointmentsPersonalData` |
+| `appointment_availability_rules`, `appointment_availability_exceptions` | calendrier | plages, exceptions | `AppointmentsPersonalData` |
+| `appointments` | `client_id`, `provider_id` (indexés) | dates, type, statut, lieu donné (chiffré) | `AppointmentsPersonalData` |
+| `appointment_notes` | `author_id` | textes libres (chiffrés) | `AppointmentsPersonalData` (ses propres textes) |
+| `appointment_reminders` | rendez-vous | traces techniques des rappels | non repris (aucune donnée fournie) |
+| `appointment_slot_holds` | rendez-vous | créneaux retenus | non repris (technique) |
+| `agenda_feeds` | `user_id` (unique) | empreinte du jeton | non repris (secret) ; l'état sera indiqué |
+
+> **À faire avant l'ouverture au public** : faire valider `docs/v1/appointments-rules.md` par le
+> juriste (tableau de la section 7) ; reprendre le tableau ci-dessus dans la politique de
+> confidentialité ; prévoir dans les CGU la page de réservation Premium et l'annulation libre.
+
 ## Vérifications avant chaque mise en production
 
 Depuis `backend/`, sur le serveur de production :

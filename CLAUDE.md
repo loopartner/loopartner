@@ -9,7 +9,7 @@ entrepreneurs.
 
 ## V1 2027 : feuille de route et décisions (à lire au début de chaque session)
 
-- **`docs/v1/ROADMAP.md`** : lots 0 à 11 de la V1 commercialisable (Billing est le lot 10 ; le lot 3 Marketplace est fusionné, validations externes en attente ; le lot 4 Rendez-vous et agenda est en cours sur `feature/rendez-vous`), avec leurs critères
+- **`docs/v1/ROADMAP.md`** : lots 0 à 11 de la V1 commercialisable (Billing est le lot 10 ; le lot 3 Marketplace est fusionné, validations externes en attente ; le lot 4 Rendez-vous et agenda est codé sur `feature/rendez-vous`, validation du juriste en attente ; le prochain est le lot 5), avec leurs critères
   d'acceptation et leur état. Ne commence jamais un lot sans validation explicite de son plan
   détaillé par l'utilisateur.
 - **`docs/v1/DECISIONS.md`** : décisions produit et techniques validées, datées. Ne les remets pas
@@ -88,14 +88,16 @@ entrepreneurs.
   `compliance:extend-calendars` (01:30), `compliance:prune` (05:30), `compliance:send-reminders`
   (06:00), `compliance:check-rule-coverage` (06:30, actif du 1er octobre au 30 novembre),
   `moderation:prune` (05:45), `moderation:notify-moderators` (toutes les 5 minutes),
-  `marketplace:expire-quotes` (chaque heure), `marketplace:prune` (05:15), puis le worker.
+  `marketplace:expire-quotes` (chaque heure), `marketplace:prune` (05:15),
+  `appointments:expire` (toutes les 15 minutes), `appointments:send-reminders` (toutes les
+  5 minutes), `appointments:prune` (04:45), puis le worker.
 - Toutes les dates sont stockées en **UTC** (`app.timezone = UTC`, connexion MySQL en `+00:00`).
   La conversion vers le fuseau de l'utilisateur se fait à l'affichage, côté frontend.
 
 ## Architecture modulaire
 
 Le code métier vit dans `backend/app/Modules/<Module>/`. Les modules sont : `Accounts`, `Directory`,
-`Events`, `Blog`, `Compliance`, `Moderation` et `Marketplace`.
+`Events`, `Blog`, `Compliance`, `Moderation`, `Marketplace` et `Appointments`.
 
 Chaque module contient :
 
@@ -155,7 +157,22 @@ utilitaires du module), `Console/Commands/` (commandes Artisan du module), `Noti
   (décision restrictive d'Events ou du Blog). Voir « Module Moderation ».
 - Calendrier iCalendar du noyau : `App\Support\Calendar\Ics` (échappement, repli des lignes à
   75 octets, dates UTC et journées entières, enveloppe `VCALENDAR`), utilisé par Events (fichier
-  d'un événement, sortie figée par `tests/Fixtures/ics`) et Compliance (abonnement aux échéances).
+  d'un événement, sortie figée par `tests/Fixtures/ics`), Compliance (abonnement aux échéances)
+  et Appointments (fichier d'un rendez-vous). Jeton d'abonnement : `App\Support\Calendar\FeedToken`
+  (sélecteur de 16 caractères, secret de 40 dont seule l'empreinte HMAC est stockée, temps
+  constant), utilisé par l'abonnement à l'agenda et par Compliance (`CalendarFeedToken` délègue).
+- Heure locale du noyau : `App\Support\Time\LocalTime` (heure locale d'une date vers UTC ; heure
+  inexistante du passage à l'heure d'été avancée à l'instant du changement ; heure ambiguë :
+  première occurrence pour un début, dernière pour une fin ; `isValidTimezone()` : fuseaux IANA
+  canoniques).
+- **Agenda unifié** (noyau) : contrat `App\Support\Agenda\AgendaSource`, un adaptateur par module
+  déclaré dans `config/agenda.php` (`sources` : Appointments, Events, Compliance), `AgendaItem`
+  (données simples), `Agenda::for()`, `AgendaCalendar` (abonnement : titres et dates seulement).
+  `GET /me/agenda` (`from`, `to` en journées UTC, 92 jours au plus, `sources[]`, champ
+  `disclaimers` par source), `GET|POST|DELETE /me/agenda/feed` (URL montrée une fois) et
+  `GET /agenda/{token}.ics` (public, à jeton, table `agenda_feeds`, éléments confirmés ou
+  publiés, jeton invalide journalisé au plus une fois par heure et par IP). L'abonnement de
+  Compliance reste disponible.
 - `TrimStrings` ne rogne pas `body.blocks.*` (corps des articles : les espaces entre segments
   comptent), voir `bootstrap/app.php`.
 - Langues : `App\Support\Locale` (`fr`, `en`). `Locale::fromRequest()` choisit la langue d'une réponse :
@@ -266,7 +283,9 @@ utilitaires du module), `Console/Commands/` (commandes Artisan du module), `Noti
   prestataire premium. Marketplace (`MarketplaceDemoSeeder`, sans aucun email) : taux de TVA
   **fictif** (`demo.vat.rate.standard`, `is_demo`), identité professionnelle fictive du
   prestataire, deux offres publiées, un devis envoyé au particulier dans leur mise en relation
-  acceptée.
+  acceptée. Rendez-vous (`AppointmentsDemoSeeder`, sans aucun email) : calendrier et page publique
+  du prestataire (deux types, plages du lundi au vendredi), un rendez-vous confirmé et une
+  proposition en attente avec le particulier.
 - **Double authentification de l'équipe de démonstration** (obligatoire pour l'équipe) :
   `redacteur@example.com` a aussi un secret fixe, `DatabaseSeeder::DEMO_REDACTEUR_TWO_FACTOR_SECRET`
   (`LOOPARTNERDEMORD`, nom `Loopartner rédacteur (démo)`, codes de secours
@@ -990,6 +1009,91 @@ durées dans `config/security.php`. Textes destinés aux utilisateurs, sources c
   et devis non acceptés supprimés ; devis acceptés conservés pour l'autre partie (lien du compte
   à null) jusqu'à la purge de la conversation orpheline.
 
+## Module Appointments (rendez-vous)
+
+Rendez-vous entre prestataires et porteurs de projets (lot 4, décisions 52 à 59). Réglages dans
+`config/appointments.php` (quotas gratuits et Premium par plan, bornes), limites et durées dans
+`config/security.php`. Sources, textes et **tableau des points à faire valider par le juriste** :
+`docs/v1/appointments-rules.md`.
+
+- **Disponibilités** (prestataire avec un email vérifié, `CalendarPolicy` : 403 pour les autres
+  rôles) : `GET|PUT /me/appointments/calendar` (fuseau IANA, ouverture, page publique, pas de 15,
+  30 ou 60 minutes, marge, délai de prévenance en heures, horizon, délais de rappel ; réponse
+  avec `effective` et `limits`), `/me/appointment-types` (CRUD ; titre, description, durée,
+  `location_mode` `provider_place|client_place|video|phone`, `location_details` chiffré : adresse
+  ou lien https `SafeExternalUrl`, `visibility` `relation|public`, `auto_confirm`, `is_active`,
+  `position`), `GET|PUT /me/appointments/availability/rules` (plages hebdomadaires en heure
+  locale, remplacées en bloc), `/me/appointments/availability/exceptions` (fermeture ou ouverture
+  ponctuelle, un an au plus), `GET /me/appointments/slots?type=&from=&to=` (aperçu). Ouvrir les
+  réservations exige un profil publié avec une catégorie (403). L'élément d'un autre prestataire :
+  404.
+- **Créneaux** (`Support/SlotGenerator`) : plages converties en UTC **pour chaque date**
+  (`LocalTime`), créneaux découpés en temps réel dans chaque plage au pas du calendrier ;
+  exceptions appliquées ; délai de prévenance, horizon et créneaux retenus (marge comprise)
+  écartés. Le même calcul sert à l'affichage et au contrôle d'une réservation. Réponses : UTC et
+  `local` (`starts_at`, `ends_at`, `offset`).
+- **Qui réserve chez qui** (décision 52) : dans une **demande de mise en relation acceptée**
+  (`GET /me/match-requests/{uuid}/booking`, `GET|POST /me/match-requests/{uuid}/appointments`) :
+  le client réserve (confirmé tout de suite si `auto_confirm`, sinon `requested`), le prestataire
+  propose (`proposed`). **Page publique Premium** (`GET /providers/{slug}/booking` public, limité
+  par IP ; `POST /providers/{slug}/appointments` particulier ou entrepreneur) : motif de 20 à 500
+  caractères, demande de contact Directory créée dans la même transaction (Action publique
+  `Directory\Actions\ManageAppointmentContact`, sans email Directory), confirmation obligatoire du
+  prestataire (accepte la demande, révèle le nom) ; relation acceptée existante : **409
+  `{"code": "relation_exists", "match_request"}`** ; page fermée ou sans Premium : 404.
+- **Double réservation impossible** (`Support/SlotLedger`) : verrou de la ligne
+  `appointment_calendars` du prestataire, contrôle par le même calcul, puis index **unique**
+  `appointment_slot_holds.slot_key` (calendrier et début UTC) : **409
+  `{"code": "slot_unavailable"}`** (`appointments.slot_conflict` dans le journal). Créneaux
+  libérés au refus, à l'annulation, à l'expiration et au report.
+- **Statuts** (`AppointmentStatus`) : `requested`, `proposed` → `confirmed` | `declined` |
+  `expired` ; `confirmed` → `cancelled` ; « passé » se déduit de `ends_at`. `/me/appointments`
+  (`role`, `scope` `upcoming|past|all`, `status`), `/{uuid}`, `confirm` (partie attendue ; adresse
+  ou téléphone du client si le lieu l'exige), `decline` (message), `cancel` (`reason`
+  `schedule_conflict|no_longer_needed|other`, message ; jusqu'au début ; une demande en attente
+  ne s'annule que par son auteur), `reschedule` (créneau retenu jusqu'à la réponse ; déplacement
+  direct du client sur un type `auto_confirm`), `accept-change`, `decline-change` (l'auteur peut
+  retirer sa proposition), 3 reports au plus, `calendar.ics` (lieu ou lien une fois confirmé),
+  `notes/{noteUuid}/report`. Demande, proposition ou report sans réponse : expiré après
+  48 heures ou plus tôt au délai de prévenance (`appointments:expire`). Le rendez-vous d'autrui :
+  **404, admins compris** ; l'action de l'autre partie : 403 ; vérifié avant la validation.
+- **Ce que chaque partie voit** (décision 53, `Support/AppointmentPresenter`) : client : résumé
+  public du prestataire ; prestataire : type de compte, pays et **nom seulement une fois la
+  demande acceptée** ; lieu seulement une fois confirmé ; aucun id interne, email ni téléphone
+  d'un compte ; compte supprimé : `{"deleted": true}`.
+- **Quotas** (décision 54, `Support/Plan`, `config/entitlements.php`, prestataire) :
+  `appointments.public_booking_page`, `active_types` (2 / 10 ; fin du Premium : les premiers
+  types restent réservables), `weekly_ranges` (10 / 40), `upcoming_exceptions` (20 / 100),
+  `horizon_days` (30 / 90), `upcoming_appointments` (30 / 200), `reminder_offsets` (`[1440]` /
+  `[120, 1440, 2880]`), `max_reminder_offsets` (1 / 2) ; au-delà : **403
+  `{"code": "premium_required", "feature"}`** (`Exceptions/PremiumFeatureRequired`). Clients :
+  5 demandes en attente, 20 rendez-vous à venir, 3 par relation ; prestataire : 3 propositions
+  en attente par relation, 30 au total (409).
+- **Emails** (`AppointmentNotification`, textes dans `Enums/AppointmentNotice`, file après commit,
+  chiffrés dans la file, langue et fuseau du destinataire) : `appointments.bookings`
+  (obligatoire) et `appointments.reminders` (facultative). Titre du type et date seulement ;
+  **`.ics` (titre et dates) joint à la confirmation et au report accepté** ; jamais de note, de
+  lieu, de lien ni de nom.
+- **Rappels** (`appointments:send-reminders`, toutes les 5 minutes) : aux deux parties, en
+  **durée réelle**, réservés dans `appointment_reminders` avant l'envoi (index unique), remis à
+  zéro par un report, pas de rappel dont l'heure était passée à la confirmation.
+- **Agenda** : adaptateur `AppointmentsAgendaSource` (abonnement : confirmés seulement, titre
+  « Rendez-vous : <type> »). Events et Compliance fournissent `EventsAgendaSource` et
+  `ComplianceAgendaSource`, sans rien changer à leur comportement.
+- **Signalement** : adaptateurs `appointment_type` (public : page de réservation) et
+  `appointment_note` (privé : signalé par l'autre partie ; son propre texte : 422).
+- **Données chiffrées** : lieu des rendez-vous, détail du lieu des types, textes libres.
+- **Suppression de compte** (`ForgetUserAppointments`, sur `AccountDeleting`) : rendez-vous à
+  venir annulés (`cancelled_by = system`, l'autre partie prévenue), lieu donné par la personne
+  effacé, calendrier supprimé, rendez-vous passés détachés.
+- **Minimisation** (`appointments:prune`, 04:45, décision 57) : lieux et notes effacés 3 mois
+  après la fin ou la clôture ; rendez-vous clos supprimés 12 mois après leur clôture (colonnes
+  `cancelled_at`, `declined_at`, `expired_at`) ; passés 24 mois après leur fin ; traces de rappel
+  et exceptions passées après 3 mois. Les rendez-vous disparaissent aussi avec leur demande de
+  mise en relation (clé étrangère en cascade).
+- **Export (lot 11)** : `Support/AppointmentsPersonalData::for(User)` (interne, non exposé,
+  testé ; décision 59).
+
 ## Catégories de services (noyau)
 
 Modèle partagé `App\Models\ServiceCategory` (table `service_categories`), utilisable par tous les
@@ -1109,8 +1213,9 @@ CGU (`terms`) et politique de confidentialité (`privacy`) versionnées (décisi
   Facultatives : `directory.match_requests`, `directory.messages`, `events.reminders`,
   `events.announcements`, `events.moderation_digest`, `blog.moderation_digest`,
   `compliance.reminders` (en plus de `emails_enabled` du module), `compliance.rule_coverage`,
-  `moderation.digest`, `marketplace.quotes`. Obligatoires aussi : `moderation.notices`,
-  `moderation.decisions`, `moderation.urgent_alerts`, `marketplace.quote_decisions`.
+  `moderation.digest`, `marketplace.quotes`, `appointments.reminders`. Obligatoires aussi :
+  `moderation.notices`, `moderation.decisions`, `moderation.urgent_alerts`,
+  `marketplace.quote_decisions`, `appointments.bookings`.
 - L'écouteur `App\Listeners\ApplyNotificationPreferences` (événement `NotificationSending`)
   abandonne l'envoi d'une catégorie facultative désactivée, **au moment de l'envoi** (après la
   file d'attente). Tout est activé par défaut : les modules n'ont rien changé à leur `via()`.
@@ -1163,7 +1268,11 @@ Obligatoire pour `admin` et `redacteur` (décision 17, `App\Support\TeamTwoFacto
   `SubmitNotice`), `moderation-lookups` (30/h par IP), `moderation-appeals` (5/j),
   `moderation-admin` (60/h par admin), `seller-profile-writes` (20/h), `offer-writes` (60/h,
   300/j), `quote-writes` (120/h, 600/j), `quote-sends` (20/h, 60/j), `quote-decisions` (30/h),
-  `quote-pdfs` (30/h, 200/j, devis et comparaison), `quote-comparisons` (60/h).
+  `quote-pdfs` (30/h, 200/j, devis et comparaison), `quote-comparisons` (60/h),
+  `appointment-settings-writes` (60/h, 300/j), `appointment-slots` (60/min, 1000/j par compte),
+  `appointment-public-slots` (30/min par IP), `appointment-bookings` (10/h, 30/j : réservations,
+  propositions, reports), `appointment-decisions` (60/h), `appointment-ics` (30/h), `agenda`
+  (60/min), `agenda-feed-manage` (10/j), `agenda-feed` (30/h par abonnement, 120/h par IP).
 - Règles de validation du texte saisi : `NoHtml` et `NoInvisibleCharacters` (caractères de contrôle
   sauf tabulation et retours à la ligne, contrôles de direction U+202A–202E et U+2066–2069, espace
   de largeur nulle U+200B, marques de direction U+200E et U+200F, U+2060–2064, BOM…), sur **tous**
@@ -1211,14 +1320,20 @@ Obligatoire pour `admin` et `redacteur` (décision 17, `App\Support\TeamTwoFacto
   `marketplace.quote_withdrawn`, `marketplace.quote_draft_deleted`, `marketplace.quote_accepted`,
   `marketplace.quote_declined` (avec `reason`), `marketplace.quote_withdrawal_exercised`,
   `marketplace.quote_pdf_downloaded`, `marketplace.comparison_pdf_downloaded`,
-  `marketplace.premium_required` (avec `feature`) (uuids seulement).
+  `marketplace.premium_required` (avec `feature`) (uuids seulement),
+  `appointments.requested|proposed|confirmed|declined|expired|rescheduled`,
+  `appointments.reschedule_proposed|reschedule_declined`, `appointments.cancelled` (avec `by` et
+  `reason`), `appointments.slot_conflict`, `appointments.public_page_enabled|disabled`,
+  `appointments.premium_required` (avec `feature`), `agenda.feed_created|regenerated|revoked|invalid`
+  (uuids seulement, jamais le jeton).
   **Jamais le contenu d'un message, d'une demande, d'un commentaire de signalement, la description
   d'un événement, son lien de connexion, le texte d'une annonce, le contenu d'un article, un motif,
   une donnée des inscrits, ni un numéro d'entreprise, un nom d'entreprise, un montant, une note ou
   un jeton du suivi administratif** (tests `MatchingPrivacyTest`, `EventsPrivacyTest`,
   `BlogInputAndPrivacyTest` et `ComplianceInputAndPrivacyTest`), **ni une identité
   professionnelle, une ligne, un montant, un titre, un commentaire ou une empreinte d'un devis**
-  (`MarketplacePrivacyTest`).
+  (`MarketplacePrivacyTest`), **ni une note, un lieu, un téléphone, un lien de visio ou le titre
+  d'un rendez-vous** (`AppointmentsPrivacyTest`).
   Les événements Laravel et Fortify sont journalisés par `App\Listeners\LogSecurityEvents`
   (listeners découverts automatiquement dans `app/Listeners`). Les tests gardent ce journal en
   mémoire (`securityLog()` dans `tests/Pest.php`).
@@ -1323,7 +1438,9 @@ composer security            # composer audit : vulnérabilités connues des dé
   `verifiedLegalForm()`, `verifiedDeadlineRule()`, `companyPayload()`, `complianceCompanyOf()`,
   `legalDocumentsInForce()`, `restrictContent()`, `restrictContentWith()`, `verifiedVatRate()`,
   `sellerProfilePayload()`, `marketplaceProvider()`, `offerPayload()`, `publishedOfferOf()`,
-  `acceptedQuoteRequest()`, `quotePayload()`, `sentQuote()`, images…) sont dans
+  `acceptedQuoteRequest()`, `quotePayload()`, `sentQuote()`, `appointmentProvider()`,
+  `appointmentCalendarOf()`, `appointmentTypeOf()`, `weeklyAvailability()`,
+  `appointmentRelation()`, images…) sont dans
   `tests/Pest.php`. Les fonctions des fichiers de test sont globales : leur nom doit être unique
   dans tout `tests/`. Un test qui fixe l'horloge (`Carbon::setTestNow`) y revient avec
   `travelTo(<date fixe>)`, jamais `travelBack()` (qui revient à l'heure réelle). Une donnée de

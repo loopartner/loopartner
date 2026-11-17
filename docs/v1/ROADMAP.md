@@ -32,7 +32,7 @@ de nouveaux paquets et ce que les utilisateurs voient ou subissent attendent une
 | 1. Socle transverse | **terminé et fusionné dans `main`** le 2026-11-16 |
 | 2. Signalements et modération (DSA) | **terminé et fusionné dans `main`** le 2026-11-16 (décisions 21 à 31) |
 | 3. Marketplace | **terminé et fusionné dans `main`** le 2026-11-17 (décisions 36 à 51) ; reste hors du code : validations du juriste et de l'expert-comptable |
-| 4. Rendez-vous et agenda | plan validé le 2026-11-17 (décisions 52 à 59), **en cours sur `feature/rendez-vous`** |
+| 4. Rendez-vous et agenda | **codé sur `feature/rendez-vous`** le 2026-11-17 (décisions 52 à 59) ; reste la validation du juriste, puis la fusion dans `main` |
 | 5 à 9 | à planifier |
 | 10. Billing | plan validé dans son principe le 2026-11-16 ; développé à la fin du backend, juste avant le durcissement |
 | 11. Durcissement avant la bêta | à planifier |
@@ -221,6 +221,21 @@ valider : `docs/v1/appointments-rules.md`)
   annulation et report ; page publique ; emails et rappels ; `.ics` ; agenda unifié et
   abonnement ; signalement, suppression, purge, export interne ; tests de sécurité ;
   démonstration ; documentation finale.
+
+**Réalisé** (2026-11-17) : tout le plan ci-dessus, avec les précisions de l'utilisateur (limite
+des propositions de créneau du prestataire : 3 par relation et 30 au total ; `.ics` sans lieu
+joint à la confirmation ; classe interne `AppointmentsPersonalData` ; tests de libération des
+créneaux après annulation, refus, expiration, report accepté et refusé, index unique compris).
+Toutes les routes sont dans `AuthorizationMatrixTest` et `AppointmentsAuthorizationTest` ; la
+page de réservation publique dans `RestrictionSurfacesTest`. Limite mémoire des tests portée à
+1 Go. Double réservation simultanée : testée par l'index unique sur tous les moteurs et par la
+présence du verrou `FOR UPDATE` sur MySQL et MariaDB (la suite tourne dans une transaction par
+test : pas de test à deux processus).
+
+**Reste hors du code** : validation des points R1 à R11 de `docs/v1/appointments-rules.md`
+(juriste) ; clauses des CGU (page de réservation Premium, annulation) et politique de
+confidentialité (tableau de SECURITY.md) ; surveiller le quota d'emails Resend (deux
+confirmations et au moins deux rappels par rendez-vous confirmé).
 
 ## Lot 5 — Workspaces et onboarding
 
