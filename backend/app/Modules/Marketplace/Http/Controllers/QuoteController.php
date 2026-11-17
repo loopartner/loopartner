@@ -19,6 +19,8 @@ use App\Modules\Marketplace\Http\Requests\StoreQuoteRequest;
 use App\Modules\Marketplace\Http\Requests\UpdateQuoteRequest;
 use App\Modules\Marketplace\Http\Resources\QuoteResource;
 use App\Modules\Marketplace\Models\Quote;
+use App\Modules\Marketplace\Support\QuotePdf;
+use App\Support\Locale;
 use App\Support\Pagination;
 use App\Support\SecurityLog;
 use Illuminate\Http\JsonResponse;
@@ -125,6 +127,31 @@ class QuoteController extends Controller
         $data = $request->validated();
 
         return new QuoteResource($declineQuote->handle($request->quote(), $data)->load('lines'));
+    }
+
+    /**
+     * PDF d'un devis envoyé, pour ses deux parties (gratuit, décision 43). Un brouillon n'a
+     * pas de PDF (409) : il n'a ni numéro ni contenu figé.
+     */
+    public function pdf(Request $request, string $uuid, QuotePdf $quotePdf): Response
+    {
+        $quote = $this->findQuote($uuid);
+        Gate::authorize('view', $quote);
+
+        if ($quote->status === QuoteStatus::Draft) {
+            throw new ConflictHttpException('Un brouillon n\'a pas de PDF : envoyez d\'abord le devis.');
+        }
+
+        abort_if($quote->moderation_restricted_at !== null && ! $quote->isProvider($this->user($request)), 404, 'Devis introuvable.');
+
+        $pdf = $quotePdf->render($quote->load('lines'), Locale::fromRequest($request));
+        SecurityLog::record('marketplace.quote_pdf_downloaded', ['quote' => $quote->uuid]);
+
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'.QuotePdf::filename($quote).'"',
+            'Cache-Control' => 'private, no-store',
+        ]);
     }
 
     /**

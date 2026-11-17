@@ -57,9 +57,13 @@ $provider = [
         // Projets visibles seulement après la fenêtre d'accès anticipé
         // (config/directory.php, early_access_hours ; décision 44).
         'directory.project_early_access' => false,
+        // Devis PDF personnalisés (logo et mentions, décisions 35 et 43) ; le PDF standard
+        // reste gratuit.
+        'marketplace.quote_branding' => false,
     ],
     'premium' => [
         'directory.project_early_access' => true,
+        'marketplace.quote_branding' => true,
     ],
 ];
 

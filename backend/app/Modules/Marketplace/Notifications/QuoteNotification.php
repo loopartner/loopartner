@@ -5,6 +5,7 @@ namespace App\Modules\Marketplace\Notifications;
 use App\Models\User;
 use App\Modules\Marketplace\Enums\QuoteNotice;
 use App\Modules\Marketplace\Models\Quote;
+use App\Modules\Marketplace\Support\QuotePdf;
 use App\Support\Locale;
 use App\Support\Notifications\CategorizedNotification;
 use Illuminate\Bus\Queueable;
@@ -18,7 +19,7 @@ use Illuminate\Notifications\Notification;
  *
  * Contenu : le numéro du devis et un lien vers le frontend ; jamais de montant, de ligne, de
  * nom ni de titre de projet (décision 46). La confirmation d'acceptation joint le PDF du devis
- * accepté (PdfAttachment, ajouté avec le module PDF).
+ * accepté, généré au moment de l'envoi (support durable même sans accès au compte).
  *
  * Le devis passe dans la file d'attente par son seul identifiant : s'il a disparu, l'email est
  * abandonné.
@@ -73,6 +74,11 @@ class QuoteNotification extends Notification implements CategorizedNotification,
 
         if ($this->notice->mentionsContract()) {
             $mail->line($common['contract']);
+        }
+
+        if ($this->notice->attachesPdf()) {
+            $quote = $this->quote->load('lines');
+            $mail->attachData(app(QuotePdf::class)->render($quote, $locale), QuotePdf::filename($quote), ['mime' => 'application/pdf']);
         }
 
         return $mail

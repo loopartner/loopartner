@@ -3,6 +3,7 @@
 namespace App\Modules\Marketplace\Actions;
 
 use App\Models\User;
+use App\Modules\Accounts\Actions\GetEntitlements;
 use App\Modules\Marketplace\Enums\QuoteNotice;
 use App\Modules\Marketplace\Enums\QuoteStatus;
 use App\Modules\Marketplace\Models\Quote;
@@ -34,7 +35,7 @@ use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
  */
 class SendQuote
 {
-    public function __construct(private QuoteGuards $guards) {}
+    public function __construct(private QuoteGuards $guards, private GetEntitlements $entitlements) {}
 
     public function handle(User $provider, Quote $quote): Quote
     {
@@ -45,8 +46,9 @@ class SendQuote
         $this->guards->matchRequest($provider, id: $quote->match_request_id);
         $seller = $this->guards->seller($provider, $quote->client_kind);
         $rates = $this->guards->vatRates($seller, now());
+        $branded = $this->entitlements->handle($provider)->allows('marketplace.quote_branding');
 
-        $quote = DB::transaction(function () use ($quote, $seller, $rates): Quote {
+        $quote = DB::transaction(function () use ($quote, $seller, $rates, $branded): Quote {
             $seller = SellerProfile::query()->whereKey($seller->id)->lockForUpdate()->firstOrFail();
             $quote = Quote::query()->with('lines')->whereKey($quote->id)->lockForUpdate()->firstOrFail();
 
@@ -85,7 +87,11 @@ class SendQuote
 
             $quote->forceFill([
                 'number' => $quote->number ?? self::nextNumber($seller),
-                'issuer_snapshot' => QuoteDocument::issuer($seller),
+                // Personnalisation Premium figée à l'envoi : logo et mentions du prestataire.
+                'issuer_snapshot' => [
+                    ...QuoteDocument::issuer($seller),
+                    'branding' => $branded ? ['logo' => true, 'footer' => $seller->quote_footer] : null,
+                ],
                 'total_ht_cents' => $totals['total_ht_cents'],
                 'total_vat_cents' => $totals['total_vat_cents'],
                 'total_ttc_cents' => $totals['total_ttc_cents'],

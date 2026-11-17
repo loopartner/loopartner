@@ -74,6 +74,7 @@ describe('GET /me/entitlements', function (): void {
                 'compliance.calendar_feed' => true,
                 'compliance.export' => true,
                 'directory.project_early_access' => true,
+                'marketplace.quote_branding' => true,
             ]);
     });
 
