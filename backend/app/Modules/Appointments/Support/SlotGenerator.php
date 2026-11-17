@@ -26,7 +26,7 @@ use Carbon\CarbonImmutable;
  * Le même calcul sert à l'affichage et au contrôle d'une réservation (sous le verrou du
  * calendrier) : un créneau réservable est exactement un créneau affiché.
  */
-final class SlotGenerator
+class SlotGenerator
 {
     /**
      * @return list<array{starts_at: CarbonImmutable, ends_at: CarbonImmutable}>

@@ -2,18 +2,21 @@
 
 namespace App\Modules\Appointments\Http\Requests;
 
+use App\Modules\Appointments\Models\Calendar;
+use Illuminate\Auth\Access\Response;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Gate;
 
 /**
- * Créneaux demandés (aperçu du prestataire, relation, page publique) : type (uuid) et
- * journées locales du calendrier "AAAA-MM-JJ", 31 jours au plus ; par défaut les 7 prochains
- * jours. L'autorisation est vérifiée par le contrôleur, selon la route.
+ * GET /me/appointments/slots : aperçu des créneaux du prestataire connecté pour un de ses
+ * types (uuid), journées locales du calendrier "AAAA-MM-JJ", 31 jours au plus ; par défaut les
+ * 7 prochains jours. Prestataires seulement (403), vérifié avant la validation.
  */
 class SlotRangeRequest extends FormRequest
 {
-    public function authorize(): bool
+    public function authorize(): Response
     {
-        return true;
+        return Gate::inspect('manage', Calendar::class);
     }
 
     /**
