@@ -60,6 +60,12 @@ Route::middleware(['auth:sanctum', 'verified'])
             Route::post('{uuid}/withdraw', [QuoteController::class, 'withdraw'])->whereUuid('uuid')->name('withdraw');
         });
 
+        Route::middleware('throttle:quote-decisions')->group(function (): void {
+            Route::post('{uuid}/accept', [QuoteController::class, 'accept'])->whereUuid('uuid')->name('accept');
+            Route::post('{uuid}/decline', [QuoteController::class, 'decline'])->whereUuid('uuid')->name('decline');
+            Route::post('{uuid}/withdrawal', [QuoteController::class, 'withdrawal'])->whereUuid('uuid')->name('withdrawal');
+        });
+
         Route::post('{uuid}/send', [QuoteController::class, 'send'])
             ->whereUuid('uuid')
             ->middleware('throttle:quote-sends')

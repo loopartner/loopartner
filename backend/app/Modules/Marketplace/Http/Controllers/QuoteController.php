@@ -4,11 +4,16 @@ namespace App\Modules\Marketplace\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Modules\Marketplace\Actions\AcceptQuote;
+use App\Modules\Marketplace\Actions\DeclineQuote;
+use App\Modules\Marketplace\Actions\ExerciseQuoteWithdrawal;
 use App\Modules\Marketplace\Actions\ReviseQuote;
 use App\Modules\Marketplace\Actions\SaveQuoteDraft;
 use App\Modules\Marketplace\Actions\SendQuote;
 use App\Modules\Marketplace\Actions\WithdrawQuote;
 use App\Modules\Marketplace\Enums\QuoteStatus;
+use App\Modules\Marketplace\Http\Requests\AcceptQuoteRequest;
+use App\Modules\Marketplace\Http\Requests\DeclineQuoteRequest;
 use App\Modules\Marketplace\Http\Requests\ListQuotesRequest;
 use App\Modules\Marketplace\Http\Requests\StoreQuoteRequest;
 use App\Modules\Marketplace\Http\Requests\UpdateQuoteRequest;
@@ -104,6 +109,34 @@ class QuoteController extends Controller
         Gate::authorize('manage', $quote);
 
         return new QuoteResource($withdrawQuote->handle($quote)->load('lines'));
+    }
+
+    public function accept(AcceptQuoteRequest $request, AcceptQuote $acceptQuote): QuoteResource
+    {
+        /** @var array{content_hash: string, express_execution?: bool, certifications?: list<string>} $data */
+        $data = $request->validated();
+
+        return new QuoteResource($acceptQuote->handle($this->user($request), $request->quote(), $data, $request)->load('lines'));
+    }
+
+    public function decline(DeclineQuoteRequest $request, DeclineQuote $declineQuote): QuoteResource
+    {
+        /** @var array{reason?: string|null, comment?: string|null} $data */
+        $data = $request->validated();
+
+        return new QuoteResource($declineQuote->handle($request->quote(), $data)->load('lines'));
+    }
+
+    /**
+     * Rétractation d'un consommateur (fonction de rétractation en ligne, décision 42).
+     */
+    public function withdrawal(Request $request, string $uuid, ExerciseQuoteWithdrawal $exerciseWithdrawal): QuoteResource
+    {
+        $quote = $this->findQuote($uuid);
+        Gate::authorize('respond', $quote);
+        $request->validate(['confirm' => ['required', 'accepted']]);
+
+        return new QuoteResource($exerciseWithdrawal->handle($quote)->load('lines'));
     }
 
     /**
