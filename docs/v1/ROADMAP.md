@@ -31,8 +31,9 @@ de nouveaux paquets et ce que les utilisateurs voient ou subissent attendent une
 | 0. Stabiliser Compliance | **terminé et fusionné dans `main`** le 2026-11-16 (avec la correction des noms d'index, `8e12edb`) |
 | 1. Socle transverse | **terminé et fusionné dans `main`** le 2026-11-16 |
 | 2. Signalements et modération (DSA) | **terminé et fusionné dans `main`** le 2026-11-16 (décisions 21 à 31) |
-| 3. Marketplace | **codé sur `feature/marketplace`** le 2026-11-17 (décisions 36 à 50), contrôles verts ; reste la validation du juriste et de l'expert-comptable, puis la fusion dans `main` |
-| 4 à 9 | à planifier |
+| 3. Marketplace | **terminé et fusionné dans `main`** le 2026-11-17 (décisions 36 à 51) ; reste hors du code : validations du juriste et de l'expert-comptable |
+| 4. Rendez-vous et agenda | plan validé le 2026-11-17 (décisions 52 à 59), **en cours sur `feature/rendez-vous`** |
+| 5 à 9 | à planifier |
 | 10. Billing | plan validé dans son principe le 2026-11-16 ; développé à la fin du backend, juste avant le durcissement |
 | 11. Durcissement avant la bêta | à planifier |
 
@@ -182,6 +183,44 @@ Rendez-vous natifs (créneaux, confirmation, annulation, rappels, `.ics`) ; agen
 **Critères d'acceptation**
 - Aucun créneau réservé deux fois, même en cas de demandes simultanées.
 - L'abonnement ne contient aucune donnée privée au-delà des titres et des dates.
+
+**Plan détaillé** (validé le 2026-11-17 ; décisions 52 à 59 ; sources, textes et points à faire
+valider : `docs/v1/appointments-rules.md`)
+
+- **Module `Appointments`** (ajouté au test d'architecture) ; briques du noyau `Agenda`
+  (contrat `AgendaSource`, adaptateurs Appointments, Events et Compliance), `LocalTime` (heure
+  locale, trous et doublons d'heure) et `FeedToken` (jeton d'abonnement, Compliance lui délègue).
+- **Tables** : `appointment_calendars` (une par prestataire, ligne verrouillée à chaque
+  réservation), `appointment_types`, `appointment_availability_rules` (heure locale),
+  `appointment_availability_exceptions`, `appointments` (cascade depuis `match_requests`),
+  `appointment_slot_holds` (`slot_key` unique), `appointment_notes` (chiffrées, signalables),
+  `appointment_reminders` (réservation avant l'envoi), `agenda_feeds` (noyau).
+- **Endpoints** : réglages, types, plages, exceptions et aperçu des créneaux du prestataire ;
+  réservation et proposition dans une relation acceptée (`/me/match-requests/{uuid}/…`) ; page
+  publique Premium (`/providers/{slug}/booking`, `/providers/{slug}/appointments`) ;
+  `/me/appointments` (liste, détail, confirmation, refus, annulation, report, `.ics`,
+  signalement d'une note) ; agenda unifié `GET /me/agenda` ; abonnement unique
+  `/me/agenda/feed` et `GET /agenda/{token}.ics` (titres et dates seulement).
+- **Double réservation** : verrou du calendrier puis index unique, 409 `slot_unavailable` ;
+  créneaux libérés à l'annulation, au refus, à l'expiration et au report (testés, index compris) ;
+  test à deux connexions sur MariaDB et MySQL.
+- **Fuseau et changements d'heure** : plages en heure locale (Europe/Paris par défaut), créneaux
+  en temps réel ; testés autour des changements d'heure de 2026 et 2027.
+- **Droits** (`config/entitlements.php`, prestataire) : `appointments.public_booking_page`,
+  `active_types`, `weekly_ranges`, `upcoming_exceptions`, `horizon_days`,
+  `upcoming_appointments`, `reminder_offsets`, `max_reminder_offsets` (décision 54).
+- **Emails** : `appointments.bookings` (obligatoire, `.ics` joint à la confirmation) et
+  `appointments.reminders` (facultative).
+- **Tâches** : `appointments:send-reminders` (toutes les 5 minutes), `appointments:expire`
+  (toutes les 15 minutes), `appointments:prune` (04:45).
+- **Signalement** : adaptateurs `appointment_type` (public) et `appointment_note` (privé).
+- **Suppression de compte** (`ForgetUserAppointments`), minimisation (décision 57), classe interne
+  `AppointmentsPersonalData` pour l'export du lot 11 (décision 59).
+- **Paquet** : aucun (`App\Support\Calendar\Ics` existant).
+- **Commits** : documentation ; noyau ; Directory ; disponibilités et créneaux ; réservation ;
+  annulation et report ; page publique ; emails et rappels ; `.ics` ; agenda unifié et
+  abonnement ; signalement, suppression, purge, export interne ; tests de sécurité ;
+  démonstration ; documentation finale.
 
 ## Lot 5 — Workspaces et onboarding
 

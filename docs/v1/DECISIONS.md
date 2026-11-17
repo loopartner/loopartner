@@ -329,6 +329,37 @@ Décisions techniques : copie en base plutôt que fichier sur un disque privé (
 la ligne, sans code de nettoyage, et n'est servable par aucune URL) ; limite de taille choisie
 sous `max_allowed_packet` (souvent 1 Mo sur XAMPP, parfois limité chez l'hébergeur).
 
+## Décisions du lot 4 : rendez-vous et agenda (validées le 2026-11-17)
+
+Plan validé avec les recommandations 1 à 7 et les précisions de l'utilisateur. Sources
+officielles consultées, textes et points à faire valider : `docs/v1/appointments-rules.md`.
+
+| # | Sujet | Décision |
+|---|---|---|
+| 52 | Qui réserve chez qui | Seuls les **prestataires** (email vérifié, profil publié avec une catégorie) publient des disponibilités. **Voie 1 (tous les prestataires, gratuite)** : dans une **demande de mise en relation acceptée**, le porteur de projet réserve un créneau (confirmé tout de suite si le type est en confirmation automatique, sinon à confirmer par le prestataire) ou le prestataire propose un créneau que le client confirme. **Voie 2 (Premium du prestataire)** : **page de réservation publique** sur son profil ; tout particulier ou entrepreneur avec un email vérifié réserve un type public en écrivant un motif, ce qui envoie en même temps une **demande de contact Directory** (mêmes limites et blocages) ; la **confirmation du prestataire est obligatoire** : elle accepte la demande (conversation ouverte, nom du client révélé), le refus la refuse, l'expiration la fait expirer, l'annulation par le client la retire. Déjà en relation acceptée : 409 (réserver depuis la relation) ; demande en attente : 409. Blocage : nouvelles réservations et reports refusés (403), les rendez-vous existants restent annulables. Pas de lien automatique avec les devis en V1 (même demande de mise en relation). |
+| 53 | Ce que chaque partie voit | Visiteur de la page publique : types publics (titre, description, durée, mode de lieu) et heures de début libres, sans distinguer un créneau réservé d'un créneau fermé. Client : résumé public du prestataire, type, dates ; le lieu complet (adresse du prestataire, lien de visio) seulement une fois confirmé. Prestataire : avant confirmation d'une réservation de la page publique, le type de compte, le pays et le motif du client, **jamais son nom** ; après, son nom, sa note et l'adresse ou le téléphone qu'il a donnés si le mode l'exige. Jamais d'email, de `user_id` ni de téléphone personnel du prestataire ; compte supprimé : `{"deleted": true}` ; admins : 404. |
+| 54 | Quotas (prestataire, `config/entitlements.php`) | Gratuit / Premium : page publique non / oui ; types réservables 2 / 10 ; plages hebdomadaires 10 / 40 ; exceptions à venir 20 / 100 ; horizon de réservation 30 / 90 jours ; rendez-vous à venir (confirmés et en attente) 30 / 200 ; rappels : un délai (24 h) / jusqu'à deux parmi 2 h, 24 h et 48 h. **Clients** (tous rôles) : 5 demandes en attente, 20 rendez-vous à venir, 3 rendez-vous à venir par relation. **Prestataire** (précision du 2026-11-17) : au plus **3 propositions de créneau en attente par relation** et **30 propositions en attente au total** (valeur alignée sur la limite quotidienne `appointment-bookings`). **Fin du Premium** : rien n'est supprimé, les rendez-vous confirmés sont honorés ; la page publique répond 404, seuls les premiers types (dans l'ordre choisi) restent réservables, les nouvelles réservations suivent l'horizon et les rappels gratuits. |
+| 55 | Annulation et report | Annulation par chaque partie **jusqu'au début**, sans frais ni pénalité, motif en liste fermée (`schedule_conflict`, `no_longer_needed`, `other`) et message facultatif (signalable). **Report** : chaque partie propose un nouveau créneau, retenu jusqu'à la réponse de l'autre ; accepté, le rendez-vous est déplacé (même uuid, version + 1) ; refusé, l'original reste ; le client qui se reporte sur un type en confirmation automatique est déplacé directement ; un report en attente à la fois, 3 reports au plus. Demande en attente : expire **48 heures** après la demande, ou plus tôt au délai de prévenance avant le début. Aucun compteur d'annulations ni marquage « non honoré ». |
+| 56 | Emails | Catégorie **obligatoire** `appointments.bookings` (demande, proposition, confirmation, refus, annulation, report, expiration, pour les deux parties) et catégorie **facultative** `appointments.reminders` (rappels, aux deux parties). Contenu : titre du type et date dans le fuseau du destinataire ; jamais de note, d'adresse, de téléphone, de lien de visio ni de nom. **Un `.ics` (titre et dates seulement, sans lieu ni lien) est joint à l'email de confirmation** (et à celui d'un report accepté). L'abonnement au calendrier de Compliance est **conservé** à côté de l'abonnement unique. |
+| 57 | Durées de conservation | Lieu (adresse, téléphone, lien de visio) et notes libres : effacés **3 mois** après la date du rendez-vous ou sa clôture. Rendez-vous refusés, annulés ou expirés : supprimés **12 mois** après ce changement. Rendez-vous passés (dates, type, statut) : supprimés **24 mois** après leur date, ou avant avec leur conversation (clé étrangère en cascade). Traces des rappels et exceptions passées : **3 mois**. Réglages, types, plages et abonnement à l'agenda : tant que le compte existe. À reporter dans la politique de confidentialité. |
+| 58 | Note libre | Facultative, **500 caractères** au plus (motif d'une réservation de la page publique : 20 à 500), texte brut, avec un avertissement près du champ : « n'indiquez pas d'information de santé ni d'autre donnée sensible » (texte à faire valider par le juriste ; recommandation de la CNIL d'encadrer les zones de commentaires libres). |
+| 59 | Export RGPD général | Placé au **lot 11** (durcissement avant la bêta) : contrat du noyau `PersonalDataSource` (un adaptateur par module), `GET /me/export` en libre-service, JSON structuré ; l'export Compliance en devient une section. Le lot 4 écrit dès maintenant la classe interne `Appointments\Support\AppointmentsPersonalData` (**non exposée, testée**) et l'inventaire de ses données dans SECURITY.md. |
+
+Décisions techniques du plan (décision 20) : nouveau module `Appointments` ; brique du noyau
+`App\Support\Agenda` (contrat `AgendaSource`, un adaptateur par module déclaré dans
+`config/agenda.php` : Appointments, Events, Compliance) pour l'agenda unifié et l'abonnement
+unique (`agenda_feeds`) ; brique du noyau `App\Support\Time\LocalTime` (heure locale et UTC,
+trou de l'heure d'été avancé à l'instant du changement, heure ambiguë : première occurrence pour
+un début, dernière pour une fin) ; jeton d'abonnement extrait dans `App\Support\Calendar\FeedToken`
+(Compliance lui délègue, comportement inchangé) ; Action publique Directory
+`ManageAppointmentContact` (demande de contact de la page publique, acceptée, refusée, retirée ou
+expirée sans email en double) ; **double réservation impossible** : verrou de la ligne du
+calendrier du prestataire pendant la vérification et l'insertion, plus un index unique
+`slot_key` (calendrier et début UTC) sur les créneaux retenus, traduit en 409
+`slot_unavailable` ; créneaux découpés en temps réel à l'intérieur des plages locales ; rappels
+« 24 h » en durée réelle ; lieu et notes chiffrés en base ; clé étrangère en cascade du
+rendez-vous vers sa demande de mise en relation.
+
 ## Décisions antérieures toujours en vigueur (rappel)
 
 - Compliance, quatre yeux : `compliance.require_distinct_verifier` à **false par défaut** tant que
