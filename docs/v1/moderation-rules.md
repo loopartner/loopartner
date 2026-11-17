@@ -32,7 +32,7 @@ Sources lues le 2026-11-16 :
 | Exposé des motifs | 17 | Oui |
 | Signalement des infractions menaçant la vie ou la sécurité | 18 | Oui (section 6) |
 | Recours interne, organes extrajudiciaires, signaleurs de confiance, abus, transparence | 20 à 28 | Non (art. 19), sauf l'art. 24 §3 ; recours interne appliqué volontairement (décision 21) |
-| Traçabilité des professionnels sur une place de marché | 30 à 32 | Non (art. 29) ; à revoir au lot 3 |
+| Traçabilité des professionnels sur une place de marché | 30 à 32 | Non (art. 29) ; traité au lot 3 (décision 37, `marketplace-rules.md`, point J3) |
 
 **À faire valider par le juriste** : la qualification de plateforme en ligne (dont les projets,
 visibles des seuls prestataires inscrits), le statut de petite entreprise (entreprises liées ou

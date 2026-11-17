@@ -9,7 +9,7 @@ entrepreneurs.
 
 ## V1 2027 : feuille de route et décisions (à lire au début de chaque session)
 
-- **`docs/v1/ROADMAP.md`** : lots 0 à 11 de la V1 commercialisable (Billing est le lot 10, le prochain est le lot 3), avec leurs critères
+- **`docs/v1/ROADMAP.md`** : lots 0 à 11 de la V1 commercialisable (Billing est le lot 10 ; le lot 3 Marketplace est codé sur `feature/marketplace`, validations externes en attente ; le prochain est le lot 4), avec leurs critères
   d'acceptation et leur état. Ne commence jamais un lot sans validation explicite de son plan
   détaillé par l'utilisateur.
 - **`docs/v1/DECISIONS.md`** : décisions produit et techniques validées, datées. Ne les remets pas
@@ -24,7 +24,9 @@ entrepreneurs.
 - `backend/` : API Laravel 13, PHP 8.4. Elle ne sert aucune vue : elle renvoie uniquement du JSON.
 - `frontend/` (à venir, après tous les lots backend) : Next.js et TypeScript, servi sur un autre sous-domaine.
   Il consomme l'API avec des cookies de session.
-- `docs/v1/` : feuille de route et décisions de la V1 (voir ci-dessus).
+- `docs/v1/` : feuille de route et décisions de la V1 (voir ci-dessus), règles de la modération
+  (`moderation-rules.md`), de la facturation (`billing-rules.md`) et de la Marketplace
+  (`marketplace-rules.md`), à faire valider.
 - `.github/workflows/ci.yml` : intégration continue (voir « Qualité »).
 - `SECURITY.md` : signalement des vulnérabilités, principes de sécurité, journal de sécurité et
   vérifications avant chaque mise en production. La liste de contrôle de chaque tâche est la section
@@ -85,15 +87,15 @@ entrepreneurs.
   (05:00), `blog:notify-moderators` (toutes les 5 minutes), `admin-audit:prune` (04:30),
   `compliance:extend-calendars` (01:30), `compliance:prune` (05:30), `compliance:send-reminders`
   (06:00), `compliance:check-rule-coverage` (06:30, actif du 1er octobre au 30 novembre),
-  `moderation:prune` (05:45), `moderation:notify-moderators` (toutes les 5 minutes), puis le
-  worker.
+  `moderation:prune` (05:45), `moderation:notify-moderators` (toutes les 5 minutes),
+  `marketplace:expire-quotes` (chaque heure), `marketplace:prune` (05:15), puis le worker.
 - Toutes les dates sont stockées en **UTC** (`app.timezone = UTC`, connexion MySQL en `+00:00`).
   La conversion vers le fuseau de l'utilisateur se fait à l'affichage, côté frontend.
 
 ## Architecture modulaire
 
 Le code métier vit dans `backend/app/Modules/<Module>/`. Les modules sont : `Accounts`, `Directory`,
-`Events`, `Blog`, `Compliance` et `Moderation`.
+`Events`, `Blog`, `Compliance`, `Moderation` et `Marketplace`.
 
 Chaque module contient :
 
@@ -188,7 +190,9 @@ utilitaires du module), `Console/Commands/` (commandes Artisan du module), `Noti
   DTO), jamais le modèle Eloquent. Actions publiques existantes : `HasPublishedProviderProfile`,
   `FindPublishedProvider` (slug d'un profil publié → `user_id` et résumé public) et
   `GetProviderSummaries` (résumés publics de plusieurs prestataires en une requête : `display_name`,
-  `slug` (null si dépublié), `headline`, `city`, `country`, `logo_url`).
+  `slug` (null si dépublié), `headline`, `city`, `country`, `logo_url`),
+  `PublishedProviderConstraint` (limite une requête d'un autre module aux prestataires au profil
+  publié et non masqué, par sous-requête) et `GetProviderLogo` (média du logo, devis PDF).
 - Événement public `Accounts\Events\AccountDeleting` : envoyé de façon synchrone par `DeleteAccount`,
   dans sa transaction et avant la suppression de la ligne `users`. Les autres modules y traitent les
   données de l'utilisateur (Directory : `ForgetUserMatching` ; Events : `ForgetUserEvents` ;
@@ -234,8 +238,10 @@ utilitaires du module), `Console/Commands/` (commandes Artisan du module), `Noti
   booléen, liste de choix, ou `['config' => 'cle']` (valeur lue à l'appel dans
   `config/blog.php` ou `config/compliance.php` ; une clé inconnue lève une exception, jamais
   « illimité »). Une fonctionnalité absente est fermée. Les noms contiennent un point : ne pas
-  utiliser la notation pointée de `config()` pour une fonctionnalité. Blog (`blog.article_quota`)
-  et Compliance (`compliance.*`) lisent cette grille. Plans en base et paiement : lot Billing.
+  utiliser la notation pointée de `config()` pour une fonctionnalité. Blog (`blog.article_quota`),
+  Compliance (`compliance.*`), Directory (`directory.project_early_access`) et Marketplace
+  (`marketplace.quote_branding`, `marketplace.quote_comparison`,
+  `marketplace.quote_comparison_export`) lisent cette grille. Plans en base et paiement : lot Billing.
 - Données de référence (rôles, catégories) : `ReferenceDataSeeder`, seul seeder à lancer en production :
   `php artisan db:seed --class="Database\Seeders\ReferenceDataSeeder" --force`.
 - Comptes de démonstration créés par `DatabaseSeeder` **uniquement si** `SEED_DEMO_DATA=true`,
@@ -257,7 +263,10 @@ utilitaires du module), `Console/Commands/` (commandes Artisan du module), `Noti
   Suivi administratif (`ComplianceDemoSeeder`, sans aucun email) : règles **fictives** (`is_demo`,
   codes `demo.*`, titres « [Démo] ») ; micro-entreprise de l'entrepreneur avec calendrier, parcours,
   tâche, échéance personnelle et chiffre d'affaires à 85 % d'un seuil ; deux entreprises pour le
-  prestataire premium.
+  prestataire premium. Marketplace (`MarketplaceDemoSeeder`, sans aucun email) : taux de TVA
+  **fictif** (`demo.vat.rate.standard`, `is_demo`), identité professionnelle fictive du
+  prestataire, deux offres publiées, un devis envoyé au particulier dans leur mise en relation
+  acceptée.
 - **Double authentification de l'équipe de démonstration** (obligatoire pour l'équipe) :
   `redacteur@example.com` a aussi un secret fixe, `DatabaseSeeder::DEMO_REDACTEUR_TWO_FACTOR_SECRET`
   (`LOOPARTNERDEMORD`, nom `Loopartner rédacteur (démo)`, codes de secours
@@ -464,11 +473,21 @@ validation). Un participant qui tente l'action de l'autre reçoit 403 ; un état
   conversations orphelines (12), demandes refusées, retirées ou expirées (12). Les signalements
   relèvent de `moderation:prune`.
 - **Actions publiques** (lecture seule, pour d'autres modules) : `IsBlockedBetween` (blocage dans un
-  sens ou dans l'autre) et `GetUserModerationSignals` (nombre de signalements reçus par ses contenus,
-  via `Moderation\Actions\CountNoticesAgainst`, et de blocages subis, sans aucun détail).
+  sens ou dans l'autre), `GetUserModerationSignals` (nombre de signalements reçus par ses contenus,
+  via `Moderation\Actions\CountNoticesAgainst`, et de blocages subis, sans aucun détail),
+  `GetMatchRequestContext` (contexte d'une demande vue par un participant : prestataire, client,
+  rôle du client, projet, acceptée, blocage ; module Marketplace) et `FindOwnProject` (projet de
+  l'utilisateur par son uuid).
 - **Projets masqués par la modération** : scope `browsable()` (en ligne et non masqué) pour la
   consultation et les propositions ; un projet masqué compte toujours dans le plafond de
   publication et ses propositions en attente expirent (`match-requests:expire`).
+- **Accès anticipé** (décisions 33 et 44, `Support/EarlyAccess`) : pendant
+  `directory.early_access_hours` (24, `DIRECTORY_EARLY_ACCESS_HOURS`, `config/directory.php`)
+  après sa publication ou sa republication, un projet n'est visible que des prestataires qui ont
+  `directory.project_early_access` (Premium) : liste, détail, propositions et signalement (404).
+  L'ordre des résultats est le même pour tous. Le porteur voit `early_access_ends_at`.
+  `phpunit.xml` désactive la fenêtre (0) pour le reste de la suite ;
+  `tests/Feature/Directory/EarlyAccessTest.php` la remet à 24.
 
 ## Module Events (agenda d'événements)
 
@@ -652,7 +671,7 @@ l'affiche sur chaque écran. Réglages dans `config/compliance.php` (aucune vale
 et durées dans `config/security.php`.
 
 - **Règles** (`ComplianceRule`, table `compliance_rules`) : par pays, `kind` (`legal_form`,
-  `deadline`, `threshold`, `rate`, `journey`), `code` stable entre versions et années
+  `deadline`, `threshold`, `rate`, `journey`, `vat_rate`), `code` stable entre versions et années
   (`fr.vat.franchise.services.base`), `valid_from`/`valid_until`, `status` (`draft`, `verified`,
   `retired`), `version`, `title`/`summary` traduits, `conditions` et `payload` à **liste fermée**
   de clés reconstruites par le serveur (`Support/RuleContent`), `source_url`/`source_label`,
@@ -777,7 +796,8 @@ art. 18 : `docs/v1/moderation-rules.md` (**à faire valider par le juriste**). R
 - **Contenus signalables** (contrat du noyau `ModerationTarget`, `config/moderation.php`,
   `targets`) : `provider_profile` (slug), `project` (uuid, visible des seuls prestataires qui
   consultent les projets), `event` (slug), `event_announcement` (uuid, visible des inscrits),
-  `article` (slug), `message` et `match_request` (messagerie seulement). Chaque adaptateur vit dans
+  `article` (slug), `offer` (slug), `message`, `match_request` et `quote` (privés : messagerie et
+  page du devis seulement). Chaque adaptateur vit dans
   son module (`Support/…ModerationTarget`) : `findVisible()` (404 si le visiteur ne le voit pas),
   `inspect()`, `restrict()`, `lift()`. **Toute nouvelle page publique de contenu (offres, avis…)
   doit avoir son adaptateur** (`tests/Feature/Moderation/RestrictionSurfacesTest.php`).
@@ -851,6 +871,118 @@ art. 18 : `docs/v1/moderation-rules.md` (**à faire valider par le juriste**). R
   (`moderation_records_months`) ; une restriction en vigueur garde son exposé des motifs.
 - **Non prévu en V1** : suspension de compte (lot 8, décision 28), rapports de transparence et
   base de données de la Commission (non obligatoires pour une petite entreprise).
+
+## Module Marketplace (offres, devis, comparateur)
+
+Offres des prestataires, devis structurés, comparateur de devis et accès anticipé (lot 3,
+décisions 33 et 36 à 50). Réglages dans `config/marketplace.php` (aucun taux de TVA), limites et
+durées dans `config/security.php`. Textes destinés aux utilisateurs, sources consultées et
+**tableau des points à faire valider par le juriste et l'expert-comptable** :
+`docs/v1/marketplace-rules.md`.
+
+- **Identité professionnelle** (`SellerProfile`, table `marketplace_seller_profiles`, une par
+  prestataire ; `GET|PUT /me/seller-profile`, prestataire seul, 403 sinon) : dénomination, forme
+  juridique (`SellerLegalForm`), SIREN, registre (`rcs` + ville du greffe, ou `rne`), capital
+  (exigé pour une société), numéro de TVA, adresse, téléphone, email, assurance, médiateur de la
+  consommation, profession réglementée, CGV, mentions personnalisées (`quote_footer`, Premium).
+  **Chiffrée en base**. En France, SIREN (clé de Luhn) et TVA (clé liée au SIREN) contrôlés dans
+  leur forme seulement (`Rules/Siren`, `Rules/FrenchVatNumber`) ; l'existence sera vérifiée au
+  lot 6, dont les colonnes `registration_*` existent déjà (effacées si le SIREN change).
+  **Autocertification** datée et versionnée (`marketplace.self_certification`, à accepter à chaque
+  enregistrement ; une nouvelle version bloque offres et devis jusqu'à l'acceptation). La
+  réponse annonce `missing_for_offers`, `missing_for_quotes` (`country` hors de
+  `marketplace.countries`, la France en V1) et `missing_for_consumer_quotes` (médiateur). Pas de
+  traçabilité DSA art. 30 complète (dispense art. 29, décision 37).
+- **Offres** (`Offer`, table `marketplace_offers`) : `/me/offers` (liste, création en brouillon,
+  détail, PATCH, suppression, `publish`, `unpublish` ; prestataire ; offre d'autrui : 404).
+  **Publiées sans validation préalable** (décision 39) ; publication : email vérifié et profil
+  prestataire publié (403), identité professionnelle complète (**409
+  `{"message", "code": "seller_profile_incomplete", "missing": [...]}`**), 20 publiées et
+  30 au total (409). Slug calculé à la première publication puis stable. Prix **indicatif TTC
+  saisi par le prestataire** (`pricing_mode` : `fixed`, `from`, `hourly`, `daily`, `on_quote` sans
+  prix ; décision 40). Lecture publique : `GET /offers` (filtres `category` avec sous-catégories,
+  `country`, `city`, `pricing_mode`, `q` ; tri par `published_at`, le même pour tous),
+  `GET /offers/{slug}`, `GET /providers/{slug}/offers` (404 si le profil n'est pas publié).
+  Visible si l'offre est publiée et non masquée **et** si le profil est publié et non masqué
+  (scope `visible()`, Action publique `Accounts\Actions\PublishedProviderConstraint`). Auteur
+  présenté par son profil public et sa **qualité déclarée** (`seller` : `declared_status`
+  `professional`, dénomination, SIREN ; décision 38), jamais ses coordonnées.
+- **Devis** (`Quote`, `QuoteLine`, tables `marketplace_quotes`, `marketplace_quote_lines`) :
+  `/me/quotes` (`auth:sanctum` et `verified`). **Seulement dans une demande de mise en relation
+  acceptée** (décision 36 ; Action publique `Directory\Actions\GetMatchRequestContext`) :
+  demande inconnue 404, porteur de projet 403, demande en attente 409, blocage 403, client
+  supprimé 409. Brouillon (`POST`, `PUT /me/quotes/{uuid}` représentation complète, `DELETE`) :
+  titre, objet, bloc client (`name`, `company_name`, `registration_number`, `address`,
+  `execution_place` obligatoire), validité (1 à 180 jours, 30 par défaut), date de début, durée,
+  conditions de paiement, acompte ou arrhes (`DepositKind`), devis gratuit ou payant,
+  conservation des pièces remplacées, notes, 1 à 100 lignes (`line_type` `QuoteLineType`,
+  désignation, `quantity_milli`, `unit` `QuoteUnit`, `unit_price_cents`, `vat_rate_code`). Un seul
+  brouillon ou devis envoyé à la fois par demande (409), 20 brouillons par prestataire (409).
+  Champs fixés par la plateforme : `prohibited` (422). Requête limitée à 128 Ko (413).
+- **Calcul** (`Support/QuoteCalculator`) : entiers seulement (centimes, millièmes, points de
+  base) ; HT de chaque ligne arrondi au centime, TVA par taux sur la somme HT de ce taux,
+  demi-centime vers le haut, TTC = HT + TVA ; plafonds techniques contre le dépassement de
+  capacité (`marketplace.quotes`). Méthode à faire valider par l'expert-comptable.
+- **TVA** : le code de chaque ligne est celui d'une règle Compliance `vat_rate` **vérifiée** en
+  vigueur dans le pays du prestataire (Action publique `Compliance\Actions\GetVatRates`), sinon
+  422 sur la ligne ; un taux `exclusive` (franchise, autoliquidation) s'applique seul (422).
+  **Sans aucun taux vérifié : 409 `{"code": "vat_rates_unavailable"}`** : aucun devis possible
+  en production avant la vérification des taux par l'expert-comptable (décision 49).
+  `tests/Arch/MarketplaceNoFiscalValuesTest.php` refuse tout décimal ou grand nombre hors
+  plafonds techniques dans le module.
+- **Envoi** (`POST …/send`, `SendQuote`) : conditions revérifiées ; taux du jour copiés dans
+  chaque ligne (code, version, valeur, libellé, mention, certification) ; numéro `D-AAAA-NNNN`
+  par prestataire (sous verrou de son identité ; une nouvelle version garde le numéro) ;
+  identité de l'émetteur copiée (`issuer_snapshot`, avec `branding` si Premium) ; validité
+  jusqu'à la fin du jour (fuseau du pays) ; **`content_hash` (SHA-256 du contenu)** ; le devis
+  envoyé précédent de la demande passe à `superseded`. Statuts `QuoteStatus` : `draft`, `sent`,
+  `accepted`, `declined`, `withdrawn`, `expired`, `superseded`. Nouvelle version
+  (`POST …/revise`, depuis envoyé, refusé ou expiré, 201), retrait par le prestataire
+  (`POST …/withdraw`, envoyé seulement).
+- **Réponses du client** : `POST …/accept` (`content_hash` lu, sinon 409 ; `accept` ;
+  `certifications` = codes des taux qui demandent une attestation, toutes et seulement elles, 422
+  sinon ; `express_execution` pour un consommateur, 422 pour un professionnel ; validité dépassée
+  ou devis masqué : 409 ; preuve : date, IP, cases cochées ; décision 41), `POST …/decline`
+  (`reason` `DeclineReason`, `comment`), `POST …/withdrawal` (`confirm` ; consommateur,
+  `marketplace.withdrawal_days` = 14 jours après l'acceptation, une fois ; décision 42).
+- **Visibilité** (`QuotePolicy`) : le prestataire voit son devis à tout statut, le client une
+  fois envoyé ; **tout autre utilisateur reçoit 404, admins compris** ; une partie qui tente
+  l'action de l'autre : 403. `GET /me/quotes?box=sent|received`. La réponse
+  (`QuoteResource`, `viewer_role`) donne aussi `mentions` (TVA, certifications, droit de
+  rétractation, « Loopartner n'est pas partie au contrat »). Aucun id interne ; seules les
+  coordonnées professionnelles copiées dans le devis apparaissent.
+- **PDF** (`GET /me/quotes/{uuid}/pdf`, **gratuit pour les deux parties**, décision 43 ; brouillon
+  409) : `Support/QuotePdf` construit un HTML échappé à partir du contenu figé, converti par
+  `Support/Pdf` (paquet `dompdf/dompdf`, décision 48 : ressources distantes, PHP et JavaScript
+  désactivés, `data://` seul, chroot sur les polices, cache dans `storage/framework/cache/dompdf`).
+  Premium (`marketplace.quote_branding`) : logo du profil (Action publique
+  `Accounts\Actions\GetProviderLogo`, converti en PNG) et mentions personnalisées, **figés à
+  l'envoi**. Aucune vue n'est servie par l'API.
+- **Comparateur** (`ProjectQuotesController`, `Support/QuoteComparison`) :
+  `GET /me/projects/{uuid}/quotes` (gratuit, paginé), `…/quotes/comparison` et
+  `…/comparison.pdf` (Premium : `marketplace.quote_comparison`, `quote_comparison_export` ;
+  **403 `{"code": "premium_required", "feature"}`**) ; projet d'autrui : 404 (Action publique
+  `Directory\Actions\FindOwnProject`). Devis envoyés ou acceptés, non masqués, 10 au plus, dans
+  l'ordre de réception. Chaque constat : `rule`, `severity` (`info`, `attention`), `quote`
+  (null : constat global), `message`, `reason` (le calcul), `question`. Règles et seuils dans
+  `marketplace.comparison.rules` ; `disclaimer` dans la réponse. Pas d'IA (lot 5 : facultative).
+- **Accès anticipé** : voir « Module Directory (projets) ».
+- **Signalement** : adaptateur public `offer` (slug) et adaptateur privé `quote` (uuid, signalé
+  par le client : `POST /me/quotes/{uuid}/report`, `category` de `config/moderation.php`,
+  `comment`, 409 si déjà en cours ; décision 45). Devis masqué : contenu caché au client, ni
+  acceptation ni PDF.
+- **Emails** (`QuoteNotification`, textes dans `Enums/QuoteNotice`, file après commit, langue du
+  destinataire) : devis reçu, refusé (`marketplace.quotes`, facultative) ; acceptation (aux deux
+  parties, **PDF du devis accepté joint**, généré à l'envoi) et rétractation
+  (`marketplace.quote_decisions`, obligatoire). Numéro du devis seulement : jamais de montant,
+  de ligne, de nom ni de titre de projet (décision 46).
+- **Tâches** : `marketplace:expire-quotes` (chaque heure), `marketplace:prune` (05:15 :
+  brouillons 12 mois sans modification, devis clos 12 mois, `config/security.php`, `retention`).
+  Les devis acceptés disparaissent avec leur conversation (clé étrangère en cascade vers
+  `match_requests`, décision 47).
+- **Suppression de compte** (`ForgetUserMarketplace`, sur `AccountDeleting`) : offres, identité
+  et devis non acceptés supprimés ; devis acceptés conservés pour l'autre partie (lien du compte
+  à null) jusqu'à la purge de la conversation orpheline.
 
 ## Catégories de services (noyau)
 
@@ -971,8 +1103,8 @@ CGU (`terms`) et politique de confidentialité (`privacy`) versionnées (décisi
   Facultatives : `directory.match_requests`, `directory.messages`, `events.reminders`,
   `events.announcements`, `events.moderation_digest`, `blog.moderation_digest`,
   `compliance.reminders` (en plus de `emails_enabled` du module), `compliance.rule_coverage`,
-  `moderation.digest`. Obligatoires aussi : `moderation.notices`, `moderation.decisions`,
-  `moderation.urgent_alerts`.
+  `moderation.digest`, `marketplace.quotes`. Obligatoires aussi : `moderation.notices`,
+  `moderation.decisions`, `moderation.urgent_alerts`, `marketplace.quote_decisions`.
 - L'écouteur `App\Listeners\ApplyNotificationPreferences` (événement `NotificationSending`)
   abandonne l'envoi d'une catégorie facultative désactivée, **au moment de l'envoi** (après la
   file d'attente). Tout est activé par défaut : les modules n'ont rien changé à leur `via()`.
@@ -1023,7 +1155,9 @@ Obligatoire pour `admin` et `redacteur` (décision 17, `App\Support\TeamTwoFacto
   `compliance-feed` (30/h par abonnement, 120/h par IP, route publique à jeton),
   `moderation-notices` (5/h et 20/j par IP, 10/j par compte, 5/j par email compté dans
   `SubmitNotice`), `moderation-lookups` (30/h par IP), `moderation-appeals` (5/j),
-  `moderation-admin` (60/h par admin).
+  `moderation-admin` (60/h par admin), `seller-profile-writes` (20/h), `offer-writes` (60/h,
+  300/j), `quote-writes` (120/h, 600/j), `quote-sends` (20/h, 60/j), `quote-decisions` (30/h),
+  `quote-pdfs` (30/h, 200/j, devis et comparaison), `quote-comparisons` (60/h).
 - Règles de validation du texte saisi : `NoHtml` et `NoInvisibleCharacters` (caractères de contrôle
   sauf tabulation et retours à la ligne, contrôles de direction U+202A–202E et U+2066–2069, espace
   de largeur nulle U+200B, marques de direction U+200E et U+200F, U+2060–2064, BOM…), sur **tous**
@@ -1065,12 +1199,20 @@ Obligatoire pour `admin` et `redacteur` (décision 17, `App\Support\TeamTwoFacto
   `moderation.self_moderation_denied`, `moderation.law_enforcement_referred` (autorité),
   `moderation.appeal_submitted`, `moderation.appeal_decided` (issue),
   `moderation.appeal_self_review_denied` (uuids seulement : jamais l'identité ni l'email du
-  signalant, son explication, la copie du contenu, les faits, ni le texte d'un recours).
+  signalant, son explication, la copie du contenu, les faits, ni le texte d'un recours),
+  `marketplace.seller_profile_updated`, `marketplace.offer_published|unpublished|deleted`,
+  `marketplace.quote_sent` (avec `version`), `marketplace.quote_revised`,
+  `marketplace.quote_withdrawn`, `marketplace.quote_draft_deleted`, `marketplace.quote_accepted`,
+  `marketplace.quote_declined` (avec `reason`), `marketplace.quote_withdrawal_exercised`,
+  `marketplace.quote_pdf_downloaded`, `marketplace.comparison_pdf_downloaded`,
+  `marketplace.premium_required` (avec `feature`) (uuids seulement).
   **Jamais le contenu d'un message, d'une demande, d'un commentaire de signalement, la description
   d'un événement, son lien de connexion, le texte d'une annonce, le contenu d'un article, un motif,
   une donnée des inscrits, ni un numéro d'entreprise, un nom d'entreprise, un montant, une note ou
   un jeton du suivi administratif** (tests `MatchingPrivacyTest`, `EventsPrivacyTest`,
-  `BlogInputAndPrivacyTest` et `ComplianceInputAndPrivacyTest`).
+  `BlogInputAndPrivacyTest` et `ComplianceInputAndPrivacyTest`), **ni une identité
+  professionnelle, une ligne, un montant, un titre, un commentaire ou une empreinte d'un devis**
+  (`MarketplacePrivacyTest`).
   Les événements Laravel et Fortify sont journalisés par `App\Listeners\LogSecurityEvents`
   (listeners découverts automatiquement dans `app/Listeners`). Les tests gardent ce journal en
   mémoire (`securityLog()` dans `tests/Pest.php`).
@@ -1172,7 +1314,9 @@ composer security            # composer audit : vulnérabilités connues des dé
   `moderator()`, `asModerator()`, `fromFrontend()`, `articleAuthor()`, `asAuthor()`,
   `articlePayload()`, `articleOf()`, `blogCategory()`, `makePremium()`, `complianceUser()`,
   `verifiedLegalForm()`, `verifiedDeadlineRule()`, `companyPayload()`, `complianceCompanyOf()`,
-  `legalDocumentsInForce()`, `restrictContent()`, `restrictContentWith()`, images…) sont dans
+  `legalDocumentsInForce()`, `restrictContent()`, `restrictContentWith()`, `verifiedVatRate()`,
+  `sellerProfilePayload()`, `marketplaceProvider()`, `offerPayload()`, `publishedOfferOf()`,
+  `acceptedQuoteRequest()`, `quotePayload()`, `sentQuote()`, images…) sont dans
   `tests/Pest.php`. Les fonctions des fichiers de test sont globales : leur nom doit être unique
   dans tout `tests/`. Un test qui fixe l'horloge (`Carbon::setTestNow`) y revient avec
   `travelTo(<date fixe>)`, jamais `travelBack()` (qui revient à l'heure réelle). Une donnée de

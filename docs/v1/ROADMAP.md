@@ -31,7 +31,7 @@ de nouveaux paquets et ce que les utilisateurs voient ou subissent attendent une
 | 0. Stabiliser Compliance | **terminé et fusionné dans `main`** le 2026-11-16 (avec la correction des noms d'index, `8e12edb`) |
 | 1. Socle transverse | **terminé et fusionné dans `main`** le 2026-11-16 |
 | 2. Signalements et modération (DSA) | **terminé et fusionné dans `main`** le 2026-11-16 (décisions 21 à 31) |
-| 3. Marketplace | plan validé le 2026-11-17 (décisions 36 à 50) ; **en cours** sur `feature/marketplace` |
+| 3. Marketplace | **codé sur `feature/marketplace`** le 2026-11-17 (décisions 36 à 50), contrôles verts ; reste la validation du juriste et de l'expert-comptable, puis la fusion dans `main` |
 | 4 à 9 | à planifier |
 | 10. Billing | plan validé dans son principe le 2026-11-16 ; développé à la fin du backend, juste avant le durcissement |
 | 11. Durcissement avant la bêta | à planifier |
@@ -162,6 +162,17 @@ des règles en base. Premium (décision 33) : **comparateur de devis** pour le p
 - **Commits** : Compliance (TVA) ; Directory (accès anticipé) ; identité professionnelle ;
   offres ; devis ; acceptation et emails ; PDF ; comparateur ; signalement, suppression, purge ;
   tests de sécurité ; démonstration ; documentation.
+
+**Réalisé** (2026-11-17) : tout le plan ci-dessus, avec les précisions de l'utilisateur (PDF du
+devis accepté joint à la confirmation, colonnes de la vérification du lot 6 créées, `dompdf/dompdf`
+v3.1.6 installé avec `composer security` avant et après). Toutes les routes sont dans
+`AuthorizationMatrixTest` ; les offres dans `RestrictionSurfacesTest`.
+
+**Reste hors du code** : validation des points J1 à J18 (juriste) et E1 à E10 (expert-comptable)
+de `docs/v1/marketplace-rules.md` ; vérification des taux de TVA 2027 (sans elle, aucun devis
+n'est possible en production) ; rubrique d'information de la place de marché et clauses des CGU
+(accès anticipé, Loopartner non partie au contrat) ; politique de confidentialité ; vérifier sur
+Hostinger les extensions `dom` et `mbstring` et la mémoire disponible pour les PDF.
 
 ## Lot 4 — Rendez-vous et agenda
 

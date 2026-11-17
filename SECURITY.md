@@ -357,6 +357,54 @@ Module Moderation (lot 2, décisions 21 à 31 ; règles et textes à faire valid
 > `MODERATION_CONTACT_EMAIL` et `MODERATION_AUTHORITIES_EMAIL` ; reprendre ce tableau dans la
 > politique de confidentialité.
 
+## Marketplace : offres, devis, données personnelles et durées de conservation
+
+Module Marketplace (lot 3, décisions 36 à 50 ; textes et points à faire valider :
+`docs/v1/marketplace-rules.md`).
+
+- **Identité professionnelle** des prestataires (dénomination, SIREN, adresse, téléphone, email,
+  assurance, médiateur) : **chiffrée en base** (`APP_KEY`), jamais publique en entier (l'offre
+  n'affiche que la qualité déclarée, la dénomination et le SIREN), copiée dans chaque devis
+  envoyé (mentions obligatoires) et visible du seul client de ce devis. Le SIREN est contrôlé dans
+  sa forme seulement.
+- **Devis** : visibles de leurs deux parties seulement (404 pour tout autre utilisateur,
+  administrateurs compris). Le contenu est figé à l'envoi avec une empreinte SHA-256 ; le client
+  n'accepte que le contenu qu'il a lu (409 sinon). Preuve d'acceptation : date, adresse IP, cases
+  cochées. Identités de l'émetteur et du client chiffrées en base.
+- **Taux de TVA** : jamais dans le code ; règles vérifiées par l'expert-comptable (module
+  Compliance), copiées dans chaque ligne à l'envoi. Sans taux vérifié, aucun devis possible.
+- **PDF** : générés en mémoire par `dompdf/dompdf` (version fixée dans `composer.lock`), sans
+  ressource distante, sans PHP ni JavaScript, à partir d'un HTML construit par l'application dont
+  tout texte saisi est échappé ; jamais enregistrés ; `Cache-Control: private, no-store`. Le PDF
+  du devis accepté est joint à l'email de confirmation des deux parties (support durable).
+- **Emails** : numéro du devis seulement, ni montant, ni ligne, ni nom, ni titre de projet.
+- **Signalement** : offres (formulaire public) et devis (par le client) rejoignent le module
+  Moderation ; un devis masqué n'est plus lisible, acceptable ni téléchargeable par le client.
+- **Journal security** : uuids, version, motif en liste fermée et fonctionnalité Premium
+  seulement ; jamais une identité professionnelle, un montant, une ligne, un titre, un
+  commentaire ni une empreinte (`tests/Feature/Security/MarketplacePrivacyTest.php`).
+- **Limites de débit** : `seller-profile-writes`, `offer-writes`, `quote-writes`, `quote-sends`,
+  `quote-decisions`, `quote-pdfs`, `quote-comparisons` (`config/security.php`) ; corps des
+  requêtes de devis limité à 128 Ko.
+
+| Données | Conservation | Ensuite |
+|---|---|---|
+| Identité professionnelle, offres | tant que le compte existe | supprimées avec le compte |
+| Brouillon de devis | 12 mois sans modification | supprimé |
+| Devis refusé, retiré, expiré ou remplacé | 12 mois après ce changement | supprimé |
+| Devis accepté et preuve d'acceptation (date, IP, cases cochées) | tant que la conversation existe ; 12 mois après la suppression d'un des deux comptes | supprimé avec la conversation |
+
+- **Suppression de compte** : offres, identité professionnelle et devis non acceptés sont
+  supprimés ; un devis accepté reste lisible par l'autre partie (c'est son contrat), sans lien
+  avec le compte supprimé, jusqu'à la purge de la conversation.
+- **Réglage** : durées dans `backend/config/security.php` (`retention.marketplace_*`),
+  appliquées chaque nuit par `marketplace:prune`.
+
+> **À faire avant l'ouverture au public** : faire valider `docs/v1/marketplace-rules.md` (juriste
+> et expert-comptable) ; faire vérifier les taux de TVA 2027 ; rédiger la rubrique d'information
+> de la place de marché et les clauses des CGU (accès anticipé, Loopartner non partie au contrat) ;
+> reprendre ce tableau dans la politique de confidentialité.
+
 ## Vérifications avant chaque mise en production
 
 Depuis `backend/`, sur le serveur de production :
@@ -383,7 +431,8 @@ Depuis `backend/`, sur le serveur de production :
    contient ses plages d'adresses (sinon l'IP des clients et le HTTPS sont mal détectés). Le site
    n'est accessible qu'en HTTPS (redirection HTTP vers HTTPS au niveau de l'hébergement).
 6. **PHP** : `upload_max_filesize` et `post_max_size` d'au moins 8 Mo, GD avec WebP, extensions
-   `exif` et `fileinfo`, `zend.exception_ignore_args = On`, `expose_php = Off`.
+   `exif`, `fileinfo`, `dom` et `mbstring` (PDF des devis), `storage/framework/cache` accessible en
+   écriture (cache des polices du PDF), `zend.exception_ignore_args = On`, `expose_php = Off`.
 7. **Fichiers** : `backend/.env` non accessible depuis le web (seul `backend/public` est exposé),
    `APP_KEY` propre à la production et sauvegardée hors du serveur (voir « `APP_KEY` : sauvegarde
    et rotation » : sans elle, les données chiffrées sont perdues).
