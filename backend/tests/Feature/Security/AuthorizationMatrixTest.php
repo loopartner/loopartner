@@ -278,6 +278,12 @@ const API_ROUTES = [
     'POST api/v1/me/appointments/{uuid}/decline-change' => 'auth',
     'GET api/v1/providers/{slug}/booking' => 'public',
     'POST api/v1/providers/{slug}/appointments' => 'auth',
+    // Agenda unifié et abonnement unique (noyau).
+    'GET api/v1/me/agenda' => 'auth',
+    'GET api/v1/me/agenda/feed' => 'auth',
+    'POST api/v1/me/agenda/feed' => 'auth',
+    'DELETE api/v1/me/agenda/feed' => 'auth',
+    'GET api/v1/agenda/{token}.ics' => 'public',
 ];
 
 /**

@@ -39,6 +39,7 @@ const NON_CONTENT_ROUTES = [
     'api/v1/compliance/countries/{country}/questionnaire',
     'api/v1/compliance/countries/{country}/journeys',
     'api/v1/compliance/calendar/{token}.ics',
+    'api/v1/agenda/{token}.ics',
     'api/v1/events/{slug}/calendar.ics',
     'api/v1/providers/{slug}/articles',
     'api/v1/providers/{slug}/offers',
