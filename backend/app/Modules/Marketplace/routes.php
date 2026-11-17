@@ -67,6 +67,11 @@ Route::middleware(['auth:sanctum', 'verified'])
             Route::post('{uuid}/withdrawal', [QuoteController::class, 'withdrawal'])->whereUuid('uuid')->name('withdrawal');
         });
 
+        Route::post('{uuid}/report', [QuoteController::class, 'report'])
+            ->whereUuid('uuid')
+            ->middleware('throttle:reports')
+            ->name('report');
+
         Route::get('{uuid}/pdf', [QuoteController::class, 'pdf'])
             ->whereUuid('uuid')
             ->middleware('throttle:quote-pdfs')

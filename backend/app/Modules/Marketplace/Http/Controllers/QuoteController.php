@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Modules\Marketplace\Actions\AcceptQuote;
 use App\Modules\Marketplace\Actions\DeclineQuote;
 use App\Modules\Marketplace\Actions\ExerciseQuoteWithdrawal;
+use App\Modules\Marketplace\Actions\ReportQuote;
 use App\Modules\Marketplace\Actions\ReviseQuote;
 use App\Modules\Marketplace\Actions\SaveQuoteDraft;
 use App\Modules\Marketplace\Actions\SendQuote;
@@ -15,6 +16,7 @@ use App\Modules\Marketplace\Enums\QuoteStatus;
 use App\Modules\Marketplace\Http\Requests\AcceptQuoteRequest;
 use App\Modules\Marketplace\Http\Requests\DeclineQuoteRequest;
 use App\Modules\Marketplace\Http\Requests\ListQuotesRequest;
+use App\Modules\Marketplace\Http\Requests\ReportQuoteRequest;
 use App\Modules\Marketplace\Http\Requests\StoreQuoteRequest;
 use App\Modules\Marketplace\Http\Requests\UpdateQuoteRequest;
 use App\Modules\Marketplace\Http\Resources\QuoteResource;
@@ -164,6 +166,24 @@ class QuoteController extends Controller
         $request->validate(['confirm' => ['required', 'accepted']]);
 
         return new QuoteResource($exerciseWithdrawal->handle($quote)->load('lines'));
+    }
+
+    /**
+     * Signalement d'un devis reçu par son client (décision 45).
+     */
+    public function report(ReportQuoteRequest $request, ReportQuote $reportQuote): JsonResponse
+    {
+        /** @var array{category: string, comment?: string|null} $data */
+        $data = $request->validated();
+        $receipt = $reportQuote->handle($this->user($request), $request->quote(), $data);
+
+        return response()->json(['data' => [
+            'uuid' => $receipt->uuid,
+            'target_type' => 'quote',
+            'category' => $data['category'],
+            'status' => $receipt->status,
+            'created_at' => $receipt->createdAt?->toIso8601ZuluString(),
+        ]], 201);
     }
 
     /**

@@ -115,6 +115,17 @@ Schedule::command('moderation:notify-moderators')
     ->everyFiveMinutes()
     ->withoutOverlapping(10);
 
+// Devis (module Marketplace) : expiration des devis envoyés dont la validité est dépassée.
+Schedule::command('marketplace:expire-quotes')
+    ->hourly()
+    ->withoutOverlapping();
+
+// Devis : minimisation (durées dans config/security.php, retention : marketplace_drafts_months,
+// marketplace_closed_quotes_months).
+Schedule::command('marketplace:prune')
+    ->dailyAt('05:15')
+    ->withoutOverlapping();
+
 // File d'attente (driver database) : traitée chaque minute, sans worker permanent.
 // Le worker s'arrête dès que la file est vide, et au plus tard après 50 secondes pour ne pas
 // déborder sur le schedule:run suivant. Le verrou anti-chevauchement expire après 5 minutes

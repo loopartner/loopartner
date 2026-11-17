@@ -22,6 +22,7 @@ final class TargetTypes
         'event_announcement' => ['fr' => 'annonce d\'événement', 'en' => 'event announcement'],
         'article' => ['fr' => 'article', 'en' => 'article'],
         'offer' => ['fr' => 'offre de prestataire', 'en' => 'provider offer'],
+        'quote' => ['fr' => 'devis', 'en' => 'quote'],
     ];
 
     public static function label(string $type, ?string $locale = null): string

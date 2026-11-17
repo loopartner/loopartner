@@ -5,7 +5,6 @@ use App\Modules\Directory\Actions\AcceptMatchRequest;
 use App\Modules\Directory\Models\Project;
 use App\Modules\Marketplace\Models\Quote;
 use App\Modules\Marketplace\Support\ComparisonPdf;
-use App\Support\Moderation\ModerationTargets;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Notification;
 
@@ -153,7 +152,7 @@ describe('comparaison Premium', function (): void {
         $this->actingAs($owner)->getJson("/api/v1/me/projects/{$project->uuid}/quotes/comparison")
             ->assertOk()
             ->assertJsonPath('data.quotes.*.uuid', [$c->uuid]);
-    })->skip(fn (): bool => ! ModerationTargets::has('quote'), 'Adaptateur quote ajouté avec le signalement des devis.');
+    });
 
     it('exporte la comparaison en PDF, texte échappé et avertissement compris', function (): void {
         [$owner, $project] = threeQuotes();

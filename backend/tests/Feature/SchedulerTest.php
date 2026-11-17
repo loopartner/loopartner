@@ -127,3 +127,14 @@ it('planifie les tâches du module Moderation, sans chevauchement', function (st
     'purge' => ['moderation:prune', '45 5 * * *'],
     'récapitulatif' => ['moderation:notify-moderators', '*/5 * * * *'],
 ]);
+
+it('planifie les tâches du module Marketplace, sans chevauchement', function (string $command, string $expression): void {
+    $event = scheduledEvent($command);
+
+    expect($event)->not->toBeNull()
+        ->and($event->expression)->toBe($expression)
+        ->and($event->withoutOverlapping)->toBeTrue();
+})->with([
+    'expiration' => ['marketplace:expire-quotes', '0 * * * *'],
+    'purge' => ['marketplace:prune', '15 5 * * *'],
+]);

@@ -8,6 +8,7 @@ use App\Modules\Directory\Support\Moderation\ProjectModerationTarget;
 use App\Modules\Events\Support\AnnouncementModerationTarget;
 use App\Modules\Events\Support\EventModerationTarget;
 use App\Modules\Marketplace\Support\OfferModerationTarget;
+use App\Modules\Marketplace\Support\QuoteModerationTarget;
 
 /*
 |--------------------------------------------------------------------------
@@ -36,6 +37,7 @@ return [
         'event_announcement' => AnnouncementModerationTarget::class,
         'article' => ArticleModerationTarget::class,
         'offer' => OfferModerationTarget::class,
+        'quote' => QuoteModerationTarget::class,
     ],
 
     /*

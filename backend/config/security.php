@@ -364,6 +364,13 @@ return [
         // plus tardive), sans recours en attente. Le journal d'audit suit sa propre durée.
         'moderation_records_months' => 24,
 
+        // Devis (module Marketplace, purge quotidienne marketplace:prune, décision 47).
+        // Brouillons sans modification depuis cette durée : supprimés.
+        'marketplace_drafts_months' => 12,
+        // Devis refusés, retirés, expirés ou remplacés depuis cette durée : supprimés. Les devis
+        // acceptés restent tant que leur conversation existe.
+        'marketplace_closed_quotes_months' => 12,
+
     ],
 
     /*

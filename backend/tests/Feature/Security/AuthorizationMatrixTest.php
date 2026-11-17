@@ -241,6 +241,7 @@ const API_ROUTES = [
     'POST api/v1/me/quotes/{uuid}/withdraw' => 'auth',
     'POST api/v1/me/quotes/{uuid}/accept' => 'auth',
     'GET api/v1/me/quotes/{uuid}/pdf' => 'auth',
+    'POST api/v1/me/quotes/{uuid}/report' => 'auth',
     'POST api/v1/me/quotes/{uuid}/decline' => 'auth',
     'POST api/v1/me/quotes/{uuid}/withdrawal' => 'auth',
     'GET api/v1/me/projects/{uuid}/quotes' => 'auth',
