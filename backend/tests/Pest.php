@@ -705,6 +705,19 @@ function verifiedDeadlineRule(string $code, array $schedule, array $conditions =
 }
 
 /**
+ * Taux de TVA vérifié (module Marketplace), en vigueur depuis le 1er janvier 2026. Valeurs
+ * fictives de test : les vrais taux sont des règles vérifiées par un professionnel.
+ *
+ * @param  array<string, mixed>  $attributes
+ */
+function verifiedVatRate(string $code = 'fr.vat.rate.standard', int $basisPoints = 2000, bool $exclusive = false, ?array $mention = null, ?array $clientCertification = null, array $attributes = []): ComplianceRule
+{
+    return ComplianceRule::factory()->verified()
+        ->vatRate($code, $basisPoints, $exclusive, $mention, $clientCertification)
+        ->create(['valid_from' => '2026-01-01', 'valid_until' => null, ...$attributes]);
+}
+
+/**
  * Réponses valides au questionnaire de démarrage.
  *
  * @param  array<string, mixed>  $overrides

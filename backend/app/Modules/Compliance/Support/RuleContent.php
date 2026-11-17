@@ -79,6 +79,7 @@ final class RuleContent
             RuleKind::Threshold => ['amount', 'activity_types', 'prorate_first_year', 'consequence'],
             RuleKind::Rate => ['basis_points', 'activity_types', 'category'],
             RuleKind::Journey => ['steps'],
+            RuleKind::VatRate => ['basis_points', 'label', 'scope', 'mention', 'client_certification', 'exclusive'],
         };
     }
 
@@ -130,6 +131,18 @@ final class RuleContent
                 ...self::itemRules('payload.steps', 'key,title,description,service_category,source_url'),
                 ...self::translatedRules('payload.steps.*.description', 'sometimes', false, 1, 2000),
                 'payload.steps.*.source_url' => ['sometimes', 'nullable', 'string', 'max:500', new SafeExternalUrl],
+            ],
+            // Taux de TVA d'une ligne de devis : libellé court, champ d'application rédigé par le
+            // professionnel qui vérifie la règle, mention imprimée sur le devis (franchise,
+            // autoliquidation…), texte certifié par le client à l'acceptation (taux réduits des
+            // travaux dans les logements) ; exclusive : ne se combine avec aucun autre taux.
+            RuleKind::VatRate => [
+                'payload.basis_points' => ['sometimes', 'nullable', 'integer', 'between:0,'.self::MAX_BASIS_POINTS],
+                ...self::translatedRules('payload.label', 'sometimes', false, 2, 100),
+                ...self::translatedRules('payload.scope', 'sometimes', false, 1, 2000),
+                ...self::translatedRules('payload.mention', 'sometimes', false, 1, 300),
+                ...self::translatedRules('payload.client_certification', 'sometimes', false, 1, 1000),
+                'payload.exclusive' => ['sometimes', 'boolean'],
             ],
         };
     }
@@ -277,6 +290,14 @@ final class RuleContent
             RuleKind::Journey => [
                 'steps' => self::items(self::arrayOf($payload['steps'] ?? []), true),
             ],
+            RuleKind::VatRate => [
+                'basis_points' => self::intOrNull($payload['basis_points'] ?? null),
+                'label' => self::translatedOrNull($payload['label'] ?? null),
+                'scope' => self::translatedOrNull($payload['scope'] ?? null),
+                'mention' => self::translatedOrNull($payload['mention'] ?? null),
+                'client_certification' => self::translatedOrNull($payload['client_certification'] ?? null),
+                'exclusive' => (bool) ($payload['exclusive'] ?? false),
+            ],
         };
     }
 
@@ -408,6 +429,12 @@ final class RuleContent
             case RuleKind::Journey:
                 $require('steps', self::arrayOf($payload['steps'] ?? []) !== []);
                 break;
+
+            case RuleKind::VatRate:
+                $require('basis_points', ($payload['basis_points'] ?? null) !== null);
+                $require('label.fr', filled(self::arrayOf($payload['label'] ?? [])['fr'] ?? null));
+                $require('scope.fr', filled(self::arrayOf($payload['scope'] ?? [])['fr'] ?? null));
+                break;
         }
 
         return $missing;
@@ -423,6 +450,22 @@ final class RuleContent
             'fr' => is_string($value['fr'] ?? null) ? $value['fr'] : null,
             'en' => is_string($value['en'] ?? null) && $value['en'] !== '' ? $value['en'] : null,
         ];
+    }
+
+    /**
+     * Texte traduit facultatif : null s'il est absent ou sans version française.
+     *
+     * @return array{fr: string|null, en: string|null}|null
+     */
+    private static function translatedOrNull(mixed $value): ?array
+    {
+        if (! is_array($value)) {
+            return null;
+        }
+
+        $translated = self::translated($value);
+
+        return $translated['fr'] === null ? null : $translated;
     }
 
     /**

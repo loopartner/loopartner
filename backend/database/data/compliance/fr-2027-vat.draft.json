@@ -1,0 +1,75 @@
+{
+    "format": "loopartner.compliance.rules",
+    "version": 1,
+    "country": "FR",
+    "prepared_at": "2026-11-16",
+    "status": "draft",
+    "notice": "Brouillons des taux de TVA proposés aux prestataires dans leurs devis (module Marketplace), à faire vérifier par un expert-comptable. Règle de préparation identique à fr-2027.draft.json : aucune valeur n'est remplie si elle n'a pas été lue sur une page officielle pour 2027 ; les taux lus le 2026-11-16 sans période d'application sont seulement cités dans internal_notes, et le champ reste à null (« à compléter »). La TVA a été recodifiée dans le Code des impositions sur les biens et services (CIBS) au 1er septembre 2026 (ordonnance n° 2025-1247, annoncée sur impots.gouv.fr) : les références d'articles des mentions sont à confirmer. Les pages ont été lues avec un outil qui en renvoie un résumé : chaque citation doit être relue sur la page source. Importer avec : php artisan compliance:import-rules database/data/compliance/fr-2027-vat.draft.json",
+    "rules": [
+        {
+            "kind": "vat_rate",
+            "code": "fr.vat.rate.standard",
+            "valid_from": "2027-01-01",
+            "valid_until": "2027-12-31",
+            "title": {"fr": "TVA : taux normal", "en": "VAT: standard rate"},
+            "summary": null,
+            "conditions": {"legal_forms": [], "activity_types": [], "vat_regimes": [], "options": {}},
+            "payload": {"basis_points": null, "label": {"fr": "Taux normal", "en": "Standard rate"}, "scope": null, "mention": null, "client_certification": null, "exclusive": false},
+            "source_url": "https://www.impots.gouv.fr/professionnel/questions/quel-taux-de-tva-appliquer-pour-les-travaux-realises-dans-les-logements",
+            "source_label": "impots.gouv.fr — Quel taux de TVA appliquer pour les travaux réalisés dans les logements ?",
+            "internal_notes": "basis_points : à compléter : taux 2027. Lu sur https://www.impots.gouv.fr/professionnel/questions/quel-taux-de-tva-appliquer-pour-les-travaux-realises-dans-les-logements le 2026-11-16 (page modifiée le 14/10/2026) : 20 % comme taux normal appliqué par défaut, sans période d'application indiquée ; champ laissé vide. scope : à compléter : champ d'application rédigé par l'expert-comptable (taux applicable par défaut aux prestations qui ne relèvent d'aucun taux particulier). Référence légale à confirmer après la recodification dans le CIBS (ancien art. 278 du CGI)."
+        },
+        {
+            "kind": "vat_rate",
+            "code": "fr.vat.rate.housing-improvement",
+            "valid_from": "2027-01-01",
+            "valid_until": "2027-12-31",
+            "title": {"fr": "TVA : taux intermédiaire des travaux dans les logements", "en": "VAT: intermediate rate for works in dwellings"},
+            "summary": null,
+            "conditions": {"legal_forms": [], "activity_types": [], "vat_regimes": [], "options": {}},
+            "payload": {"basis_points": null, "label": {"fr": "Travaux d'amélioration dans un logement", "en": "Improvement works in a dwelling"}, "scope": null, "mention": null, "client_certification": null, "exclusive": false},
+            "source_url": "https://www.impots.gouv.fr/professionnel/questions/quel-taux-de-tva-appliquer-pour-les-travaux-realises-dans-les-logements",
+            "source_label": "impots.gouv.fr — Quel taux de TVA appliquer pour les travaux réalisés dans les logements ?",
+            "internal_notes": "basis_points : à compléter : taux 2027. Lu sur https://www.impots.gouv.fr/professionnel/questions/quel-taux-de-tva-appliquer-pour-les-travaux-realises-dans-les-logements le 2026-11-16 (page modifiée le 14/10/2026) : 10 % pour les travaux d'amélioration, de transformation, d'aménagement et d'entretien des logements achevés depuis plus de deux ans, sans période d'application indiquée ; champ laissé vide. scope : à compléter : conditions exactes (nature des travaux, logement achevé depuis plus de deux ans, exclusions). client_certification : à compléter : la même page indique que depuis le 1er mars 2025 le client certifie les conditions « via une mention sur le devis ou la facture », sans en donner la formulation ; texte exact à fournir par l'expert-comptable."
+        },
+        {
+            "kind": "vat_rate",
+            "code": "fr.vat.rate.housing-energy-renovation",
+            "valid_from": "2027-01-01",
+            "valid_until": "2027-12-31",
+            "title": {"fr": "TVA : taux réduit de la rénovation énergétique des logements", "en": "VAT: reduced rate for energy renovation of dwellings"},
+            "summary": null,
+            "conditions": {"legal_forms": [], "activity_types": [], "vat_regimes": [], "options": {}},
+            "payload": {"basis_points": null, "label": {"fr": "Rénovation énergétique d'un logement", "en": "Energy renovation of a dwelling"}, "scope": null, "mention": null, "client_certification": null, "exclusive": false},
+            "source_url": "https://www.impots.gouv.fr/professionnel/questions/quel-taux-de-tva-appliquer-pour-les-travaux-realises-dans-les-logements",
+            "source_label": "impots.gouv.fr — Quel taux de TVA appliquer pour les travaux réalisés dans les logements ?",
+            "internal_notes": "basis_points : à compléter : taux 2027. Lu sur https://www.impots.gouv.fr/professionnel/questions/quel-taux-de-tva-appliquer-pour-les-travaux-realises-dans-les-logements le 2026-11-16 (page modifiée le 14/10/2026) : 5,5 % pour les travaux de rénovation énergétique des logements achevés depuis plus de deux ans, sans période d'application indiquée ; champ laissé vide. scope : à compléter : liste des travaux éligibles et conditions. client_certification : à compléter : formulation de la certification du client (même page, sans formulation type)."
+        },
+        {
+            "kind": "vat_rate",
+            "code": "fr.vat.franchise",
+            "valid_from": "2027-01-01",
+            "valid_until": "2027-12-31",
+            "title": {"fr": "TVA : franchise en base (TVA non applicable)", "en": "VAT: basic exemption (VAT not applicable)"},
+            "summary": null,
+            "conditions": {"legal_forms": [], "activity_types": [], "vat_regimes": [], "options": {}},
+            "payload": {"basis_points": null, "label": {"fr": "TVA non applicable (franchise en base)", "en": "VAT not applicable (basic exemption)"}, "scope": null, "mention": null, "client_certification": null, "exclusive": true},
+            "source_url": "https://bofip.impots.gouv.fr/bofip/1079-PGP.html/identifiant%3DBOI-TVA-DECLA-40-10-20-20260701",
+            "source_label": "BOFiP — BOI-TVA-DECLA-40-10-20 (franchise en base, publié le 01/07/2026)",
+            "internal_notes": "basis_points : à compléter : la franchise n'applique aucune TVA (BOFiP BOI-TVA-DECLA-40-10-20, § 53, lu sur https://bofip.impots.gouv.fr/bofip/1079-PGP.html/identifiant%3DBOI-TVA-DECLA-40-10-20-20260701 le 2026-11-16 : un franchisé ne peut pas faire apparaître de TVA) ; valeur attendue à confirmer par l'expert-comptable. mention : à compléter : le même BOFiP (§ 50) cite « TVA non applicable, article 293 B du CGI » (ou 293 B bis, ou art. 284 de la directive 2006/112/CE), et impots.gouv.fr admet « TVA non applicable, article L. 223-3 du Code des impositions sur les biens et services » après la recodification ; formulation 2027 à choisir par l'expert-comptable. scope : à compléter. exclusive : une franchise ne se combine avec aucun autre taux dans un même devis."
+        },
+        {
+            "kind": "vat_rate",
+            "code": "fr.vat.reverse-charge.construction-subcontracting",
+            "valid_from": "2027-01-01",
+            "valid_until": "2027-12-31",
+            "title": {"fr": "TVA : autoliquidation de la sous-traitance dans le bâtiment", "en": "VAT: reverse charge for construction subcontracting"},
+            "summary": null,
+            "conditions": {"legal_forms": [], "activity_types": [], "vat_regimes": [], "options": {}},
+            "payload": {"basis_points": null, "label": {"fr": "Autoliquidation (sous-traitance dans le bâtiment)", "en": "Reverse charge (construction subcontracting)"}, "scope": null, "mention": null, "client_certification": null, "exclusive": true},
+            "source_url": "https://bofip.impots.gouv.fr/bofip/15082-PGP.html/identifiant=BOI-RES-TVA-000269-20260909",
+            "source_label": "BOFiP — BOI-RES-TVA-000269 (autoliquidation dans la sous-traitance du bâtiment, publié le 09/09/2026)",
+            "internal_notes": "basis_points : à compléter : le sous-traitant ne facture pas la TVA, que le preneur autoliquide ; valeur attendue à confirmer par l'expert-comptable. mention : à compléter : lu sur https://bofip.impots.gouv.fr/bofip/15082-PGP.html/identifiant=BOI-RES-TVA-000269-20260909 le 2026-11-16 : le sous-traitant porte les mentions de l'art. 242 nonies A de l'annexe II du CGI, dont « Autoliquidation » (13°, lu sur https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000050811276 le 2026-11-16) ; un sous-traitant en franchise en base n'est pas concerné. scope : à compléter : champ exact du dispositif (ancien art. 283, 2 nonies du CGI, référence CIBS à confirmer). exclusive : tout le contrat est autoliquidé selon le même rescrit."
+        }
+    ]
+}

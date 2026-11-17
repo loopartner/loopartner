@@ -144,6 +144,30 @@ class ComplianceRuleFactory extends Factory
     }
 
     /**
+     * Taux de TVA (module Marketplace) : libellé et champ d'application remplis.
+     *
+     * @param  array{fr: string, en: string|null}|null  $mention
+     * @param  array{fr: string, en: string|null}|null  $clientCertification
+     */
+    public function vatRate(string $code, ?int $basisPoints, bool $exclusive = false, ?array $mention = null, ?array $clientCertification = null): static
+    {
+        return $this->state(fn (): array => [
+            'kind' => RuleKind::VatRate,
+            'code' => $code,
+            'title' => ['fr' => 'TVA '.$code, 'en' => null],
+            'conditions' => ['legal_forms' => [], 'activity_types' => [], 'vat_regimes' => [], 'options' => []],
+            'payload' => [
+                'basis_points' => $basisPoints,
+                'label' => ['fr' => 'Taux '.$code, 'en' => 'Rate '.$code],
+                'scope' => ['fr' => "Champ d'application de ".$code, 'en' => null],
+                'mention' => $mention,
+                'client_certification' => $clientCertification,
+                'exclusive' => $exclusive,
+            ],
+        ]);
+    }
+
+    /**
      * Parcours type.
      *
      * @param  list<array<string, mixed>>  $steps

@@ -21,4 +21,8 @@ enum RuleKind: string
 
     // Parcours type (« créer mon entreprise »…) : étapes ordonnées.
     case Journey = 'journey';
+
+    // Taux de TVA proposé aux prestataires dans leurs devis (module Marketplace), avec sa
+    // mention et le texte que le client certifie éventuellement.
+    case VatRate = 'vat_rate';
 }
