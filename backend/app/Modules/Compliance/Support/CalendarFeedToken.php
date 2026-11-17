@@ -3,23 +3,21 @@
 namespace App\Modules\Compliance\Support;
 
 use App\Modules\Compliance\Models\CalendarFeed;
-use Illuminate\Support\Str;
+use App\Support\Calendar\FeedToken;
 
 /**
- * Jeton de l'URL privée d'abonnement au calendrier : 16 caractères de sélecteur (publics, pour
- * retrouver la ligne par un index) suivis de 40 caractères secrets (≈ 238 bits).
- *
- * Seule l'empreinte HMAC-SHA256 (APP_KEY) du secret est stockée, et la comparaison se fait en
- * temps constant (hash_equals). Un sélecteur inconnu donne lieu au même calcul, pour que le
- * temps de réponse ne révèle pas qu'il existe. Le jeton n'est jamais journalisé.
+ * Jeton de l'URL privée d'abonnement au calendrier des échéances. Le mécanisme (sélecteur
+ * public de 16 caractères, secret de 40 caractères dont seule l'empreinte HMAC-SHA256 est
+ * stockée, comparaison en temps constant, même calcul pour un sélecteur inconnu) est celui de
+ * la brique du noyau App\Support\Calendar\FeedToken. Le jeton n'est jamais journalisé.
  */
 final class CalendarFeedToken
 {
-    public const SELECTOR_LENGTH = 16;
+    public const SELECTOR_LENGTH = FeedToken::SELECTOR_LENGTH;
 
-    public const SECRET_LENGTH = 40;
+    public const SECRET_LENGTH = FeedToken::SECRET_LENGTH;
 
-    public const PATTERN = '[A-Za-z0-9]{56}';
+    public const PATTERN = FeedToken::PATTERN;
 
     /**
      * Nouveau jeton : [sélecteur, jeton complet, empreinte du secret].
@@ -28,10 +26,7 @@ final class CalendarFeedToken
      */
     public static function generate(): array
     {
-        $selector = Str::random(self::SELECTOR_LENGTH);
-        $secret = Str::random(self::SECRET_LENGTH);
-
-        return ['selector' => $selector, 'token' => $selector.$secret, 'hash' => self::hash($secret)];
+        return FeedToken::generate();
     }
 
     /**
@@ -39,24 +34,13 @@ final class CalendarFeedToken
      */
     public static function find(#[\SensitiveParameter] string $token): ?CalendarFeed
     {
-        $selector = substr($token, 0, self::SELECTOR_LENGTH);
-        $secret = substr($token, self::SELECTOR_LENGTH);
-        $feed = CalendarFeed::query()->where('selector', $selector)->first();
+        $feed = CalendarFeed::query()->where('selector', FeedToken::selector($token))->first();
 
-        // Même calcul et même comparaison, que le sélecteur existe ou non.
-        $expected = $feed !== null ? $feed->verifier_hash : self::hash(str_repeat('0', self::SECRET_LENGTH));
-        $valid = hash_equals($expected, self::hash($secret));
-
-        return $feed !== null && $valid ? $feed : null;
+        return FeedToken::matches($feed?->verifier_hash, $token) ? $feed : null;
     }
 
     public static function url(#[\SensitiveParameter] string $token): string
     {
         return rtrim((string) config('app.url'), '/').'/api/v1/compliance/calendar/'.$token.'.ics';
-    }
-
-    private static function hash(#[\SensitiveParameter] string $secret): string
-    {
-        return hash_hmac('sha256', $secret, (string) config('app.key'));
     }
 }
