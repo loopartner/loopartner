@@ -319,7 +319,7 @@ relation ; montants en centimes, quantités en millièmes, taux en points de bas
 contenu figé à l'envoi avec une empreinte SHA-256 contrôlée à l'acceptation ; identités chiffrées
 en base ; accès anticipé par un scope de Directory (`config/directory.php`).
 
-## Correction du lot 3 : logo figé des devis (validée le 2026-11-18)
+## Correction du lot 3 : logo figé des devis (validée le 2026-11-17)
 
 | # | Sujet | Décision |
 |---|---|---|
