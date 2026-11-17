@@ -2,7 +2,9 @@
 
 namespace App\Modules\Directory\Http\Requests;
 
+use App\Models\User;
 use App\Modules\Directory\Models\Project;
+use App\Modules\Directory\Support\EarlyAccess;
 use App\Modules\Directory\Support\MatchingRules;
 use App\Modules\Directory\Support\ProjectRules;
 use App\Rules\CurrencyCode;
@@ -53,7 +55,11 @@ class StoreProposalRequest extends FormRequest
     public function project(): Project
     {
         if ($this->project === null) {
-            $project = Project::query()->browsable()->where('uuid', (string) $this->route('uuid'))->first();
+            /** @var User $user */
+            $user = $this->user();
+            $project = app(EarlyAccess::class)->constrain(Project::query()->browsable(), $user)
+                ->where('uuid', (string) $this->route('uuid'))
+                ->first();
             abort_if($project === null, 404, 'Projet introuvable.');
             $this->project = $project;
         }

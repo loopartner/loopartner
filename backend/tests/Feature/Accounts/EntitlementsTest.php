@@ -73,6 +73,7 @@ describe('GET /me/entitlements', function (): void {
                 'compliance.estimate' => true,
                 'compliance.calendar_feed' => true,
                 'compliance.export' => true,
+                'directory.project_early_access' => true,
             ]);
     });
 

@@ -49,6 +49,20 @@ $professional = [
     ],
 ];
 
+/*
+| Avantages propres au prestataire (décision 35), ajoutés à ceux de $professional.
+*/
+$provider = [
+    'free' => [
+        // Projets visibles seulement après la fenêtre d'accès anticipé
+        // (config/directory.php, early_access_hours ; décision 44).
+        'directory.project_early_access' => false,
+    ],
+    'premium' => [
+        'directory.project_early_access' => true,
+    ],
+];
+
 return [
 
     'plans' => ['free', 'premium'],
@@ -63,7 +77,10 @@ return [
             'free' => [],
             'premium' => [],
         ],
-        'prestataire' => $professional,
+        'prestataire' => [
+            'free' => [...$professional['free'], ...$provider['free']],
+            'premium' => [...$professional['premium'], ...$provider['premium']],
+        ],
         'entrepreneur' => $professional,
     ],
 

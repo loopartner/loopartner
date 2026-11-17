@@ -9,6 +9,7 @@ use App\Modules\Directory\Actions\RecordProjectConsultation;
 use App\Modules\Directory\Http\Requests\BrowseProjectsRequest;
 use App\Modules\Directory\Http\Resources\PublishedProjectResource;
 use App\Modules\Directory\Models\Project;
+use App\Modules\Directory\Support\EarlyAccess;
 use App\Support\Pagination;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -21,9 +22,9 @@ use Illuminate\Support\Facades\Gate;
  */
 class ProjectBrowseController extends Controller
 {
-    public function index(BrowseProjectsRequest $request, RecordProjectConsultation $recordConsultation): AnonymousResourceCollection
+    public function index(BrowseProjectsRequest $request, RecordProjectConsultation $recordConsultation, EarlyAccess $earlyAccess): AnonymousResourceCollection
     {
-        $query = Project::query()->browsable()->with(['category', 'user.roles']);
+        $query = $earlyAccess->constrain(Project::query()->browsable(), $this->user($request))->with(['category', 'user.roles']);
 
         if ($request->filled('category')) {
             $query->whereIn('service_category_id', ServiceCategory::idsWithDescendants($request->string('category')->toString()));
@@ -72,11 +73,15 @@ class ProjectBrowseController extends Controller
         return PublishedProjectResource::collection($projects);
     }
 
-    public function show(Request $request, string $uuid, RecordProjectConsultation $recordConsultation): PublishedProjectResource
+    public function show(Request $request, string $uuid, RecordProjectConsultation $recordConsultation, EarlyAccess $earlyAccess): PublishedProjectResource
     {
         Gate::authorize('browse', Project::class);
 
-        $project = Project::query()->browsable()->with(['category', 'user.roles'])->where('uuid', $uuid)->first();
+        // Projet encore dans sa fenêtre d'accès anticipé : 404 pour un prestataire sans ce droit.
+        $project = $earlyAccess->constrain(Project::query()->browsable(), $this->user($request))
+            ->with(['category', 'user.roles'])
+            ->where('uuid', $uuid)
+            ->first();
 
         // Brouillon, clos, expiré ou inconnu : même réponse, sans révéler le nom du modèle.
         abort_if($project === null, 404, 'Projet introuvable.');

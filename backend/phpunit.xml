@@ -41,6 +41,10 @@
         <env name="MAIL_MAILER" value="array"/>
         <env name="MEDIA_DISK" value="public"/>
         <env name="SEED_DEMO_DATA" value="false"/>
+        <!-- Accès anticipé désactivé par défaut dans les tests (les projets publiés pendant un
+             test sont visibles tout de suite) ; tests/Feature/Directory/EarlyAccessTest.php le
+             réactive avec la valeur de production. -->
+        <env name="DIRECTORY_EARLY_ACCESS_HOURS" value="0"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>

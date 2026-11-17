@@ -4,6 +4,7 @@ namespace App\Modules\Directory\Support\Moderation;
 
 use App\Models\User;
 use App\Modules\Directory\Models\Project;
+use App\Modules\Directory\Support\EarlyAccess;
 use App\Support\Moderation\ModerationTarget;
 use App\Support\Moderation\Restriction;
 use App\Support\Moderation\TargetContent;
@@ -29,7 +30,7 @@ class ProjectModerationTarget implements ModerationTarget
             return null;
         }
 
-        $project = Project::query()->browsable()->where('uuid', $ref)->first();
+        $project = app(EarlyAccess::class)->constrain(Project::query()->browsable(), $viewer)->where('uuid', $ref)->first();
 
         return $project === null ? null : self::content($project);
     }
