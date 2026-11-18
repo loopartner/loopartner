@@ -316,13 +316,14 @@ describe('reprise des signalements de la messagerie', function (): void {
         $message = postMessage($provider, $conversation, 'Payez-moi hors plateforme.');
         $migration = require database_path('migrations/2026_11_16_120200_move_abuse_reports_to_moderation_notices.php');
 
-        $migration->down();
+        // Migration rejouée (DDL) : voir changeSchemaInTest() pour MySQL et MariaDB.
+        changeSchemaInTest(fn () => $migration->down());
         DB::table('abuse_reports')->insert([
             ['uuid' => '1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed', 'reporter_id' => $owner->id, 'reported_user_id' => $provider->id, 'target_type' => 'message', 'target_id' => $message->id, 'reason' => 'off_platform', 'comment' => 'Hors site', 'content_snapshot' => 'Payez-moi hors plateforme.', 'status' => 'open', 'closed_at' => null, 'created_at' => now(), 'updated_at' => now()],
             ['uuid' => '6ec0bd7f-11c0-43da-975e-2a8ad9ebae0b', 'reporter_id' => null, 'reported_user_id' => null, 'target_type' => 'match_request', 'target_id' => 999, 'reason' => 'harassment', 'comment' => null, 'content_snapshot' => null, 'status' => 'closed', 'closed_at' => now(), 'created_at' => now(), 'updated_at' => now()],
         ]);
 
-        $migration->up();
+        changeSchemaInTest(fn () => $migration->up());
 
         expect(DB::getSchemaBuilder()->hasTable('abuse_reports'))->toBeFalse();
 

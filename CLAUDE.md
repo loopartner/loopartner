@@ -1590,7 +1590,10 @@ composer security            # composer audit : vulnérabilités connues des dé
   `travelTo(<date fixe>)`, jamais `travelBack()` (qui revient à l'heure réelle). Une donnée de
   session (`withSession`) sur une route `/api/v1` hors Fortify exige `fromFrontend()` : Sanctum
   n'ouvre une session que pour une requête du frontend. Les requêtes de test envoient `Accept-Language: fr-FR` par défaut
-  (`tests/TestCase.php`).
+  (`tests/TestCase.php`). Un test qui change le schéma (migration rejouée, table temporaire)
+  passe par `changeSchemaInTest()` : MySQL et MariaDB valident implicitement la transaction de
+  `RefreshDatabase` à chaque DDL (SQLite non), et sans ce helper le `DB::transaction()` suivant
+  échoue (« SAVEPOINT trans2 does not exist ») au lieu de se comporter comme en production.
 
 - Les tests simulent l'API Have I Been Pwned avec `Http::fake` (voir `tests/Pest.php`).
 - Fais des commits séparés et lisibles. Ne travaille pas directement sur `main` et ne pousse rien sans

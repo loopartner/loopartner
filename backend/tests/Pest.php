@@ -36,8 +36,10 @@ use App\Support\TwoFactorSession;
 use Database\Factories\Modules\Blog\ArticleFactory;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\RefreshDatabaseState;
 use Illuminate\Http\Client\Factory;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
@@ -81,6 +83,40 @@ pest()->extend(TestCase::class)
 | Journal de sécurité
 |--------------------------------------------------------------------------
 */
+
+/**
+ * Change le schéma au milieu d'un test (migration rejouée, table temporaire).
+ *
+ * MySQL et MariaDB valident implicitement la transaction en cours à chaque instruction DDL :
+ * la transaction de RefreshDatabase disparaît, Laravel croit pourtant en avoir une, et le
+ * premier DB::transaction() du test échoue (« SAVEPOINT trans2 does not exist ») au lieu de se
+ * comporter comme en production. On rouvre donc une vraie transaction après le changement, et
+ * la base est recréée avant le test suivant, puisque les lignes écrites avant ont été validées.
+ * SQLite exécute le DDL dans la transaction : rien à faire.
+ *
+ * @template TResult
+ *
+ * @param  Closure(): TResult  $change
+ * @return TResult
+ */
+function changeSchemaInTest(Closure $change): mixed
+{
+    $connection = DB::connection();
+
+    if ($connection->getDriverName() === 'sqlite') {
+        return $change();
+    }
+
+    try {
+        return $change();
+    } finally {
+        RefreshDatabaseState::$migrated = false;
+
+        if (! $connection->getPdo()->inTransaction()) {
+            $connection->getPdo()->beginTransaction();
+        }
+    }
+}
 
 /**
  * Entrées du journal de sécurité (canal "security"), éventuellement filtrées par événement.

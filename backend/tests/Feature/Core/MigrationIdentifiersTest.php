@@ -1,5 +1,7 @@
 <?php
 
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /*
@@ -60,14 +62,34 @@ it('ne donne aucun nom explicite trop long à une clé étrangère dans les migr
 });
 
 it('détecte bien un nom trop long (contrôle du garde-fou)', function (): void {
-    Schema::create('identifiant_de_test_volontairement_long', function ($table): void {
+    $createTable = fn () => Schema::create('identifiant_de_test_volontairement_long', function ($table): void {
         $table->id();
         $table->unsignedBigInteger('premiere_colonne_assez_longue');
         $table->unsignedBigInteger('seconde_colonne_assez_longue');
         $table->unique(['premiere_colonne_assez_longue', 'seconde_colonne_assez_longue']);
     });
 
-    $names = collect(Schema::getIndexes('identifiant_de_test_volontairement_long'))->pluck('name');
+    // SQLite accepte le nom : le contrôle par lecture du schéma (premier test) doit le voir.
+    if (DB::connection()->getDriverName() === 'sqlite') {
+        $createTable();
 
-    expect($names->contains(fn (string $name): bool => strlen($name) > MAX_IDENTIFIER_LENGTH))->toBeTrue();
+        $names = collect(Schema::getIndexes('identifiant_de_test_volontairement_long'))->pluck('name');
+
+        expect($names->contains(fn (string $name): bool => strlen($name) > MAX_IDENTIFIER_LENGTH))->toBeTrue();
+
+        return;
+    }
+
+    // MySQL et MariaDB refusent le nom eux-mêmes (erreur 1059) : c'est l'échec que le premier
+    // test anticipe sur SQLite. La table est créée avant l'index refusé, puis supprimée.
+    try {
+        changeSchemaInTest($createTable);
+        $error = null;
+    } catch (QueryException $exception) {
+        $error = $exception->errorInfo[1] ?? null;
+    } finally {
+        changeSchemaInTest(fn () => Schema::dropIfExists('identifiant_de_test_volontairement_long'));
+    }
+
+    expect($error)->toBe(1059);
 });
