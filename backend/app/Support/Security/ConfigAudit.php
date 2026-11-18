@@ -4,6 +4,8 @@ namespace App\Support\Security;
 
 use App\Http\Middleware\EnsureModerator;
 use App\Models\User;
+use App\Support\Ai\AiGateway;
+use App\Support\Ai\AiPricing;
 use App\Support\Database\TimestampSchema;
 use App\Support\Legal\LegalDocumentType;
 use App\Support\Links\ExternalLink;
@@ -57,6 +59,9 @@ class ConfigAudit
     /** @var Closure(): (array{in_force: list<string>, demo: int}|null) */
     private Closure $legalDocuments;
 
+    /** @var Closure(string): (string|false) */
+    private Closure $phpIniFile;
+
     /** @var list<ConfigFinding> */
     private array $findings = [];
 
@@ -67,9 +72,11 @@ class ConfigAudit
      * @param  (Closure(): (array{admins_with_two_factor: int, demo_rules: int}|null))|null  $complianceRules  règles administratives en base (null : table absente)
      * @param  (Closure(): (int|null))|null  $demoAccounts  nombre de comptes de démonstration vérifiés en base (null : table absente)
      * @param  (Closure(): (array{in_force: list<string>, demo: int}|null))|null  $legalDocuments  documents légaux en vigueur (types) et versions de démonstration (null : table absente)
+     * @param  (Closure(string): (string|false))|null  $phpIniFile  valeur écrite dans le php.ini chargé (get_cfg_var), et non celle de la ligne de commande : en CLI, max_execution_time vaut toujours 0
      */
-    public function __construct(?Closure $devDependenciesInstalled = null, ?Closure $ini = null, ?Closure $timestampSchema = null, ?Closure $complianceRules = null, ?Closure $demoAccounts = null, ?Closure $legalDocuments = null)
+    public function __construct(?Closure $devDependenciesInstalled = null, ?Closure $ini = null, ?Closure $timestampSchema = null, ?Closure $complianceRules = null, ?Closure $demoAccounts = null, ?Closure $legalDocuments = null, ?Closure $phpIniFile = null)
     {
+        $this->phpIniFile = $phpIniFile ?? fn (string $key): string|false => get_cfg_var($key);
         $this->legalDocuments = $legalDocuments ?? fn (): ?array => Schema::hasTable('legal_documents') ? [
             'in_force' => DB::table('legal_documents')->where('is_demo', false)->where('effective_at', '<=', now())->distinct()->orderBy('type')->pluck('type')->map(fn (mixed $type): string => (string) $type)->values()->all(),
             'demo' => DB::table('legal_documents')->where('is_demo', true)->count(),
@@ -112,6 +119,7 @@ class ConfigAudit
         $this->checkComplianceRules();
         $this->checkLegalDocuments();
         $this->checkModeration();
+        $this->checkAi();
 
         return $this->findings;
     }
@@ -460,6 +468,55 @@ class ConfigAudit
         $channels = (array) config("logging.channels.{$default}.channels");
 
         return array_values(array_filter(array_map('trim', $channels)));
+    }
+
+    /**
+     * Brique d'IA (décisions 60 et 70). Désactivée : rien à vérifier. Activée : pilote réel
+     * seulement, clé présente, endpoint régional de l'UE en https, prix du modèle et plafonds
+     * renseignés, et max_execution_time du php.ini compatible avec l'appel synchrone (l'IA ne
+     * doit pas être activée sur l'hébergement mutualisé). Valeur absente du php.ini : 30 s,
+     * la valeur par défaut de PHP.
+     */
+    private function checkAi(): void
+    {
+        $driver = config('ai.driver');
+
+        if ($driver === 'disabled' || $driver === null) {
+            return;
+        }
+
+        if ($driver !== 'mistral') {
+            $this->error('AI_DRIVER', 'doit valoir "disabled" ou "mistral" en production (pilote simulé ou inconnu).');
+
+            return;
+        }
+
+        if (blank(config('ai.providers.mistral.api_key'))) {
+            $this->error('MISTRAL_API_KEY', 'est vide alors que l\'IA est activée.');
+        }
+
+        $baseUrl = (string) config('ai.providers.mistral.base_url');
+
+        if (parse_url($baseUrl, PHP_URL_SCHEME) !== 'https' || parse_url($baseUrl, PHP_URL_HOST) !== config('ai.providers.mistral.eu_host')) {
+            $this->error('MISTRAL_BASE_URL', 'doit être l\'endpoint régional de l\'UE (https://'.config('ai.providers.mistral.eu_host').', décision 60).');
+        }
+
+        if (! AiPricing::has((string) config('ai.model'))) {
+            $this->error('AI_MODEL', 'n\'a pas de prix dans config/ai.php (pricing) : les plafonds de coût ne peuvent pas être appliqués.');
+        }
+
+        foreach (['AI_USER_MONTHLY_BUDGET_CENTS' => 'user_monthly_cents', 'AI_GLOBAL_MONTHLY_BUDGET_CENTS' => 'global_monthly_cents', 'AI_GLOBAL_DAILY_BUDGET_CENTS' => 'global_daily_cents'] as $variable => $key) {
+            if ((int) config('ai.budgets.'.$key) <= 0) {
+                $this->error($variable, 'doit être un plafond positif (en cents) quand l\'IA est activée.');
+            }
+        }
+
+        $configured = ($this->phpIniFile)('max_execution_time');
+        $seconds = $configured === false || $configured === '' ? 30 : (int) $configured;
+
+        if (! AiGateway::executionTimeSufficient($seconds)) {
+            $this->error('max_execution_time', 'vaut '.$seconds.' s (php.ini) alors que l\'IA est activée : il faut 0 ou au moins '.AiGateway::requiredExecutionTime().' s (AI_TIMEOUT + 15 s). L\'IA ne doit pas être activée sur l\'hébergement mutualisé (décision 70).');
+        }
     }
 
     private function error(string $variable, string $message): void

@@ -58,6 +58,8 @@ function safeProductionConfig(bool $devDependencies = false, array $ini = []): v
         'security.trusted_proxies' => '173.245.48.0/20',
         'moderation.contact.users_email' => 'contact@loopartner.com',
         'moderation.contact.authorities_email' => 'legal@loopartner.com',
+        // IA désactivée (valeur par défaut, décision 60) : les tests de l'IA l'activent.
+        'ai.driver' => 'disabled',
         ...collect(array_keys((array) config('moderation.terms_clauses')))
             ->mapWithKeys(fn (string $key): array => ["moderation.terms_clauses.{$key}.reference" => 'Article 7'])
             ->all(),
@@ -377,4 +379,85 @@ describe('modération (DSA)', function (): void {
             ->expectsOutputToContain('MODERATION_REQUIRE_DISTINCT_APPEAL_REVIEWER')
             ->assertSuccessful();
     });
+});
+
+/*
+| Brique d'IA (décisions 60 et 70) : désactivée, rien n'est exigé ; activée, pilote réel,
+| clé, endpoint de l'UE, prix, plafonds et max_execution_time du php.ini compatibles.
+*/
+
+/**
+ * IA activée avec le pilote Mistral et un php.ini simulé (max_execution_time).
+ *
+ * @param  array<string, mixed>  $overrides
+ */
+function productionWithAi(string|false $maxExecutionTime, array $overrides = []): void
+{
+    safeProductionConfig();
+    config([
+        'ai.driver' => 'mistral',
+        'ai.model' => 'mistral-small-2603',
+        'ai.providers.mistral.api_key' => 'cle-de-production',
+        'ai.providers.mistral.base_url' => 'https://api.eu.mistral.ai',
+        ...$overrides,
+    ]);
+
+    app()->bind(ConfigAudit::class, fn (): ConfigAudit => new ConfigAudit(
+        devDependenciesInstalled: fn (): bool => false,
+        ini: fn (string $key): string|false => ['zend.exception_ignore_args' => '1', 'expose_php' => '0'][$key] ?? false,
+        timestampSchema: fn (): array => ['explicit_defaults' => true, 'on_update_columns' => []],
+        phpIniFile: fn (string $key): string|false => $key === 'max_execution_time' ? $maxExecutionTime : false,
+    ));
+}
+
+it('accepte une IA activée correctement configurée, sans délai d\'exécution ou avec un délai suffisant', function (string $maxExecutionTime): void {
+    productionWithAi($maxExecutionTime);
+
+    $this->artisan('security:check-config')
+        ->expectsOutputToContain('Aucun problème')
+        ->assertSuccessful();
+})->with(['illimité' => '0', '60 s' => '60', '120 s' => '120']);
+
+it('échoue si l\'IA est activée avec un max_execution_time trop court (hébergement mutualisé)', function (string|false $maxExecutionTime, string $shown): void {
+    productionWithAi($maxExecutionTime);
+
+    $this->artisan('security:check-config')
+        ->expectsOutputToContain($shown)
+        ->assertFailed();
+})->with([
+    '30 s' => ['30', 'vaut 30 s (php.ini)'],
+    '59 s' => ['59', 'vaut 59 s (php.ini)'],
+    'absent du php.ini : 30 s par défaut' => [false, 'vaut 30 s (php.ini)'],
+]);
+
+it('échoue si l\'IA est activée sans clé, hors de l\'endpoint de l\'UE, sans prix ou sans plafond', function (array $overrides, string $variable): void {
+    productionWithAi('0', $overrides);
+
+    $this->artisan('security:check-config')
+        ->expectsOutputToContain($variable)
+        ->assertFailed();
+})->with([
+    'clé absente' => [['ai.providers.mistral.api_key' => ''], 'MISTRAL_API_KEY'],
+    'endpoint global' => [['ai.providers.mistral.base_url' => 'https://api.mistral.ai'], 'MISTRAL_BASE_URL'],
+    'endpoint en http' => [['ai.providers.mistral.base_url' => 'http://api.eu.mistral.ai'], 'MISTRAL_BASE_URL'],
+    'modèle sans prix' => [['ai.model' => 'mistral-large-latest'], 'AI_MODEL'],
+    'plafond utilisateur nul' => [['ai.budgets.user_monthly_cents' => 0], 'AI_USER_MONTHLY_BUDGET_CENTS'],
+    'plafond global nul' => [['ai.budgets.global_monthly_cents' => 0], 'AI_GLOBAL_MONTHLY_BUDGET_CENTS'],
+    'plafond du jour nul' => [['ai.budgets.global_daily_cents' => 0], 'AI_GLOBAL_DAILY_BUDGET_CENTS'],
+]);
+
+it('échoue si le pilote simulé ou un pilote inconnu est actif en production', function (string $driver): void {
+    productionWithAi('0', ['ai.driver' => $driver]);
+
+    $this->artisan('security:check-config')
+        ->expectsOutputToContain('AI_DRIVER')
+        ->assertFailed();
+})->with(['fake', 'openai']);
+
+it('ne vérifie rien de l\'IA quand elle est désactivée, même sur l\'hébergement mutualisé', function (): void {
+    productionWithAi('30', ['ai.driver' => 'disabled', 'ai.providers.mistral.api_key' => '']);
+
+    $this->artisan('security:check-config')
+        ->expectsOutputToContain('Aucun problème')
+        ->assertSuccessful();
 });

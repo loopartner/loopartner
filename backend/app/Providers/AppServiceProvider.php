@@ -3,6 +3,9 @@
 namespace App\Providers;
 
 use App\Models\User;
+use App\Support\Ai\AiClient;
+use App\Support\Ai\Drivers\DisabledAiClient;
+use App\Support\Ai\Drivers\FakeAiClient;
 use App\Support\SecurityLog;
 use Illuminate\Auth\Access\Response;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -24,7 +27,19 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->registerAi();
+    }
+
+    /**
+     * Pilote d'IA choisi par AI_DRIVER (config/ai.php) : un seul par requête, partagé, pour que
+     * les tests lisent les requêtes reçues par le pilote simulé. Valeur inconnue : désactivé.
+     */
+    private function registerAi(): void
+    {
+        $this->app->singleton(AiClient::class, fn (): AiClient => match (config('ai.driver')) {
+            'fake' => new FakeAiClient,
+            default => new DisabledAiClient,
+        });
     }
 
     /**
