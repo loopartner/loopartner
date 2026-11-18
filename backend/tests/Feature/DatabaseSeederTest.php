@@ -31,6 +31,7 @@ use Database\Seeders\ComplianceDemoSeeder;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\MarketplaceDemoSeeder;
 use Database\Seeders\ServiceCategorySeeder;
+use Database\Seeders\WorkspacesDemoSeeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -324,4 +325,34 @@ it('crée le calendrier et les rendez-vous de démonstration, sans email, et peu
 
 it('refuse les rendez-vous de démonstration hors du poste local', function (): void {
     expect(fn () => $this->seed(AppointmentsDemoSeeder::class))->toThrow(RuntimeException::class);
+});
+
+it('crée les workspaces de démonstration, sans email ni appel à l\'IA, et peut être relancé', function (): void {
+    allowDemoSeeding();
+    config(['queue.default' => 'database']);
+
+    $this->seed(DatabaseSeeder::class);
+    $this->seed(DatabaseSeeder::class);
+
+    $particulier = User::query()->where('email', 'particulier@example.com')->sole();
+    $entrepreneur = User::query()->where('email', 'entrepreneur@example.com')->sole();
+
+    expect(DB::table('workspaces')->count())->toBe(2)
+        ->and(DB::table('workspace_copilot_suggestions')->count())->toBe(1)
+        ->and(DB::table('ai_usages')->count())->toBe(0);
+
+    $workspace = $this->actingAs($particulier)->getJson('/api/v1/me/workspaces')->assertOk()->assertJsonCount(1, 'data')->json('data.0.uuid');
+    $this->actingAs($particulier)->getJson('/api/v1/me/workspaces/'.$workspace)
+        ->assertOk()
+        ->assertJsonPath('data.title', WorkspacesDemoSeeder::DEMO_WORKSPACE_TITLE)
+        ->assertJsonPath('data.steps.1.ai_generated', true)
+        ->assertJsonPath('data.progress.tasks_done', 1);
+    $this->actingAs($particulier)->getJson('/api/v1/me/copilot')->assertJsonPath('data.quota.roadmaps.used', 1);
+    $this->actingAs($entrepreneur)->getJson('/api/v1/me/workspaces')->assertJsonPath('data.0.template', 'lancer-son-activite');
+
+    expect(DB::table('jobs')->count())->toBe(0);
+});
+
+it('refuse les workspaces de démonstration hors du poste local', function (): void {
+    expect(fn () => $this->seed(WorkspacesDemoSeeder::class))->toThrow(RuntimeException::class);
 });

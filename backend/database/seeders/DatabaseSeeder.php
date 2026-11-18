@@ -198,6 +198,8 @@ class DatabaseSeeder extends Seeder
             $this->call(MarketplaceDemoSeeder::class);
             // Après la mise en relation et le premium du prestataire : calendrier et rendez-vous.
             $this->call(AppointmentsDemoSeeder::class);
+            // Workspaces du particulier et de l'entrepreneur (sans appel à l'IA).
+            $this->call(WorkspacesDemoSeeder::class);
         }
     }
 
