@@ -1551,8 +1551,10 @@ composer security            # composer audit : vulnérabilités connues des dé
 ```
 
 - **Les tests ne lisent jamais `backend/.env`** (`tests/TestCase.php` : dossier
-  d'environnement `tests/`) : toute leur configuration est dans `phpunit.xml` (dont une `APP_KEY`
-  publique de test). Une variable d'environnement déjà définie l'emporte sur `phpunit.xml`. Hors
+  d'environnement `tests/`, fichier `tests/phpunit.env` **volontairement vide**, commentaires
+  seulement, vérifié par `TestEnvironmentTest` ; sans lui, phpdotenv tentait de lire `tests/.env`
+  à chaque test et PHPUnit comptait un avertissement par test) : toute leur configuration est
+  dans `phpunit.xml` (dont une `APP_KEY` publique de test). Une variable d'environnement déjà définie l'emporte sur `phpunit.xml`. Hors
   SQLite, les tests refusent une base dont le nom n'annonce pas une base de test (`testing`,
   `<nom>_test`, `<nom>_testing`) : ils la vident (`RefreshDatabase`).
 - **Intégration continue** (`.github/workflows/ci.yml`, GitHub Actions) : à chaque push, sur

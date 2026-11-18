@@ -12,7 +12,16 @@ use Tests\TestCase;
 
 it('ne lit aucun fichier .env', function (): void {
     expect(realpath(app()->environmentPath()))->toBe(realpath(base_path('tests')))
-        ->and(is_file(app()->environmentFilePath()))->toBeFalse();
+        ->and(app()->environmentFile())->toBe(TestCase::ENVIRONMENT_FILE)
+        ->and(is_file(base_path('tests/.env')))->toBeFalse();
+});
+
+it('ne définit aucune variable dans le fichier d\'environnement des tests', function (): void {
+    $lines = file(app()->environmentFilePath(), FILE_IGNORE_NEW_LINES) ?: [];
+    $assignments = array_filter($lines, fn (string $line): bool => trim($line) !== '' && ! str_starts_with(ltrim($line), '#'));
+
+    expect(is_file(app()->environmentFilePath()))->toBeTrue()
+        ->and($assignments)->toBe([]);
 });
 
 it('ne reconnaît comme base de test qu\'un nom de base de test', function (string $name, bool $accepted): void {

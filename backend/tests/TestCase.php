@@ -15,6 +15,9 @@ abstract class TestCase extends BaseTestCase
      */
     public const TEST_DATABASE_PATTERN = '/(^|_)test(s|ing)?$/';
 
+    /** Fichier d'environnement des tests, dans tests/ : volontairement vide (voir createApplication). */
+    public const ENVIRONMENT_FILE = 'phpunit.env';
+
     /**
      * Les tests ne lisent jamais backend/.env : le dossier des variables d'environnement est
      * tests/, qui ne contient aucun fichier .env. Toute la configuration des tests vient de
@@ -23,12 +26,16 @@ abstract class TestCase extends BaseTestCase
      * Raison : backend/.env pointe vers la base locale de l'utilisateur (XAMPP), et un test
      * lancé avec RefreshDatabase la viderait ; les tests doivent aussi donner le même résultat
      * sur le poste local et en intégration continue, où aucun .env n'existe.
+     *
+     * Le fichier chargé est tests/phpunit.env, vide (commentaires seulement) : sans fichier à
+     * lire, phpdotenv tenterait d'ouvrir tests/.env à chaque test, et PHPUnit compterait cet
+     * échec de lecture comme un avertissement.
      */
     public function createApplication(): Application
     {
         /** @var Application $app */
         $app = require Application::inferBasePath().'/bootstrap/app.php';
-        $app->useEnvironmentPath(__DIR__);
+        $app->useEnvironmentPath(__DIR__)->loadEnvironmentFrom(self::ENVIRONMENT_FILE);
 
         $this->traitsUsedByTest = class_uses_recursive(static::class);
 
