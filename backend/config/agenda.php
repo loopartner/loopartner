@@ -3,6 +3,7 @@
 use App\Modules\Appointments\Support\AppointmentsAgendaSource;
 use App\Modules\Compliance\Support\ComplianceAgendaSource;
 use App\Modules\Events\Support\EventsAgendaSource;
+use App\Modules\Workspaces\Support\WorkspacesAgendaSource;
 
 /*
 |--------------------------------------------------------------------------
@@ -20,6 +21,7 @@ return [
         'appointments' => AppointmentsAgendaSource::class,
         'events' => EventsAgendaSource::class,
         'compliance' => ComplianceAgendaSource::class,
+        'workspaces' => WorkspacesAgendaSource::class,
     ],
 
     // GET /me/agenda : de from à to inclus (journées UTC), 30 jours par défaut, 92 au plus.
