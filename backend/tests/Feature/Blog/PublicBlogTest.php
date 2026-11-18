@@ -247,3 +247,15 @@ it('n\'expose les catégories que par leur slug et leur nom', function (): void 
 
     expect(DB::table('article_category')->count())->toBe(1);
 });
+
+it('donne les catégories d\'un article dans l\'ordre du référentiel, quel que soit l\'ordre d\'ajout', function (): void {
+    $article = articleOf(articleAuthor(), 'published');
+    $last = serviceCategory('categorie-derniere', position: 30);
+    $first = serviceCategory('categorie-premiere', position: 1);
+    $article->categories()->sync([$last->id, blogCategory()->id, $first->id]);
+    blogCategory()->forceFill(['position' => 20])->save();
+
+    $slugs = collect($this->getJson("/api/v1/articles/{$article->slug}")->assertOk()->json('data.categories'))->pluck('slug')->all();
+
+    expect($slugs)->toBe(['categorie-premiere', 'creation-entreprise', 'categorie-derniere']);
+});

@@ -90,7 +90,7 @@ class Decision extends Model
      */
     public function appeals(): HasMany
     {
-        return $this->hasMany(Appeal::class);
+        return $this->hasMany(Appeal::class)->orderBy('id');
     }
 
     /**

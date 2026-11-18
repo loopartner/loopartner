@@ -33,6 +33,8 @@ class EventsAgendaSource implements AgendaSource
             ->notRestricted()
             ->where('starts_at', '<', $to)
             ->where('ends_at', '>', $from)
+            ->orderBy('starts_at')
+            ->orderBy('id')
             ->limit(500)
             ->get()
             ->map(fn (Event $event): AgendaItem => self::item($event, 'event_registration', 'participant'));
@@ -43,6 +45,8 @@ class EventsAgendaSource implements AgendaSource
             ->notRestricted()
             ->where('starts_at', '<', $to)
             ->where('ends_at', '>', $from)
+            ->orderBy('starts_at')
+            ->orderBy('id')
             ->limit(500)
             ->get()
             ->map(fn (Event $event): AgendaItem => self::item($event, 'event_organized', 'organizer'));

@@ -69,7 +69,7 @@ final class ModerationView
     {
         $article = $revision->article;
         $proposed = ArticleContent::merge(ArticleContent::blank(), $revision->content());
-        $proposedCategories = ServiceCategory::query()->whereIn('slug', (array) $proposed['categories'])->get()->all();
+        $proposedCategories = ServiceCategory::query()->whereIn('slug', (array) $proposed['categories'])->orderBy('position')->orderBy('slug')->get()->all();
 
         /** @var Media|null $proposedCover */
         $proposedCover = $revision->cover;

@@ -126,7 +126,9 @@ class Article extends Model
      */
     public function categories(): BelongsToMany
     {
-        return $this->belongsToMany(ServiceCategory::class, 'article_category');
+        return $this->belongsToMany(ServiceCategory::class, 'article_category')
+            ->orderBy('service_categories.position')
+            ->orderBy('service_categories.slug');
     }
 
     /**

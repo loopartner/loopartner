@@ -153,7 +153,9 @@ class Event extends Model
      */
     public function categories(): BelongsToMany
     {
-        return $this->belongsToMany(ServiceCategory::class, 'event_category');
+        return $this->belongsToMany(ServiceCategory::class, 'event_category')
+            ->orderBy('service_categories.position')
+            ->orderBy('service_categories.slug');
     }
 
     /**
@@ -197,7 +199,7 @@ class Event extends Model
      */
     public function announcements(): HasMany
     {
-        return $this->hasMany(EventAnnouncement::class);
+        return $this->hasMany(EventAnnouncement::class)->orderBy('id');
     }
 
     /**

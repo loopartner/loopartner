@@ -71,7 +71,7 @@ class MyRegistrationResource extends JsonResource
                 $event->announcements
                     ->filter(fn (EventAnnouncement $announcement): bool => $announcement->status === AnnouncementStatus::Published
                         && $announcement->moderation_restricted_at === null)
-                    ->sortByDesc('published_at')
+                    ->sortBy([['published_at', 'desc'], ['id', 'desc']])
                     ->values(),
             )),
         ];
