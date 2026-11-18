@@ -199,8 +199,20 @@ it('ne vérifie pas le schéma hors MySQL et MariaDB', function (): void {
         ->assertSuccessful();
 });
 
-it('lit le schéma par défaut sans erreur sur la connexion de test (SQLite)', function (): void {
-    expect(TimestampSchema::inspect(DB::connection()))->toBeNull();
+it('lit le schéma par défaut sans erreur sur la connexion de test', function (): void {
+    $report = TimestampSchema::inspect(DB::connection());
+
+    // SQLite (suite locale) : rien à lire. MySQL et MariaDB (intégration continue) : rapport
+    // complet, sans aucune colonne ON UPDATE CURRENT_TIMESTAMP hors updated_at.
+    if (DB::connection()->getDriverName() === 'sqlite') {
+        expect($report)->toBeNull();
+
+        return;
+    }
+
+    expect($report)->toBeArray()
+        ->and($report['explicit_defaults'])->toBeBool()
+        ->and($report['on_update_columns'])->toBe([]);
 });
 
 it('n\'affiche jamais la valeur des secrets', function (): void {
