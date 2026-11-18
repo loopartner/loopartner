@@ -61,7 +61,10 @@ jobs:
         run: composer install --no-interaction --no-progress --prefer-dist
 
       - name: GD avec WebP
-        run: php -r 'exit(gd_info()["WebP Support"] ? 0 : 1);'
+        # Bloc littéral : une commande qui contient « : » ou « # » ne doit jamais être un scalaire
+        # YAML nu (« ? 0 : 1 » rendait tout le fichier invalide).
+        run: |
+          php -r 'exit(gd_info()["WebP Support"] ? 0 : 1);'
 
       - name: Style (Pint)
         run: vendor/bin/pint --test
@@ -144,7 +147,8 @@ jobs:
         run: composer install --no-interaction --no-progress --prefer-dist
 
       - name: Version du serveur
-        run: php -r '$pdo = new PDO("mysql:host=127.0.0.1;port=3306;dbname=testing", "root", "root"); echo $pdo->query("SELECT VERSION()")->fetchColumn(), PHP_EOL, "explicit_defaults_for_timestamp=", $pdo->query("SELECT @@explicit_defaults_for_timestamp")->fetchColumn(), PHP_EOL;'
+        run: |
+          php -r '$pdo = new PDO("mysql:host=127.0.0.1;port=3306;dbname=testing", "root", "root"); echo $pdo->query("SELECT VERSION()")->fetchColumn(), PHP_EOL, "explicit_defaults_for_timestamp=", $pdo->query("SELECT @@explicit_defaults_for_timestamp")->fetchColumn(), PHP_EOL;'
 
       - name: Migrations réelles
         run: php artisan migrate --no-interaction

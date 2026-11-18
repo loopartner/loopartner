@@ -29,7 +29,7 @@ de nouveaux paquets et ce que les utilisateurs voient ou subissent attendent une
 | Lot | État |
 |---|---|
 | 0. Stabiliser Compliance | **terminé et fusionné dans `main`** le 2026-11-16 (avec la correction des noms d'index, `8e12edb`) |
-| 1. Socle transverse | **terminé et fusionné dans `main`** le 2026-11-16 |
+| 1. Socle transverse | **terminé et fusionné dans `main`** le 2026-11-16 ; critère de l'intégration continue **non atteint jusqu'au 2026-11-18** (workflow invalide, jamais exécuté ; corrigé sur `fix/ci-workflow`, premier passage à vérifier) |
 | 2. Signalements et modération (DSA) | **terminé et fusionné dans `main`** le 2026-11-16 (décisions 21 à 31) |
 | 3. Marketplace | **terminé et fusionné dans `main`** le 2026-11-17 (décisions 36 à 51) ; reste hors du code : validations du juriste et de l'expert-comptable |
 | 4. Rendez-vous et agenda | **terminé et fusionné dans `main`** le 2026-11-18 (décisions 52 à 59) ; reste hors du code : points R1 à R11 du juriste |

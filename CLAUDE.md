@@ -1562,6 +1562,12 @@ composer security            # composer audit : vulnérabilités connues des dé
   données de démonstration, toute la suite (base `testing`). Sur ces serveurs,
   `tests/Feature/Core/TestEnvironmentTest.php` contrôle aussi le schéma réel (aucune colonne
   `ON UPDATE CURRENT_TIMESTAMP` hors `updated_at`). Résultat : onglet **Actions** du dépôt GitHub.
+  **Jusqu'au 2026-11-18, ce workflow n'a jamais tourné** : une erreur de syntaxe YAML le rendait
+  invalide (échec en 0 s, « Invalid workflow file ») ; corrigée sur `fix/ci-workflow`. Aucun
+  passage vert n'est donc acquis avant cette correction, sur SQLite comme sur les serveurs réels.
+  Dans le workflow, toute commande qui contient « : » ou « # » s'écrit en bloc littéral
+  (`run: |`), jamais en scalaire nu ; valider après chaque modification avec
+  `python -c "import yaml,sys; yaml.safe_load(open(sys.argv[1], encoding='utf-8'))" .github/workflows/ci.yml`.
 - La limite mémoire par défaut de PHP (128 Mo) ne suffit plus : `phpunit.xml` fixe 1 Go pour les
   tests (512 Mo ne suffisaient plus pour toute la suite au lot 4 : la mémoire s'accumule d'un test
   à l'autre), et PHPStan se lance avec `--memory-limit=1G`.
