@@ -7,12 +7,14 @@
 
 use App\Http\Controllers\AgendaController;
 use App\Http\Controllers\AgendaFeedController;
+use App\Http\Controllers\AiUsageController;
 use App\Http\Controllers\LegalConsentController;
 use App\Http\Controllers\LegalDocumentController;
 use App\Http\Controllers\MediaController;
 use App\Http\Controllers\NotificationPreferenceController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\ServiceCategoryController;
+use App\Http\Middleware\EnsureModerator;
 use App\Support\Calendar\FeedToken;
 use Illuminate\Support\Facades\Route;
 
@@ -83,4 +85,12 @@ Route::middleware(['throttle:api', 'auth:sanctum'])->group(function (): void {
         ->where('key', '[a-z_]{1,64}')
         ->middleware('throttle:onboarding-writes')
         ->name('onboarding.skip');
+});
+
+/*
+| Suivi des coûts de l'IA (lot 5) : admins avec 2FA de session (EnsureModerator) ; totaux sans
+| identité ni contenu.
+*/
+Route::middleware(['throttle:api', 'auth:sanctum', 'verified', EnsureModerator::class, 'throttle:ai-admin'])->group(function (): void {
+    Route::get('admin/ai/usage', AiUsageController::class)->name('admin.ai.usage');
 });

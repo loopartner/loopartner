@@ -26,6 +26,8 @@ final class AiBudget
 
     private const GLOBAL_DAY = 'global:day';
 
+    public function __construct(private AiBudgetAlerts $alerts) {}
+
     /**
      * @throws AiUnavailable plafond global atteint (reason "capacity")
      * @throws AiQuotaExceeded plafond de l'utilisateur atteint (scope "budget")
@@ -111,6 +113,10 @@ final class AiBudget
 
             $this->recordStats($created->toDateString(), $usage->feature, $model, $failureReason !== null, $inputTokens, $outputTokens, $cost);
         });
+
+        if ($cost > 0) {
+            $this->alerts->check($created);
+        }
     }
 
     /**

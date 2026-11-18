@@ -144,6 +144,18 @@ Schedule::command('appointments:prune')
     ->dailyAt('04:45')
     ->withoutOverlapping();
 
+// Workspaces : minimisation (durée dans config/security.php, retention :
+// copilot_suggestions_days, 90 jours).
+Schedule::command('workspaces:prune')
+    ->dailyAt('04:15')
+    ->withoutOverlapping();
+
+// Brique d'IA : réservations abandonnées libérées, journal des appels purgé (retention :
+// ai_usages_months, 13 mois).
+Schedule::command('ai:prune')
+    ->dailyAt('04:20')
+    ->withoutOverlapping();
+
 // File d'attente (driver database) : traitée chaque minute, sans worker permanent.
 // Le worker s'arrête dès que la file est vide, et au plus tard après 50 secondes pour ne pas
 // déborder sur le schedule:run suivant. Le verrou anti-chevauchement expire après 5 minutes

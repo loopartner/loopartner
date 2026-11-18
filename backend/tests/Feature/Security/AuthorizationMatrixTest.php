@@ -286,6 +286,9 @@ const API_ROUTES = [
     'DELETE api/v1/me/agenda/feed' => 'auth',
     'GET api/v1/agenda/{token}.ics' => 'public',
 
+    // Suivi des coûts de l'IA (lot 5, admins).
+    'GET api/v1/admin/ai/usage' => 'auth',
+
     // Parcours d'accueil (lot 5).
     'GET api/v1/me/onboarding' => 'auth',
     'POST api/v1/me/onboarding/dismiss' => 'auth',

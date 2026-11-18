@@ -140,6 +140,12 @@ return [
             'label' => ['fr' => 'Décisions de modération sur mes contenus', 'en' => 'Moderation decisions about my content'],
         ],
         // Admins : alerte immédiate sur un signalement urgent (sans contenu), et récapitulatif.
+        // Brique d'IA (lot 5, décision 62) : paliers du budget mensuel global atteints.
+        'ai.budget_alerts' => [
+            'mandatory' => true,
+            'roles' => ['admin'],
+            'label' => ['fr' => 'Alertes de budget de l\'IA', 'en' => 'AI budget alerts'],
+        ],
         'moderation.urgent_alerts' => [
             'mandatory' => true,
             'roles' => ['admin'],

@@ -162,3 +162,19 @@ it('purge les données des rendez-vous chaque jour à 04:45, sans chevauchement'
         ->and($event->expression)->toBe('45 4 * * *')
         ->and($event->withoutOverlapping)->toBeTrue();
 });
+
+it('purge les suggestions du copilote chaque jour à 04:15, sans chevauchement', function (): void {
+    $event = scheduledEvent('workspaces:prune');
+
+    expect($event)->not->toBeNull()
+        ->and($event->expression)->toBe('15 4 * * *')
+        ->and($event->withoutOverlapping)->toBeTrue();
+});
+
+it('purge le journal des appels à l\'IA chaque jour à 04:20, sans chevauchement', function (): void {
+    $event = scheduledEvent('ai:prune');
+
+    expect($event)->not->toBeNull()
+        ->and($event->expression)->toBe('20 4 * * *')
+        ->and($event->withoutOverlapping)->toBeTrue();
+});
