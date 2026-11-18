@@ -235,6 +235,10 @@ utilitaires du module), `Console/Commands/` (commandes Artisan du module), `Noti
   Filtres facultatifs (un paramètre vide est ignoré) : `category` (slug actif, sous-catégories
   incluses), `country`, `city` (égalité sans tenir compte de la casse) et `q` (2 à 100 caractères,
   dans `display_name`, `headline` et `bio`). Même Resource que la page publique.
+- **Colonnes JSON** : le type JSON natif de MySQL (production) trie les clés de chaque objet à
+  l'écriture ; MariaDB et SQLite gardent l'ordre. Un document relu en base ne se compare donc
+  jamais avec `===` à un tableau construit par l'application : `App\Support\Database\JsonDocument`
+  (`same()`, `canonical()`), comme `Blog\Support\ArticleContent::changedFields()`.
 - La recherche texte est un simple `LIKE` (`App\Support\Database\Like`, qui échappe `%`, `_` et `!`
   avec `ESCAPE '!'`, compatible SQLite et MariaDB 10.4). Une recherche plein texte (index FULLTEXT ou
   moteur dédié) pourra la remplacer plus tard si le volume l'exige.

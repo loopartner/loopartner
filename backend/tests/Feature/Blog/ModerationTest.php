@@ -275,13 +275,16 @@ describe('révisions', function (): void {
         $body = ArticleFactory::body();
         $body['blocks'][] = ['type' => 'image', 'media' => $image->uuid, 'alt' => 'Une image refusée'];
         $revision = pendingArticleRevision($article, ['body' => $body]);
+        // Relu en base avant la décision : le type JSON de MySQL trie les clés des objets, le
+        // corps gardé en mémoire depuis la création n'a donc pas le même ordre.
+        $publishedBody = $article->fresh()->body;
 
         asModerator(blogModerator())
             ->postJson("/api/v1/admin/article-revisions/{$revision->uuid}/reject", ['version' => 1, 'reason' => 'Le lien ajouté pointe vers un site commercial.'])
             ->assertOk()
             ->assertJsonPath('data.status', 'rejected');
 
-        expect($article->fresh()->body)->toBe($article->body)
+        expect($article->fresh()->body)->toBe($publishedBody)
             ->and(Media::query()->whereKey($image->id)->exists())->toBeFalse();
 
         asAuthor($author)->getJson("/api/v1/me/articles/{$article->uuid}")

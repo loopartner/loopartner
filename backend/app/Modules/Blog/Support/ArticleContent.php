@@ -5,6 +5,7 @@ namespace App\Modules\Blog\Support;
 use App\Models\ServiceCategory;
 use App\Modules\Blog\Enums\AuthorKind;
 use App\Modules\Blog\Models\Article;
+use App\Support\Database\JsonDocument;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -94,7 +95,8 @@ final class ArticleContent
     }
 
     /**
-     * Noms des champs dont la valeur diffère.
+     * Noms des champs dont la valeur diffère. Le corps lu en base (colonne JSON) n'a pas
+     * forcément l'ordre de clés du corps reconstruit (MySQL les trie) : comparaison canonique.
      *
      * @param  array<string, mixed>  $before
      * @param  array<string, mixed>  $after
@@ -104,7 +106,7 @@ final class ArticleContent
     {
         return array_values(array_filter(
             self::FIELDS,
-            fn (string $field): bool => ($before[$field] ?? null) !== ($after[$field] ?? null),
+            fn (string $field): bool => ! JsonDocument::same($before[$field] ?? null, $after[$field] ?? null),
         ));
     }
 
