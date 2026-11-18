@@ -87,7 +87,7 @@ class WorkspacesDemoSeeder extends Seeder
                 'steps' => [
                     ['title' => '[Démo] Comparer trois devis de signalétique', 'description' => '[Démo] Demander des devis détaillés.', 'category' => $this->category('supports-imprimes'), 'tasks' => ['[Démo] Envoyer le cahier des charges']],
                 ],
-                'categories' => array_values(array_filter([$this->category('identite-visuelle') === null ? null : ['slug' => 'identite-visuelle', 'reason' => '[Démo] Pour la nouvelle enseigne.']])),
+                'categories' => $this->category('identite-visuelle') === null ? [] : [['slug' => 'identite-visuelle', 'reason' => '[Démo] Pour la nouvelle enseigne.']],
             ],
             'prompt_version' => CopilotPrompts::version(SuggestionKind::Roadmap),
             'provider' => 'fake',
