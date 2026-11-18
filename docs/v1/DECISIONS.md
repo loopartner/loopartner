@@ -372,3 +372,37 @@ rendez-vous vers sa demande de mise en relation.
 - Compliance, répartition gratuit / premium, chiffrement, durées de conservation, abonnement `.ics`
   gratuit, suppression d'une entreprise avec confirmation récente du mot de passe : plan validé le
   2026-11-13 (voir CLAUDE.md, « Module Compliance »).
+
+## Décisions du lot 5 : workspaces, onboarding et brique d'IA (validées le 2026-11-18)
+
+Plan validé avec les recommandations D1 à D12 et les précisions de l'utilisateur. Sources
+officielles consultées, contenu envoyé à l'IA, textes et points à faire valider :
+`docs/v1/workspaces-rules.md`.
+
+| # | Sujet | Décision |
+|---|---|---|
+| 60 | Fournisseur d'IA | **Mistral AI, modèle Mistral Small 4, endpoint régional de l'UE** (`https://api.eu.mistral.ai`, inférence garantie dans l'UE, prix ×1,1) : société française, pas de transfert vers les États-Unis, contrat de sous-traitance incorporé aux conditions. Pilote écrit avec le client `Http` de Laravel, **aucun paquet** ; le pilote refuse tout autre hôte que l'endpoint de l'UE. `AI_DRIVER=disabled` par défaut (production comprise) tant que l'exploitant n'a pas créé le compte, désactivé l'opt-out d'entraînement, demandé la conservation nulle (ZDR) et renseigné la clé (étapes dans `workspaces-rules.md`). Tests avec de fausses réponses seulement. Comparaison avec Anthropic et OpenAI : `workspaces-rules.md`. |
+| 61 | Quotas du copilote | Particuliers et entrepreneurs. **Gratuit** : une feuille de route et une régénération **à vie** (deux générations ; un échec ne compte pas), pas de cahier des charges. **Premium** : **30 générations par mois et 10 par jour** (feuilles de route et cahiers des charges confondus). **Email vérifié obligatoire pour toute génération** (403 `email_not_verified`) ; le workspace reste utilisable sans vérification. Gratuit épuisé : 403 `premium_required` ; quota Premium atteint : 429 `ai_quota_exceeded` avec `resets_at`. |
+| 62 | Plafonds de coût | **0,50 $ par utilisateur et par mois**, **50 $ par mois et 5 $ par jour au global** (en configuration, en cents). Coût réservé sous verrou avant chaque appel, ajusté au coût réel après. Plafond global atteint : IA indisponible (503 `ai_unavailable`, `reason: capacity`) ; plafond utilisateur : 429 `ai_quota_exceeded`. Alerte email aux admins avec 2FA à **80 % et 100 %** du budget mensuel global (catégorie obligatoire `ai.budget_alerts`, une fois par palier et par mois). |
+| 63 | Workspaces | Module privé pour les **particuliers et les entrepreneurs** (403 pour les autres rôles ; email vérifié non requis). **Gratuit : 1 workspace non archivé ; Premium : 10** ; 50 au total. **Modèles de projet réservés au Premium.** Limites : 20 objectifs, 30 étapes, 50 tâches par étape et 300 par workspace ; titre 160 caractères, description 5 000, note 2 000. **Fin du Premium** : rien n'est supprimé ; le workspace choisi (`activate`) reste modifiable, les autres passent en lecture seule (lecture, archivage, suppression). |
+| 64 | Contenu envoyé à l'IA | **Liste blanche exacte** (`workspaces-rules.md`) : titre et description du workspace **expurgés** (emails, téléphones, IBAN, URL, numéros SIREN/SIRET remplacés), pays, budget, date de début souhaitée, travail à distance, langue, type de compte, titres des étapes existantes, catégories actives (publiques). **Jamais** : nom, email, identifiant, ville, notes, données d'un autre utilisateur. Prévisualisation du contenu exact avant l'envoi ; l'information sur l'IA (version) doit être lue avant la première génération. |
+| 65 | Durées de conservation | Workspaces et leur contenu : tant que le compte existe. Suggestion du copilote (réponse de l'IA) : **90 jours** après sa génération. Journal des appels à l'IA (`ai_usages` : fonctionnalité, modèle, jetons, coût, sans contenu) : **13 mois** ; ensuite seuls des totaux par jour sans utilisateur restent. Décompte des générations gratuites : tant que le compte existe. Chez Mistral : 30 jours sans ZDR, aucun avec ZDR. À faire valider par le juriste (J8). |
+| 66 | Ce que voient les utilisateurs | Avertissement systématique sur chaque réponse du copilote (`ai.disclaimer` : contenu généré par une IA, à vérifier, ni avis juridique, fiscal ni comptable) ; information sur l'IA avant la première génération ; avertissement sur les données sensibles près du champ de description ; marque `ai_generated` sur tout élément issu du copilote, même modifié. Textes à faire valider par le juriste (J2 à J5). |
+| 67 | Agenda et accueil | Échéances des étapes et des tâches des workspaces modifiables dans l'agenda unifié **et l'abonnement** (titres et dates). Parcours d'accueil par rôle calculé sur les données réelles, **sans email** (ni relance d'accueil ni rappel de tâche en V1). |
+| 68 | Comparateur de devis | **Pas d'IA dans le comparateur** : elle enverrait des données d'autres utilisateurs (identité du prestataire, prix). Le comparateur à règles du lot 3 reste inchangé. |
+| 69 | Brouillon Directory | Un workspace peut créer un **brouillon** de projet Directory (titre, description, catégorie, pays, budget) ; il n'est jamais publié sans l'action habituelle de l'utilisateur, et il devient alors signalable comme tout projet. Un workspace peut aussi être relié à un projet existant de l'utilisateur. |
+| 70 | Hébergement et démarches | **L'IA ne doit pas être activée sur l'hébergement mutualisé** (délai d'exécution) : appel synchrone de 45 s au plus ; `security:check-config` signale **en erreur** une IA activée avec un `max_execution_time` inférieur au délai d'appel plus 15 s de marge, et l'API refuse l'appel (503) dans ce cas. Hors du code : analyse d'impact (AIPD), politique de confidentialité, mesures de maîtrise de l'IA pour l'équipe (règlement sur l'IA, art. 4), validation des points J1 à J11 de `workspaces-rules.md`. |
+
+Décisions techniques du plan (décision 20) : nouveau module `Workspaces` ; brique du noyau
+`App\Support\Ai` (contrat `AiClient`, pilotes `disabled`, `fake` et `mistral`, passerelle
+`AiGateway` qui vérifie la disponibilité, réserve le coût sous verrou et journalise sans contenu ;
+tables `ai_usages`, `ai_budgets`, `ai_usage_stats`) ; coûts en micro-dollars entiers ; sortie
+JSON imposée par un schéma puis **nettoyée par le serveur** (texte brut, liens retirés,
+catégories filtrées, longueurs bornées ; réponse invalide : 502 `ai_invalid_response`, non
+décomptée) ; appel synchrone avec un verrou par utilisateur (409 `generation_in_progress`) ;
+réponse gardée comme **suggestion** que l'utilisateur applique ; brique du noyau
+`App\Support\Onboarding` (contrat `OnboardingStep`, un adaptateur par module déclaré dans
+`config/onboarding.php`) ; Actions publiques Directory `CreateDraftProject` et
+`DescribeOwnProject` ; adaptateur d'agenda `WorkspacesAgendaSource` ; classes internes
+`WorkspacesPersonalData` et `AiUsagePersonalData` pour l'export du lot 11 ; aucun texte d'un
+workspace n'est visible d'autrui, donc aucun nouvel adaptateur de modération.

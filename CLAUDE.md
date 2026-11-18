@@ -9,7 +9,7 @@ entrepreneurs.
 
 ## V1 2027 : feuille de route et décisions (à lire au début de chaque session)
 
-- **`docs/v1/ROADMAP.md`** : lots 0 à 11 de la V1 commercialisable (Billing est le lot 10 ; le lot 3 Marketplace est fusionné, validations externes en attente ; le lot 4 Rendez-vous et agenda est codé sur `feature/rendez-vous`, validation du juriste en attente ; le prochain est le lot 5), avec leurs critères
+- **`docs/v1/ROADMAP.md`** : lots 0 à 11 de la V1 commercialisable (Billing est le lot 10 ; le lot 3 Marketplace est fusionné, validations externes en attente ; le lot 4 Rendez-vous et agenda est fusionné, validation du juriste en attente ; le lot 5 Workspaces et onboarding est en cours sur `feature/workspaces`, plan validé le 2026-11-18), avec leurs critères
   d'acceptation et leur état. Ne commence jamais un lot sans validation explicite de son plan
   détaillé par l'utilisateur.
 - **`docs/v1/DECISIONS.md`** : décisions produit et techniques validées, datées. Ne les remets pas
@@ -25,8 +25,9 @@ entrepreneurs.
 - `frontend/` (à venir, après tous les lots backend) : Next.js et TypeScript, servi sur un autre sous-domaine.
   Il consomme l'API avec des cookies de session.
 - `docs/v1/` : feuille de route et décisions de la V1 (voir ci-dessus), règles de la modération
-  (`moderation-rules.md`), de la facturation (`billing-rules.md`) et de la Marketplace
-  (`marketplace-rules.md`), à faire valider.
+  (`moderation-rules.md`), de la facturation (`billing-rules.md`), de la Marketplace
+  (`marketplace-rules.md`), des rendez-vous (`appointments-rules.md`) et des workspaces et de
+  l'IA (`workspaces-rules.md`), à faire valider.
 - `.github/workflows/ci.yml` : intégration continue (voir « Qualité »).
 - `SECURITY.md` : signalement des vulnérabilités, principes de sécurité, journal de sécurité et
   vérifications avant chaque mise en production. La liste de contrôle de chaque tâche est la section

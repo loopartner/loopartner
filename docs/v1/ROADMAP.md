@@ -32,8 +32,9 @@ de nouveaux paquets et ce que les utilisateurs voient ou subissent attendent une
 | 1. Socle transverse | **terminé et fusionné dans `main`** le 2026-11-16 |
 | 2. Signalements et modération (DSA) | **terminé et fusionné dans `main`** le 2026-11-16 (décisions 21 à 31) |
 | 3. Marketplace | **terminé et fusionné dans `main`** le 2026-11-17 (décisions 36 à 51) ; reste hors du code : validations du juriste et de l'expert-comptable |
-| 4. Rendez-vous et agenda | **codé sur `feature/rendez-vous`** le 2026-11-17 (décisions 52 à 59) ; reste la validation du juriste, puis la fusion dans `main` |
-| 5 à 9 | à planifier |
+| 4. Rendez-vous et agenda | **terminé et fusionné dans `main`** le 2026-11-18 (décisions 52 à 59) ; reste hors du code : points R1 à R11 du juriste |
+| 5. Workspaces et onboarding | **plan validé le 2026-11-18** (décisions 60 à 70), en cours sur `feature/workspaces` |
+| 6 à 9 | à planifier |
 | 10. Billing | plan validé dans son principe le 2026-11-16 ; développé à la fin du backend, juste avant le durcissement |
 | 11. Durcissement avant la bêta | à planifier |
 
@@ -232,6 +233,8 @@ page de réservation publique dans `RestrictionSurfacesTest`. Limite mémoire de
 présence du verrou `FOR UPDATE` sur MySQL et MariaDB (la suite tourne dans une transaction par
 test : pas de test à deux processus).
 
+**Terminé et fusionné dans `main` le 2026-11-18.**
+
 **Reste hors du code** : validation des points R1 à R11 de `docs/v1/appointments-rules.md`
 (juriste) ; clauses des CGU (page de réservation Premium, annulation) et politique de
 confidentialité (tableau de SECURITY.md) ; surveiller le quota d'emails Resend (deux
@@ -260,7 +263,42 @@ modèle d'IA.
   le cas ; 404 sur le projet d'autrui.
 - **Comparateur de devis** (facultatif, si retenu au plan du lot) : enrichissement par l'IA dans
   les quotas de la décision 34 ; IA désactivée ou quota atteint : le comparateur à règles du lot 3
-  reste disponible et inchangé (testé).
+  reste disponible et inchangé (testé). **Non retenu** (décision 68).
+
+**Plan détaillé** (validé le 2026-11-18 ; décisions 60 à 70 ; sources, contenu envoyé à l'IA,
+textes et points à faire valider : `docs/v1/workspaces-rules.md`)
+
+- **Module `Workspaces`** (ajouté au test d'architecture), particuliers et entrepreneurs, privé :
+  `workspaces` (titre et description chiffrés, pays, budget, début souhaité, statut, projet
+  Directory relié, modèle d'origine, `activated_at`), `workspace_goals`, `workspace_steps`
+  (catégorie utile, source `user`, `copilot` ou `template`), `workspace_tasks`,
+  `workspace_specifications` (cahier des charges à sections fixes), `workspace_copilot_suggestions`
+  (réponses de l'IA, chiffrées) et `workspace_copilot_entries` (décompte des générations).
+- **Endpoints** : `/me/workspaces` (CRUD, archivage, activation, objectifs, étapes, tâches, ordre,
+  cahiers des charges, projet relié, brouillon Directory) ; `GET /workspace-templates` ; copilote
+  (`GET /me/copilot`, prévisualisation, `roadmap`, `specification`, suggestions, application) ;
+  `GET /me/onboarding` ; `GET /admin/ai/usage`.
+- **Brique d'IA du noyau** (`App\Support\Ai`) : contrat `AiClient`, pilotes `disabled` (défaut),
+  `fake` (tests) et `mistral` (client `Http`, endpoint de l'UE imposé) ; `AiGateway` :
+  disponibilité, délai d'exécution, verrou par utilisateur, réservation du coût, plafonds par
+  utilisateur et globaux, journal sans contenu, statistiques par jour ; alertes de budget aux
+  admins ; commandes `ai:test-connection` et `ai:prune`.
+- **Copilote** : contenu envoyé construit par liste blanche et expurgé, prévisualisable ;
+  information lue avant la première génération ; sortie JSON par schéma, nettoyée (texte brut,
+  liens retirés, catégories actives seulement) ; avertissement dans chaque réponse ; suggestion
+  appliquée par l'utilisateur, éléments marqués `ai_generated`.
+- **Parcours d'accueil** (noyau, `App\Support\Onboarding`) : étapes par rôle calculées sur les
+  données réelles, un adaptateur par module (`config/onboarding.php`), sans email.
+- **Droits** (`config/entitlements.php`, particulier et entrepreneur) : `workspaces.active`,
+  `workspaces.templates`, `copilot.roadmap_generations`, `copilot.specifications`,
+  `copilot.monthly_generations`, `copilot.daily_generations`.
+- **Agenda** : adaptateur `WorkspacesAgendaSource` (échéances des étapes et des tâches).
+- **Suppression de compte** (`ForgetUserWorkspaces`), minimisation (`workspaces:prune`,
+  `ai:prune`), classes internes `WorkspacesPersonalData` et `AiUsagePersonalData`.
+- **Paquet** : aucun.
+- **Commits** : documentation ; noyau IA ; workspaces ; lien Directory et brouillon ; modèles ;
+  agenda ; parcours d'accueil ; copilote ; pilote Mistral ; suivi des coûts et alertes ;
+  suppression, purge, export interne ; tests de sécurité ; démonstration ; documentation finale.
 
 ## Lot 6 — Avis, ressources et coffre-fort documentaire
 
