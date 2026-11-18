@@ -31,6 +31,8 @@ describe('GET /me', function (): void {
                     'two_factor_required' => false,
                     'premium' => ['active' => false, 'source' => null, 'starts_at' => null, 'ends_at' => null],
                     'article_quota' => ['premium' => false, 'limit' => 2, 'used' => 0, 'remaining' => 2],
+                    // Prestataire sans profil publié : parcours d'accueil pas encore terminé.
+                    'onboarding' => ['completed' => false, 'dismissed' => false],
                 ],
             ]);
     });

@@ -286,6 +286,11 @@ const API_ROUTES = [
     'DELETE api/v1/me/agenda/feed' => 'auth',
     'GET api/v1/agenda/{token}.ics' => 'public',
 
+    // Parcours d'accueil (lot 5).
+    'GET api/v1/me/onboarding' => 'auth',
+    'POST api/v1/me/onboarding/dismiss' => 'auth',
+    'POST api/v1/me/onboarding/steps/{key}/skip' => 'auth',
+
     // Workspaces (lot 5) : privés, aucune route publique.
     'GET api/v1/workspace-templates' => 'auth',
     'GET api/v1/me/workspaces' => 'auth',
@@ -327,6 +332,7 @@ function concreteUri(string $uri): string
         '{uuid}' => '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d',
         '{company}' => '3f2504e0-4f89-41d3-9a0c-0305e82c3301',
         '{deadline}' => '7c9e6679-7425-40de-944b-e07fc1f90ae7',
+        '{key}' => 'publish_project',
         '{goal}' => 'e3b0c442-98fc-4c14-9afb-f4c8996fb924',
         '{step}' => 'd4735e3a-265e-46ef-8b3a-8e2b5d6f7a10',
         '{specification}' => '4e07408c-5c8b-4b2a-9f1e-3d2c1b0a9f8e',

@@ -319,6 +319,10 @@ return [
             'per_hour' => 120,
             'per_day' => 600,
         ],
+        // Parcours d'accueil : masquer le parcours, passer une étape facultative.
+        'onboarding_writes' => [
+            'per_hour' => 30,
+        ],
         // Agenda unifié (GET /me/agenda).
         'agenda' => [
             'per_minute' => 60,

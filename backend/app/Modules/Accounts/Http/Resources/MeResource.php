@@ -5,6 +5,7 @@ namespace App\Modules\Accounts\Http\Resources;
 use App\Models\User;
 use App\Modules\Accounts\Actions\GetPremiumStatus;
 use App\Modules\Blog\Actions\GetArticleQuota;
+use App\Support\Onboarding\Onboarding;
 use App\Support\TeamTwoFactor;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -40,6 +41,8 @@ class MeResource extends JsonResource
             'premium' => app(GetPremiumStatus::class)->handle($this->id),
             // Quota gratuit d'articles (module Blog) : prestataires et entrepreneurs, null sinon.
             'article_quota' => app(GetArticleQuota::class)->handle($this->resource),
+            // Parcours d'accueil (détail : GET /me/onboarding).
+            'onboarding' => app(Onboarding::class)->summary($this->resource),
         ];
     }
 }

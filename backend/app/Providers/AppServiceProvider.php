@@ -276,6 +276,7 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('appointment-public-slots', fn (Request $request): Limit => Limit::perMinute(self::limit('appointment_slots.public_per_minute_per_ip'))->by('ip:'.$request->ip()));
         RateLimiter::for('appointment-decisions', fn (Request $request): Limit => Limit::perHour(self::limit('appointment_decisions.per_hour'))->by($this->userOrIp($request)));
         RateLimiter::for('appointment-ics', fn (Request $request): Limit => Limit::perHour(self::limit('appointment_ics.per_hour'))->by($this->userOrIp($request)));
+        RateLimiter::for('onboarding-writes', fn (Request $request): Limit => Limit::perHour(self::limit('onboarding_writes.per_hour'))->by($this->userOrIp($request)));
         RateLimiter::for('agenda', fn (Request $request): Limit => Limit::perMinute(self::limit('agenda.per_minute'))->by($this->userOrIp($request)));
         RateLimiter::for('agenda-feed-manage', fn (Request $request): Limit => Limit::perDay(self::limit('agenda_feed_manage.per_day'))->by($this->userOrIp($request)));
         RateLimiter::for('agenda-feed', fn (Request $request): array => [

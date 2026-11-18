@@ -11,6 +11,7 @@ use App\Http\Controllers\LegalConsentController;
 use App\Http\Controllers\LegalDocumentController;
 use App\Http\Controllers\MediaController;
 use App\Http\Controllers\NotificationPreferenceController;
+use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\ServiceCategoryController;
 use App\Support\Calendar\FeedToken;
 use Illuminate\Support\Facades\Route;
@@ -68,4 +69,18 @@ Route::middleware(['throttle:api', 'auth:sanctum', 'verified'])->group(function 
     Route::delete('me/agenda/feed', [AgendaFeedController::class, 'destroy'])
         ->middleware('throttle:agenda-feed-manage')
         ->name('agenda.feed.destroy');
+});
+
+/*
+| Parcours d'accueil par rôle (lot 5) : sans email vérifié (sa vérification est une étape).
+*/
+Route::middleware(['throttle:api', 'auth:sanctum'])->group(function (): void {
+    Route::get('me/onboarding', [OnboardingController::class, 'show'])->name('onboarding.show');
+    Route::post('me/onboarding/dismiss', [OnboardingController::class, 'dismiss'])
+        ->middleware('throttle:onboarding-writes')
+        ->name('onboarding.dismiss');
+    Route::post('me/onboarding/steps/{key}/skip', [OnboardingController::class, 'skip'])
+        ->where('key', '[a-z_]{1,64}')
+        ->middleware('throttle:onboarding-writes')
+        ->name('onboarding.skip');
 });
