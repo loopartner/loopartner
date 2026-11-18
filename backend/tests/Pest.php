@@ -28,6 +28,7 @@ use App\Modules\Events\Models\EventRegistration;
 use App\Modules\Marketplace\Models\Offer;
 use App\Modules\Marketplace\Models\Quote;
 use App\Modules\Marketplace\Models\SellerProfile;
+use App\Modules\Workspaces\Models\Workspace;
 use App\Notifications\VerifyEmailNotification;
 use App\Support\Legal\LegalDocuments;
 use App\Support\Moderation\ModerationTargets;
@@ -993,4 +994,28 @@ function appointmentRelation(string $clientRole = 'particulier', array $calendar
     $matchRequest = app(AcceptMatchRequest::class)->handle(pendingProposal($provider, publishedProjectOf($client)));
 
     return [$client, $provider, $matchRequest];
+}
+
+/*
+|--------------------------------------------------------------------------
+| Workspaces et copilote (module Workspaces, lot 5)
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * Particulier ou entrepreneur qui utilise les workspaces (email vérifié par défaut).
+ */
+function workspaceOwner(string $role = 'particulier', bool $verified = true): User
+{
+    return projectOwner($role, $verified);
+}
+
+/**
+ * Workspace actif d'un utilisateur (site vitrine en France par défaut).
+ *
+ * @param  array<string, mixed>  $attributes
+ */
+function workspaceOf(User $user, array $attributes = []): Workspace
+{
+    return Workspace::factory()->for($user)->create($attributes);
 }

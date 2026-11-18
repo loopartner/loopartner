@@ -1,0 +1,57 @@
+{
+    "code": "creer-son-site",
+    "title": {"fr": "Créer mon site web", "en": "Build my website"},
+    "description": {
+        "fr": "De la définition du besoin à la mise en ligne d'un site vitrine ou marchand.",
+        "en": "From defining the need to putting a showcase or online store website live."
+    },
+    "steps": [
+        {
+            "title": {"fr": "Définir le besoin", "en": "Define the need"},
+            "description": {"fr": "Objectif du site, public visé, pages et fonctions attendues.", "en": "Purpose of the site, target audience, expected pages and features."},
+            "category": null,
+            "tasks": [
+                {"fr": "Lister les pages du site", "en": "List the pages of the site"},
+                {"fr": "Noter trois sites de référence", "en": "Note three reference websites"},
+                {"fr": "Fixer un budget et une date de mise en ligne", "en": "Set a budget and a go-live date"}
+            ]
+        },
+        {
+            "title": {"fr": "Préparer les contenus", "en": "Prepare the content"},
+            "description": {"fr": "Textes, photos et logo.", "en": "Texts, photos and logo."},
+            "category": "photo-video",
+            "tasks": [
+                {"fr": "Rédiger les textes de présentation", "en": "Write the presentation texts"},
+                {"fr": "Rassembler les photos", "en": "Gather the photos"}
+            ]
+        },
+        {
+            "title": {"fr": "Choisir le prestataire", "en": "Choose the provider"},
+            "description": {"fr": "Comparer les propositions et les devis.", "en": "Compare proposals and quotes."},
+            "category": "site-vitrine",
+            "tasks": [
+                {"fr": "Rédiger le cahier des charges", "en": "Write the specification"},
+                {"fr": "Demander au moins trois devis", "en": "Ask for at least three quotes"},
+                {"fr": "Comparer les devis et choisir", "en": "Compare the quotes and choose"}
+            ]
+        },
+        {
+            "title": {"fr": "Suivre la réalisation", "en": "Follow the build"},
+            "description": {"fr": "Maquettes, relectures et tests.", "en": "Mock-ups, reviews and tests."},
+            "category": "design-ui-ux",
+            "tasks": [
+                {"fr": "Valider les maquettes", "en": "Approve the mock-ups"},
+                {"fr": "Tester le site sur téléphone", "en": "Test the site on a phone"}
+            ]
+        },
+        {
+            "title": {"fr": "Mettre en ligne et faire connaître", "en": "Go live and get known"},
+            "description": {"fr": "Mise en ligne, référencement et annonce.", "en": "Go-live, search visibility and announcement."},
+            "category": "referencement-seo",
+            "tasks": [
+                {"fr": "Vérifier les mentions obligatoires avec un professionnel", "en": "Check the mandatory notices with a professional"},
+                {"fr": "Annoncer la mise en ligne", "en": "Announce the launch"}
+            ]
+        }
+    ]
+}

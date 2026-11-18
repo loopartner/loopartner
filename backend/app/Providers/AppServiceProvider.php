@@ -263,7 +263,7 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('quote-comparisons', fn (Request $request): Limit => Limit::perHour(self::limit('quote_comparisons.per_hour'))->by($this->userOrIp($request)));
 
         // Rendez-vous (lot 4) : par utilisateur ; créneaux de la page publique : par IP.
-        foreach (['appointment-settings-writes' => 'appointment_settings_writes', 'appointment-bookings' => 'appointment_bookings'] as $name => $key) {
+        foreach (['appointment-settings-writes' => 'appointment_settings_writes', 'appointment-bookings' => 'appointment_bookings', 'workspace-writes' => 'workspace_writes'] as $name => $key) {
             RateLimiter::for($name, fn (Request $request): array => [
                 Limit::perHour(self::limit($key.'.per_hour'))->by('hour:'.$this->userOrIp($request)),
                 Limit::perDay(self::limit($key.'.per_day'))->by('day:'.$this->userOrIp($request)),

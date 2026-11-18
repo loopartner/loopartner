@@ -101,6 +101,31 @@ $client = [
     ],
 ];
 
+/*
+| Workspaces et copilote de projet (particulier, entrepreneur ; décisions 61 et 63) : quotas dans
+| config/workspaces.php (plans). Gratuit : un workspace non archivé, deux feuilles de route
+| générées à vie (une et une régénération), pas de cahier des charges ni de modèle de projet.
+| Premium : dix workspaces, modèles, 30 générations par mois et 10 par jour.
+*/
+$workspace = [
+    'free' => [
+        'workspaces.active' => ['config' => 'workspaces.plans.free.active_workspaces'],
+        'workspaces.templates' => false,
+        'copilot.roadmap_generations' => ['config' => 'workspaces.plans.free.roadmap_generations'],
+        'copilot.specifications' => false,
+        'copilot.monthly_generations' => null,
+        'copilot.daily_generations' => null,
+    ],
+    'premium' => [
+        'workspaces.active' => ['config' => 'workspaces.plans.premium.active_workspaces'],
+        'workspaces.templates' => true,
+        'copilot.roadmap_generations' => null,
+        'copilot.specifications' => true,
+        'copilot.monthly_generations' => ['config' => 'workspaces.plans.premium.monthly_generations'],
+        'copilot.daily_generations' => ['config' => 'workspaces.plans.premium.daily_generations'],
+    ],
+];
+
 return [
 
     'plans' => ['free', 'premium'],
@@ -111,14 +136,17 @@ return [
     | au lot Billing (décision 19).
     */
     'roles' => [
-        'particulier' => $client,
+        'particulier' => [
+            'free' => [...$client['free'], ...$workspace['free']],
+            'premium' => [...$client['premium'], ...$workspace['premium']],
+        ],
         'prestataire' => [
             'free' => [...$professional['free'], ...$provider['free']],
             'premium' => [...$professional['premium'], ...$provider['premium']],
         ],
         'entrepreneur' => [
-            'free' => [...$professional['free'], ...$client['free']],
-            'premium' => [...$professional['premium'], ...$client['premium']],
+            'free' => [...$professional['free'], ...$client['free'], ...$workspace['free']],
+            'premium' => [...$professional['premium'], ...$client['premium'], ...$workspace['premium']],
         ],
     ],
 

@@ -1,0 +1,46 @@
+{
+    "code": "preparer-un-financement",
+    "title": {"fr": "Préparer une recherche de financement", "en": "Prepare a funding search"},
+    "description": {
+        "fr": "Organiser la recherche de financement d'un projet : besoins, dossier, interlocuteurs. Les montages juridiques et fiscaux se font avec un professionnel.",
+        "en": "Organise the search for project funding: needs, file, contacts. Legal and tax arrangements are handled with a professional."
+    },
+    "steps": [
+        {
+            "title": {"fr": "Chiffrer le besoin", "en": "Quantify the need"},
+            "description": {"fr": "Montant, calendrier et usage des fonds, avec un professionnel du prévisionnel.", "en": "Amount, schedule and use of funds, with a forecasting professional."},
+            "category": "business-plan",
+            "tasks": [
+                {"fr": "Lister les dépenses à financer", "en": "List the expenses to fund"},
+                {"fr": "Faire relire le prévisionnel par un professionnel", "en": "Have the forecast reviewed by a professional"}
+            ]
+        },
+        {
+            "title": {"fr": "Repérer les aides possibles", "en": "Identify possible grants"},
+            "description": {"fr": "Aides publiques, concours et prêts d'honneur.", "en": "Public grants, competitions and honour loans."},
+            "category": "aides-subventions",
+            "tasks": [
+                {"fr": "Lister les aides auxquelles le projet pourrait prétendre", "en": "List the grants the project might qualify for"},
+                {"fr": "Noter les dates limites", "en": "Note the deadlines"}
+            ]
+        },
+        {
+            "title": {"fr": "Préparer le dossier", "en": "Prepare the file"},
+            "description": {"fr": "Présentation du projet, chiffres et pièces.", "en": "Project presentation, figures and documents."},
+            "category": null,
+            "tasks": [
+                {"fr": "Rédiger la présentation du projet", "en": "Write the project presentation"},
+                {"fr": "Rassembler les pièces demandées", "en": "Gather the requested documents"}
+            ]
+        },
+        {
+            "title": {"fr": "Rencontrer les financeurs", "en": "Meet the funders"},
+            "description": {"fr": "Banques, investisseurs, réseaux d'accompagnement.", "en": "Banks, investors, support networks."},
+            "category": "levee-de-fonds",
+            "tasks": [
+                {"fr": "Préparer une présentation de dix minutes", "en": "Prepare a ten-minute pitch"},
+                {"fr": "Planifier trois rendez-vous", "en": "Schedule three meetings"}
+            ]
+        }
+    ]
+}

@@ -52,6 +52,12 @@ describe('GET /me/entitlements', function (): void {
                     'compliance.export' => true,
                     'marketplace.quote_comparison' => false,
                     'marketplace.quote_comparison_export' => false,
+                    'workspaces.active' => 1,
+                    'workspaces.templates' => false,
+                    'copilot.roadmap_generations' => 2,
+                    'copilot.specifications' => false,
+                    'copilot.monthly_generations' => null,
+                    'copilot.daily_generations' => null,
                 ],
             ]]);
     });
@@ -95,15 +101,33 @@ describe('GET /me/entitlements', function (): void {
             ->and($response->json('data.plan'))->toBe('free');
     })->with(['redacteur', 'admin']);
 
-    it('donne au particulier le comparateur de devis en Premium seulement', function (): void {
+    it('donne au particulier le comparateur de devis, les workspaces et le copilote selon son plan', function (): void {
         $user = entitledUser('particulier');
 
         $this->actingAs($user)->getJson('/api/v1/me/entitlements')
-            ->assertJsonPath('data.features', ['marketplace.quote_comparison' => false, 'marketplace.quote_comparison_export' => false]);
+            ->assertJsonPath('data.features', [
+                'marketplace.quote_comparison' => false,
+                'marketplace.quote_comparison_export' => false,
+                'workspaces.active' => 1,
+                'workspaces.templates' => false,
+                'copilot.roadmap_generations' => 2,
+                'copilot.specifications' => false,
+                'copilot.monthly_generations' => null,
+                'copilot.daily_generations' => null,
+            ]);
 
         makePremium($user);
         $this->actingAs($user)->getJson('/api/v1/me/entitlements')
-            ->assertJsonPath('data.features', ['marketplace.quote_comparison' => true, 'marketplace.quote_comparison_export' => true]);
+            ->assertJsonPath('data.features', [
+                'marketplace.quote_comparison' => true,
+                'marketplace.quote_comparison_export' => true,
+                'workspaces.active' => 10,
+                'workspaces.templates' => true,
+                'copilot.roadmap_generations' => null,
+                'copilot.specifications' => true,
+                'copilot.monthly_generations' => 30,
+                'copilot.daily_generations' => 10,
+            ]);
     });
 
     it('ne renvoie aucun identifiant ni donnée personnelle', function (): void {

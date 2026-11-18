@@ -1,0 +1,65 @@
+{
+    "code": "lancer-son-activite",
+    "title": {"fr": "Lancer mon activité", "en": "Launch my business"},
+    "description": {
+        "fr": "Les grandes étapes pour préparer le lancement d'une activité, de l'étude de marché à la première communication. Les démarches juridiques, fiscales et comptables se font avec un professionnel.",
+        "en": "The main steps to prepare a business launch, from market research to first communication. Legal, tax and accounting matters are handled with a professional."
+    },
+    "steps": [
+        {
+            "title": {"fr": "Valider le besoin et le marché", "en": "Validate the need and the market"},
+            "description": {"fr": "Vérifier que l'offre répond à un besoin et identifier la concurrence.", "en": "Check that the offer meets a need and identify competitors."},
+            "category": "etude-de-marche",
+            "tasks": [
+                {"fr": "Décrire la clientèle visée", "en": "Describe the target customers"},
+                {"fr": "Lister cinq concurrents et leurs prix", "en": "List five competitors and their prices"},
+                {"fr": "Interroger dix clients potentiels", "en": "Interview ten potential customers"}
+            ]
+        },
+        {
+            "title": {"fr": "Construire le modèle économique", "en": "Build the business model"},
+            "description": {"fr": "Définir l'offre, les prix et les sources de revenus.", "en": "Define the offer, prices and revenue streams."},
+            "category": "modele-economique",
+            "tasks": [
+                {"fr": "Rédiger l'offre en une phrase", "en": "Write the offer in one sentence"},
+                {"fr": "Fixer une première grille de prix", "en": "Set a first price list"}
+            ]
+        },
+        {
+            "title": {"fr": "Préparer le prévisionnel avec un professionnel", "en": "Prepare forecasts with a professional"},
+            "description": {"fr": "Établir le budget de départ et les besoins de financement avec un expert.", "en": "Draw up the starting budget and funding needs with an expert."},
+            "category": "business-plan",
+            "tasks": [
+                {"fr": "Lister les dépenses de démarrage", "en": "List the start-up expenses"},
+                {"fr": "Prendre rendez-vous avec un professionnel du prévisionnel", "en": "Book a meeting with a forecasting professional"}
+            ]
+        },
+        {
+            "title": {"fr": "Choisir le statut avec un professionnel", "en": "Choose the legal form with a professional"},
+            "description": {"fr": "Le choix du statut juridique se fait avec un avocat ou un expert-comptable.", "en": "The choice of legal form is made with a lawyer or an accountant."},
+            "category": "creation-statuts",
+            "tasks": [
+                {"fr": "Préparer ses questions pour le rendez-vous", "en": "Prepare questions for the meeting"},
+                {"fr": "Comparer deux ou trois devis d'accompagnement", "en": "Compare two or three support quotes"}
+            ]
+        },
+        {
+            "title": {"fr": "Créer l'identité visuelle", "en": "Create the brand identity"},
+            "description": {"fr": "Nom, logo et charte graphique.", "en": "Name, logo and visual guidelines."},
+            "category": "identite-visuelle",
+            "tasks": [
+                {"fr": "Rassembler des exemples d'identités appréciées", "en": "Collect examples of brand identities you like"},
+                {"fr": "Rédiger le brief pour le graphiste", "en": "Write the brief for the designer"}
+            ]
+        },
+        {
+            "title": {"fr": "Annoncer le lancement", "en": "Announce the launch"},
+            "description": {"fr": "Présence en ligne et premières actions de communication.", "en": "Online presence and first communication actions."},
+            "category": "strategie-marketing",
+            "tasks": [
+                {"fr": "Choisir deux canaux de communication", "en": "Choose two communication channels"},
+                {"fr": "Préparer le message de lancement", "en": "Prepare the launch message"}
+            ]
+        }
+    ]
+}

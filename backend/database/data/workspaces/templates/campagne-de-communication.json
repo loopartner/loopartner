@@ -1,0 +1,54 @@
+{
+    "code": "campagne-de-communication",
+    "title": {"fr": "Mener une campagne de communication", "en": "Run a communication campaign"},
+    "description": {
+        "fr": "Préparer, lancer et mesurer une campagne pour faire connaître une offre.",
+        "en": "Prepare, launch and measure a campaign to promote an offer."
+    },
+    "steps": [
+        {
+            "title": {"fr": "Fixer l'objectif et la cible", "en": "Set the goal and the audience"},
+            "description": {"fr": "Ce que la campagne doit produire, et pour qui.", "en": "What the campaign must achieve, and for whom."},
+            "category": "strategie-marketing",
+            "tasks": [
+                {"fr": "Choisir un objectif chiffré", "en": "Choose a measurable goal"},
+                {"fr": "Décrire le public visé", "en": "Describe the target audience"}
+            ]
+        },
+        {
+            "title": {"fr": "Choisir les canaux", "en": "Choose the channels"},
+            "description": {"fr": "Réseaux sociaux, presse, événements, emailing.", "en": "Social media, press, events, email."},
+            "category": "reseaux-sociaux",
+            "tasks": [
+                {"fr": "Comparer trois canaux possibles", "en": "Compare three possible channels"},
+                {"fr": "Fixer le budget par canal", "en": "Set the budget per channel"}
+            ]
+        },
+        {
+            "title": {"fr": "Produire les contenus", "en": "Produce the content"},
+            "description": {"fr": "Visuels, vidéos et messages.", "en": "Visuals, videos and messages."},
+            "category": "photo-video",
+            "tasks": [
+                {"fr": "Rédiger le calendrier de publication", "en": "Write the publishing calendar"},
+                {"fr": "Faire valider les visuels", "en": "Have the visuals approved"}
+            ]
+        },
+        {
+            "title": {"fr": "Contacter la presse", "en": "Reach out to the press"},
+            "description": {"fr": "Communiqué et liste de journalistes.", "en": "Press release and journalist list."},
+            "category": "relations-presse",
+            "tasks": [
+                {"fr": "Préparer le communiqué", "en": "Prepare the press release"}
+            ]
+        },
+        {
+            "title": {"fr": "Mesurer les résultats", "en": "Measure the results"},
+            "description": {"fr": "Comparer les résultats à l'objectif.", "en": "Compare results with the goal."},
+            "category": null,
+            "tasks": [
+                {"fr": "Relever les chiffres à la fin de la campagne", "en": "Record the figures at the end of the campaign"},
+                {"fr": "Noter ce qu'il faut garder ou changer", "en": "Note what to keep or change"}
+            ]
+        }
+    ]
+}

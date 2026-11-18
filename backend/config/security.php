@@ -314,6 +314,11 @@ return [
         'appointment_ics' => [
             'per_hour' => 30,
         ],
+        // Workspaces (lot 5) : création et modification du contenu, par utilisateur.
+        'workspace_writes' => [
+            'per_hour' => 120,
+            'per_day' => 600,
+        ],
         // Agenda unifié (GET /me/agenda).
         'agenda' => [
             'per_minute' => 60,
