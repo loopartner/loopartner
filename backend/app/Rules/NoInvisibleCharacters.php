@@ -31,7 +31,7 @@ use Illuminate\Contracts\Validation\ValidationRule;
  */
 class NoInvisibleCharacters implements ValidationRule
 {
-    private const PATTERN = '/[\x{0000}-\x{0008}\x{000B}\x{000C}\x{000E}-\x{001F}\x{007F}-\x{009F}'
+    public const PATTERN = '/[\x{0000}-\x{0008}\x{000B}\x{000C}\x{000E}-\x{001F}\x{007F}-\x{009F}'
         .'\x{061C}\x{180E}\x{200B}\x{200E}\x{200F}\x{202A}-\x{202E}\x{2060}-\x{2064}\x{2066}-\x{206F}\x{FEFF}]/u';
 
     public function validate(string $attribute, mixed $value, Closure $fail): void

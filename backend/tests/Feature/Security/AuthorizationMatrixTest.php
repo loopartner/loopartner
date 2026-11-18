@@ -293,6 +293,14 @@ const API_ROUTES = [
 
     // Workspaces (lot 5) : privés, aucune route publique.
     'GET api/v1/workspace-templates' => 'auth',
+    'GET api/v1/me/copilot' => 'auth',
+    'GET api/v1/me/workspaces/{uuid}/copilot/preview' => 'auth',
+    'GET api/v1/me/workspaces/{uuid}/copilot/suggestions' => 'auth',
+    'GET api/v1/me/workspaces/{uuid}/copilot/suggestions/{suggestion}' => 'auth',
+    'POST api/v1/me/workspaces/{uuid}/copilot/roadmap' => 'auth',
+    'POST api/v1/me/workspaces/{uuid}/copilot/specification' => 'auth',
+    'POST api/v1/me/workspaces/{uuid}/copilot/suggestions/{suggestion}/apply' => 'auth',
+    'POST api/v1/me/workspaces/{uuid}/copilot/suggestions/{suggestion}/dismiss' => 'auth',
     'GET api/v1/me/workspaces' => 'auth',
     'POST api/v1/me/workspaces' => 'auth',
     'GET api/v1/me/workspaces/{uuid}' => 'auth',

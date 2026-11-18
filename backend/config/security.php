@@ -319,6 +319,16 @@ return [
             'per_hour' => 120,
             'per_day' => 600,
         ],
+        // Copilote (lot 5) : générations par l'IA, par utilisateur (les quotas du plan et les
+        // plafonds de coût s'appliquent en plus).
+        'copilot_generations' => [
+            'per_hour' => 5,
+            'per_day' => 20,
+        ],
+        // Administration de l'IA (suivi des coûts), par admin.
+        'ai_admin' => [
+            'per_hour' => 60,
+        ],
         // Parcours d'accueil : masquer le parcours, passer une étape facultative.
         'onboarding_writes' => [
             'per_hour' => 30,
@@ -432,6 +442,13 @@ return [
         // Traces des rappels envoyés et exceptions de disponibilité passées.
         'appointment_reminders_months' => 3,
         'past_availability_exceptions_months' => 3,
+
+        // Copilote et brique d'IA (lot 5, décision 65), purges workspaces:prune et ai:prune.
+        // Suggestion du copilote (réponse de l'IA) : supprimée après ce nombre de jours.
+        'copilot_suggestions_days' => 90,
+        // Journal des appels à l'IA (sans contenu) : supprimé après cette durée ; les totaux
+        // par jour sans utilisateur (ai_usage_stats) restent.
+        'ai_usages_months' => 13,
 
     ],
 

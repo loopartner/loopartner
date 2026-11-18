@@ -13,9 +13,14 @@ use Illuminate\Contracts\Validation\ValidationRule;
  */
 class NoHtml implements ValidationRule
 {
+    /**
+     * Début d'une balise, d'un commentaire ou d'une instruction HTML.
+     */
+    public const PATTERN = '/<[a-zA-Z\/!?]/';
+
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        if (is_string($value) && preg_match('/<[a-zA-Z\/!?]/', $value) === 1) {
+        if (is_string($value) && preg_match(self::PATTERN, $value) === 1) {
             $fail('Le champ :attribute ne doit pas contenir de HTML.');
         }
     }

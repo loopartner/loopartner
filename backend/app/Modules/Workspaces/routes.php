@@ -12,6 +12,7 @@
 
 use App\Http\Middleware\LimitRequestBody;
 use App\Modules\Workspaces\Http\Controllers\ContentController;
+use App\Modules\Workspaces\Http\Controllers\CopilotController;
 use App\Modules\Workspaces\Http\Controllers\LinkedProjectController;
 use App\Modules\Workspaces\Http\Controllers\SpecificationController;
 use App\Modules\Workspaces\Http\Controllers\TemplateController;
@@ -20,6 +21,27 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('workspace-templates', TemplateController::class)->name('workspaces.templates');
+
+    /*
+    | Copilote de projet (décisions 33, 61 à 66) : génération réservée aux emails vérifiés
+    | (403 email_not_verified, vérifié avant la validation), IA désactivée : 503.
+    */
+    Route::get('me/copilot', [CopilotController::class, 'status'])->name('workspaces.copilot.status');
+    Route::prefix('me/workspaces/{uuid}/copilot')->whereUuid('uuid')->name('workspaces.copilot.')->group(function (): void {
+        Route::get('preview', [CopilotController::class, 'preview'])->name('preview');
+        Route::get('suggestions', [CopilotController::class, 'index'])->name('suggestions.index');
+        Route::get('suggestions/{suggestion}', [CopilotController::class, 'show'])->whereUuid('suggestion')->name('suggestions.show');
+
+        Route::middleware(['throttle:copilot-generations', LimitRequestBody::class.':16384'])->group(function (): void {
+            Route::post('roadmap', [CopilotController::class, 'roadmap'])->name('roadmap');
+            Route::post('specification', [CopilotController::class, 'specification'])->name('specification');
+        });
+
+        Route::middleware(['throttle:workspace-writes', LimitRequestBody::class.':16384'])->group(function (): void {
+            Route::post('suggestions/{suggestion}/apply', [CopilotController::class, 'apply'])->whereUuid('suggestion')->name('suggestions.apply');
+            Route::post('suggestions/{suggestion}/dismiss', [CopilotController::class, 'dismiss'])->whereUuid('suggestion')->name('suggestions.dismiss');
+        });
+    });
 
     Route::prefix('me/workspaces')->name('workspaces.')->group(function (): void {
         Route::get('/', [WorkspaceController::class, 'index'])->name('index');
