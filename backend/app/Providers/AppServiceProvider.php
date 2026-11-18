@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Support\Ai\AiClient;
 use App\Support\Ai\Drivers\DisabledAiClient;
 use App\Support\Ai\Drivers\FakeAiClient;
+use App\Support\Ai\Drivers\MistralAiClient;
 use App\Support\SecurityLog;
 use Illuminate\Auth\Access\Response;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -38,6 +39,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->singleton(AiClient::class, fn (): AiClient => match (config('ai.driver')) {
             'fake' => new FakeAiClient,
+            'mistral' => MistralAiClient::fromConfig(),
             default => new DisabledAiClient,
         });
     }
