@@ -33,7 +33,7 @@ de nouveaux paquets et ce que les utilisateurs voient ou subissent attendent une
 | 2. Signalements et modération (DSA) | **terminé et fusionné dans `main`** le 2026-11-16 (décisions 21 à 31) |
 | 3. Marketplace | **terminé et fusionné dans `main`** le 2026-11-17 (décisions 36 à 51) ; reste hors du code : validations du juriste et de l'expert-comptable |
 | 4. Rendez-vous et agenda | **terminé et fusionné dans `main`** le 2026-11-18 (décisions 52 à 59) ; reste hors du code : points R1 à R11 du juriste |
-| 5. Workspaces et onboarding | **plan validé le 2026-11-18** (décisions 60 à 70), en cours sur `feature/workspaces` |
+| 5. Workspaces et onboarding | **codé sur `feature/workspaces`** le 2026-11-18 (décisions 60 à 70) ; reste la validation du juriste (J1 à J11), puis la fusion dans `main` |
 | 6 à 9 | à planifier |
 | 10. Billing | plan validé dans son principe le 2026-11-16 ; développé à la fin du backend, juste avant le durcissement |
 | 11. Durcissement avant la bêta | à planifier |
@@ -299,6 +299,22 @@ textes et points à faire valider : `docs/v1/workspaces-rules.md`)
 - **Commits** : documentation ; noyau IA ; workspaces ; lien Directory et brouillon ; modèles ;
   agenda ; parcours d'accueil ; copilote ; pilote Mistral ; suivi des coûts et alertes ;
   suppression, purge, export interne ; tests de sécurité ; démonstration ; documentation finale.
+
+**Réalisé** (2026-11-18) : tout le plan ci-dessus, avec les précisions de l'utilisateur (pilote
+Mistral écrit avec le client `Http` et testé seulement avec de fausses réponses, endpoint de l'UE
+vérifié par le pilote, `AI_DRIVER=disabled` par défaut ; gratuit : une feuille de route et une
+régénération à vie ; email vérifié obligatoire pour générer, 403 `email_not_verified` ; erreur de
+`security:check-config` pour une IA activée avec un `max_execution_time` trop court). Les modèles
+de projet et le lien Directory sont dans le même commit que le module. Toutes les routes sont dans
+`AuthorizationMatrixTest` ; celles du module dans `WorkspacesAuthorizationTest` (lues dans le
+routeur). Aucune nouvelle page publique, donc aucun adaptateur de modération. Aucun paquet
+installé.
+
+**Reste hors du code** : validation des points J1 à J11 de `docs/v1/workspaces-rules.md`
+(juriste) ; AIPD ; politique de confidentialité (sous-traitant Mistral AI, conservation) ;
+formation de l'équipe à l'IA (art. 4) ; étapes de l'exploitant (compte Mistral, opt-out
+d'entraînement désactivé, ZDR, clé) ; IA activée seulement hors de l'hébergement mutualisé,
+puis `php artisan ai:test-connection` pour confirmer le format de l'API et les prix.
 
 ## Lot 6 — Avis, ressources et coffre-fort documentaire
 

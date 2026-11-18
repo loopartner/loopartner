@@ -9,7 +9,7 @@ entrepreneurs.
 
 ## V1 2027 : feuille de route et décisions (à lire au début de chaque session)
 
-- **`docs/v1/ROADMAP.md`** : lots 0 à 11 de la V1 commercialisable (Billing est le lot 10 ; le lot 3 Marketplace est fusionné, validations externes en attente ; le lot 4 Rendez-vous et agenda est fusionné, validation du juriste en attente ; le lot 5 Workspaces et onboarding est en cours sur `feature/workspaces`, plan validé le 2026-11-18), avec leurs critères
+- **`docs/v1/ROADMAP.md`** : lots 0 à 11 de la V1 commercialisable (Billing est le lot 10 ; le lot 3 Marketplace est fusionné, validations externes en attente ; le lot 4 Rendez-vous et agenda est fusionné, validation du juriste en attente ; le lot 5 Workspaces et onboarding est codé sur `feature/workspaces`, validation du juriste en attente ; le prochain est le lot 6), avec leurs critères
   d'acceptation et leur état. Ne commence jamais un lot sans validation explicite de son plan
   détaillé par l'utilisateur.
 - **`docs/v1/DECISIONS.md`** : décisions produit et techniques validées, datées. Ne les remets pas
@@ -91,14 +91,15 @@ entrepreneurs.
   `moderation:prune` (05:45), `moderation:notify-moderators` (toutes les 5 minutes),
   `marketplace:expire-quotes` (chaque heure), `marketplace:prune` (05:15),
   `appointments:expire` (toutes les 15 minutes), `appointments:send-reminders` (toutes les
-  5 minutes), `appointments:prune` (04:45), puis le worker.
+  5 minutes), `appointments:prune` (04:45), `workspaces:prune` (04:15), `ai:prune` (04:20),
+  puis le worker.
 - Toutes les dates sont stockées en **UTC** (`app.timezone = UTC`, connexion MySQL en `+00:00`).
   La conversion vers le fuseau de l'utilisateur se fait à l'affichage, côté frontend.
 
 ## Architecture modulaire
 
 Le code métier vit dans `backend/app/Modules/<Module>/`. Les modules sont : `Accounts`, `Directory`,
-`Events`, `Blog`, `Compliance`, `Moderation`, `Marketplace` et `Appointments`.
+`Events`, `Blog`, `Compliance`, `Moderation`, `Marketplace`, `Appointments` et `Workspaces`.
 
 Chaque module contient :
 
@@ -167,13 +168,15 @@ utilitaires du module), `Console/Commands/` (commandes Artisan du module), `Noti
   première occurrence pour un début, dernière pour une fin ; `isValidTimezone()` : fuseaux IANA
   canoniques).
 - **Agenda unifié** (noyau) : contrat `App\Support\Agenda\AgendaSource`, un adaptateur par module
-  déclaré dans `config/agenda.php` (`sources` : Appointments, Events, Compliance), `AgendaItem`
+  déclaré dans `config/agenda.php` (`sources` : Appointments, Events, Compliance, Workspaces), `AgendaItem`
   (données simples), `Agenda::for()`, `AgendaCalendar` (abonnement : titres et dates seulement).
   `GET /me/agenda` (`from`, `to` en journées UTC, 92 jours au plus, `sources[]`, champ
   `disclaimers` par source), `GET|POST|DELETE /me/agenda/feed` (URL montrée une fois) et
   `GET /agenda/{token}.ics` (public, à jeton, table `agenda_feeds`, éléments confirmés ou
   publiés, jeton invalide journalisé au plus une fois par heure et par IP). L'abonnement de
   Compliance reste disponible.
+- **Brique d'IA** (`App\Support\Ai`) et **parcours d'accueil** (`App\Support\Onboarding`) : voir
+  « Brique d'IA et parcours d'accueil (noyau) ».
 - `TrimStrings` ne rogne pas `body.blocks.*` (corps des articles : les espaces entre segments
   comptent), voir `bootstrap/app.php`.
 - Langues : `App\Support\Locale` (`fr`, `en`). `Locale::fromRequest()` choisit la langue d'une réponse :
@@ -257,9 +260,12 @@ utilitaires du module), `Console/Commands/` (commandes Artisan du module), `Noti
   `config/blog.php` ou `config/compliance.php` ; une clé inconnue lève une exception, jamais
   « illimité »). Une fonctionnalité absente est fermée. Les noms contiennent un point : ne pas
   utiliser la notation pointée de `config()` pour une fonctionnalité. Blog (`blog.article_quota`),
-  Compliance (`compliance.*`), Directory (`directory.project_early_access`) et Marketplace
+  Compliance (`compliance.*`), Directory (`directory.project_early_access`), Marketplace
   (`marketplace.quote_branding`, `marketplace.quote_comparison`,
-  `marketplace.quote_comparison_export`) lisent cette grille. Plans en base et paiement : lot Billing.
+  `marketplace.quote_comparison_export`), Appointments (`appointments.*`) et Workspaces
+  (`workspaces.active`, `workspaces.templates`, `copilot.roadmap_generations`,
+  `copilot.specifications`, `copilot.monthly_generations`, `copilot.daily_generations`) lisent
+  cette grille. Plans en base et paiement : lot Billing.
 - Données de référence (rôles, catégories) : `ReferenceDataSeeder`, seul seeder à lancer en production :
   `php artisan db:seed --class="Database\Seeders\ReferenceDataSeeder" --force`.
 - Comptes de démonstration créés par `DatabaseSeeder` **uniquement si** `SEED_DEMO_DATA=true`,
@@ -286,7 +292,10 @@ utilitaires du module), `Console/Commands/` (commandes Artisan du module), `Noti
   prestataire, deux offres publiées, un devis envoyé au particulier dans leur mise en relation
   acceptée. Rendez-vous (`AppointmentsDemoSeeder`, sans aucun email) : calendrier et page publique
   du prestataire (deux types, plages du lundi au vendredi), un rendez-vous confirmé et une
-  proposition en attente avec le particulier.
+  proposition en attente avec le particulier. Workspaces (`WorkspacesDemoSeeder`, sans email ni
+  appel à l'IA) : workspace du particulier (objectif, étapes dont une issue du copilote, tâches,
+  suggestion fictive en attente, une génération décomptée) et workspace de l'entrepreneur copié
+  du modèle « Lancer mon activité ».
 - **Double authentification de l'équipe de démonstration** (obligatoire pour l'équipe) :
   `redacteur@example.com` a aussi un secret fixe, `DatabaseSeeder::DEMO_REDACTEUR_TWO_FACTOR_SECRET`
   (`LOOPARTNERDEMORD`, nom `Loopartner rédacteur (démo)`, codes de secours
@@ -496,8 +505,10 @@ validation). Un participant qui tente l'action de l'autre reçoit 403 ; un état
   sens ou dans l'autre), `GetUserModerationSignals` (nombre de signalements reçus par ses contenus,
   via `Moderation\Actions\CountNoticesAgainst`, et de blocages subis, sans aucun détail),
   `GetMatchRequestContext` (contexte d'une demande vue par un participant : prestataire, client,
-  rôle du client, projet, acceptée, blocage ; module Marketplace) et `FindOwnProject` (projet de
-  l'utilisateur par son uuid).
+  rôle du client, projet, acceptée, blocage ; module Marketplace), `FindOwnProject` (projet de
+  l'utilisateur par son uuid), `DescribeOwnProject` (résumé d'un projet de l'utilisateur par son
+  identifiant interne, module Workspaces) et `CreateDraftProject` (brouillon créé pour
+  l'utilisateur avec les règles de `POST /me/projects`, jamais publié ; module Workspaces).
 - **Projets masqués par la modération** : scope `browsable()` (en ligne et non masqué) pour la
   consultation et les propositions ; un projet masqué compte toujours dans le plafond de
   publication et ses propositions en attente expirent (`match-requests:expire`).
@@ -1095,6 +1106,119 @@ Rendez-vous entre prestataires et porteurs de projets (lot 4, décisions 52 à 5
 - **Export (lot 11)** : `Support/AppointmentsPersonalData::for(User)` (interne, non exposé,
   testé ; décision 59).
 
+## Module Workspaces (projets privés, copilote)
+
+Workspaces privés des porteurs de projet, modèles de projet, copilote de projet (lot 5,
+décisions 60 à 70). Réglages dans `config/workspaces.php` (quotas par plan, limites de contenu,
+copilote), limites de débit et durées dans `config/security.php`. Sources, contenu exact envoyé
+à l'IA, textes, étapes de l'exploitant et **tableau J1 à J11 à faire valider par le juriste** :
+`docs/v1/workspaces-rules.md`.
+
+- **Accès** (`WorkspacePolicy`) : particuliers et entrepreneurs (403 pour les autres rôles, admins
+  compris) ; email vérifié **non requis** pour le workspace. **Le workspace d'un autre utilisateur
+  donne 404**, vérifié avant la validation (`Http/Requests/WorkspaceRequest` résout le workspace de
+  l'URL dans `authorize()`). Aucune route publique : rien d'un workspace n'est visible d'autrui,
+  donc aucun adaptateur de modération (un texte ne sort que par un brouillon Directory, signalable
+  comme tout projet).
+- **Tables** : `workspaces` (titre et description **chiffrés**, pays, budget, début souhaité,
+  `status` `active|archived`, `template_code`, `linked_project_id` unique en `nullOnDelete`,
+  `activated_at`), `workspace_goals`, `workspace_steps` (catégorie utile, `source`
+  `user|copilot|template`, `ai_generated_at`), `workspace_tasks` (note chiffrée),
+  `workspace_specifications` (sections à liste fermée `Support/SpecificationSections`, chiffrées),
+  `workspace_copilot_suggestions` (réponse nettoyée, chiffrée), `workspace_copilot_entries`
+  (décompte des générations réussies, gardé tant que le compte existe).
+- **Endpoints** (`auth:sanctum`) : `/me/workspaces` (liste avec `meta` du quota, création avec
+  `template` facultatif, détail avec objectifs, étapes, tâches et `progress`, PATCH, suppression,
+  `archive`, `unarchive`, `activate`), `…/goals`, `…/steps`, `…/steps/{step}/tasks`,
+  `…/tasks/{task}` (POST, PATCH avec `achieved`/`completed`, `step` pour déplacer une tâche,
+  DELETE), `PUT …/goals/order`, `…/steps/order`, `…/steps/{step}/tasks/order` (`{"order": [uuids]}`,
+  liste complète, 422 sinon), `…/specifications` (CRUD, PUT complet), `…/linked-project` (POST
+  `project`, DELETE), `POST …/directory-draft` (brouillon Directory, jamais publié),
+  `GET /workspace-templates`. Champs fixés par la plateforme : `prohibited` (422). Requêtes
+  limitées à 64 Ko. Chaque étape catégorisée donne `providers_search` (`category`, `country`)
+  pour `GET /providers`.
+- **Quotas** (`Support/Plan`, `config/entitlements.php`) : `workspaces.active` (gratuit 1,
+  Premium 10 ; 403 `premium_required` `multiple_workspaces`, 409 au-delà), 50 workspaces au
+  total, `workspaces.templates` (Premium, `workspace_templates`). Limites de contenu (409) :
+  20 objectifs, 30 étapes, 50 tâches par étape, 300 par workspace, 20 cahiers des charges.
+  **Fin du Premium** (`Support/Workspaces`) : les workspaces actifs les plus récemment activés
+  restent modifiables, les autres sont `locked` (lecture, archivage, suppression ; 403
+  `multiple_workspaces` sinon) ; archivé : lecture seule (409).
+- **Modèles de projet** : JSON de `database/data/workspaces/templates` (`Support/Templates`,
+  français et anglais, catégories vérifiées par un test), copiés à la création ; aucune démarche
+  juridique, fiscale ou comptable détaillée.
+- **Copilote** (`/me/copilot`, `/me/workspaces/{uuid}/copilot/…`) : `GET /me/copilot`
+  (`available`, `provider`, `notice` avec sa version, `disclaimer`, `sensitive_data_warning`,
+  `quota`), `GET …/preview` (**contenu exact qui serait envoyé**, expurgé, sans appel),
+  `POST …/roadmap` et `POST …/specification` (`notice_version` en vigueur obligatoire, 422 sinon ;
+  **email vérifié obligatoire, 403 `{"code": "email_not_verified"}`** vérifié avant la
+  validation), `GET …/suggestions`, `GET …/suggestions/{suggestion}`, `POST …/apply` (`steps`
+  facultatif), `POST …/dismiss`. Ordre des contrôles : rôle, workspace (404), email, validation,
+  workspace modifiable, IA disponible (503), verrou par utilisateur (409
+  `generation_in_progress`), quotas, plafonds de coût, appel, nettoyage (502).
+- **Contenu envoyé** (`Support/CopilotPayload`, liste blanche) : tâche, langue, type de compte,
+  titre et description **expurgés** (`Support/Redactor` : emails, liens et domaines, IBAN,
+  SIREN/SIRET, téléphones), pays, travail à distance, budget, mois de début, titres des étapes
+  existantes, catégories actives ; pour un cahier des charges, l'étape et la catégorie.
+  **Jamais** : nom, email, identifiants, ville, objectifs, notes, données d'un tiers ou d'un
+  autre module. Consignes fixes et versionnées (`Support/CopilotPrompts`) : aucun avis juridique,
+  fiscal ou comptable, catégories seulement.
+- **Réponse** (`Support/CopilotOutput`, `Support/GeneratedText`) : JSON imposé par un schéma puis
+  nettoyé (HTML écarté, caractères invisibles et liens retirés, longueurs bornées, 12 étapes de
+  8 tâches, 6 catégories actives) ; gardée comme **suggestion** ; appliquée, elle crée des
+  éléments `source: copilot` dont `ai_generated` reste vrai même modifiés. Chaque réponse porte
+  `ai` (`generated`, `provider`, `model`, `prompt_version`, `disclaimer`). Textes :
+  `Support/CopilotTexts` (`NOTICE_VERSION`, à changer avec le texte).
+- **Quotas du copilote** (`Support/CopilotQuota`, décision 61) : gratuit **2 feuilles de route à
+  vie** (une et une régénération ; un échec ne compte pas ; 403 `copilot_roadmaps`), pas de cahier
+  des charges (403 `copilot_specifications`) ; Premium **30 par mois et 10 par jour** (429
+  `{"code": "ai_quota_exceeded", "scope", "resets_at"}`), comptés sous un verrou par utilisateur.
+- **Agenda** : `Support/WorkspacesAgendaSource` (échéances des étapes et tâches des workspaces
+  modifiables, titres et dates, aussi dans l'abonnement).
+- **Suppression de compte** (`ForgetUserWorkspaces`, sur `AccountDeleting`) : tout est supprimé.
+  **Minimisation** (`workspaces:prune`, 04:15) : suggestions supprimées 90 jours après leur
+  génération (`retention.copilot_suggestions_days`). **Export (lot 11)** :
+  `Support/WorkspacesPersonalData::for(User)` (interne, testé).
+
+## Brique d'IA et parcours d'accueil (noyau)
+
+- **Brique d'IA** (`App\Support\Ai`, décisions 34 et 60 à 70, `config/ai.php`) : contrat
+  `AiClient`, pilotes `disabled` (**défaut, production comprise**), `fake` (tests et démonstration,
+  imposé par `phpunit.xml`) et `mistral` (`Drivers/MistralAiClient` : client `Http`, aucun paquet,
+  **seul l'endpoint de l'UE `https://api.eu.mistral.ai` est accepté**, sinon le pilote reste
+  désactivé et n'envoie rien). Les modules passent **uniquement** par `AiGateway::generate()` :
+  disponibilité (pilote, prix du modèle, `max_execution_time` de PHP au moins
+  `AI_TIMEOUT` + 15 s ou nul, sinon 503 `ai_unavailable` avec `reason`), verrou par utilisateur
+  (409), réservation du coût maximal sous verrou (`AiBudget`, tables `ai_budgets` et `ai_usages`),
+  coût réel après l'appel, totaux par jour sans utilisateur (`ai_usage_stats`). Plafonds en cents
+  (`AI_USER_MONTHLY_BUDGET_CENTS`, `AI_GLOBAL_MONTHLY_BUDGET_CENTS`, `AI_GLOBAL_DAILY_BUDGET_CENTS`) :
+  utilisateur 429 `ai_quota_exceeded` (`scope: budget`), global 503 (`reason: capacity`). Prix par
+  modèle en micro-unités (`ai.pricing`). Réponse inexploitable : 502 `ai_invalid_response`
+  (jetons comptés dans le coût, pas dans le quota). **Jamais de contenu** dans `ai_usages` ni dans
+  le journal security. Tests : `Http::preventStrayRequests` et pilote simulé
+  (`FakeAiClient::respondWith()`, `requests()`).
+- **L'IA ne doit pas être activée sur l'hébergement mutualisé** (appel synchrone,
+  décision 70) : `security:check-config` signale **en erreur** une IA activée avec un
+  `max_execution_time` (lu dans le php.ini, `get_cfg_var` ; 30 s si absent) inférieur à
+  `AI_TIMEOUT` + 15 s, et l'API refuse l'appel (503). Activation : étapes de
+  `docs/v1/workspaces-rules.md`, section 7, puis `php artisan ai:test-connection` (requête fixe,
+  sans donnée d'utilisateur).
+- **Suivi des coûts** : `GET /admin/ai/usage?month=AAAA-MM` (admin avec 2FA de session,
+  `EnsureModerator`, limiteur `ai-admin`) : totaux sans identité ni contenu. Alertes email aux
+  admins avec 2FA à 80 % et 100 % du budget mensuel global (`AiBudgetAlerts`,
+  `App\Notifications\AiBudgetAlert`, catégorie obligatoire `ai.budget_alerts`, une fois par palier
+  et par mois). `ai:prune` (04:20) : réservations abandonnées depuis plus d'une heure libérées,
+  journal des appels et compteurs par utilisateur supprimés après 13 mois
+  (`retention.ai_usages_months`). Export (lot 11) : `App\Support\Ai\AiUsagePersonalData`.
+- **Parcours d'accueil** (`App\Support\Onboarding`, décision 67) : contrat `OnboardingStep`, un
+  adaptateur par module déclaré dans `config/onboarding.php` (ordre d'affichage), état **calculé
+  sur les données réelles**. `GET /me/onboarding` (étapes du rôle : `key`, `label`, `optional`,
+  `done`, `skipped` ; `completed`, `progress`, `dismissed`), `POST /me/onboarding/dismiss`,
+  `POST /me/onboarding/steps/{key}/skip` (facultative seulement ; obligatoire 409, inconnue ou
+  d'un autre rôle 404), limiteur `onboarding-writes`, email vérifié non requis. Table
+  `onboarding_states` (choix de l'utilisateur seulement). `GET /me` expose `onboarding`
+  (`completed`, `dismissed`). Aucun email.
+
 ## Catégories de services (noyau)
 
 Modèle partagé `App\Models\ServiceCategory` (table `service_categories`), utilisable par tous les
@@ -1216,7 +1340,7 @@ CGU (`terms`) et politique de confidentialité (`privacy`) versionnées (décisi
   `compliance.reminders` (en plus de `emails_enabled` du module), `compliance.rule_coverage`,
   `moderation.digest`, `marketplace.quotes`, `appointments.reminders`. Obligatoires aussi :
   `moderation.notices`, `moderation.decisions`, `moderation.urgent_alerts`,
-  `marketplace.quote_decisions`, `appointments.bookings`.
+  `marketplace.quote_decisions`, `appointments.bookings`, `ai.budget_alerts` (admins).
 - L'écouteur `App\Listeners\ApplyNotificationPreferences` (événement `NotificationSending`)
   abandonne l'envoi d'une catégorie facultative désactivée, **au moment de l'envoi** (après la
   file d'attente). Tout est activé par défaut : les modules n'ont rien changé à leur `via()`.
@@ -1273,7 +1397,9 @@ Obligatoire pour `admin` et `redacteur` (décision 17, `App\Support\TeamTwoFacto
   `appointment-settings-writes` (60/h, 300/j), `appointment-slots` (60/min, 1000/j par compte),
   `appointment-public-slots` (30/min par IP), `appointment-bookings` (10/h, 30/j : réservations,
   propositions, reports), `appointment-decisions` (60/h), `appointment-ics` (30/h), `agenda`
-  (60/min), `agenda-feed-manage` (10/j), `agenda-feed` (30/h par abonnement, 120/h par IP).
+  (60/min), `agenda-feed-manage` (10/j), `agenda-feed` (30/h par abonnement, 120/h par IP),
+  `workspace-writes` (120/h, 600/j), `copilot-generations` (5/h, 20/j), `ai-admin` (60/h par
+  admin), `onboarding-writes` (30/h).
 - Règles de validation du texte saisi : `NoHtml` et `NoInvisibleCharacters` (caractères de contrôle
   sauf tabulation et retours à la ligne, contrôles de direction U+202A–202E et U+2066–2069, espace
   de largeur nulle U+200B, marques de direction U+200E et U+200F, U+2060–2064, BOM…), sur **tous**
@@ -1326,7 +1452,12 @@ Obligatoire pour `admin` et `redacteur` (décision 17, `App\Support\TeamTwoFacto
   `appointments.reschedule_proposed|reschedule_declined`, `appointments.cancelled` (avec `by` et
   `reason`), `appointments.slot_conflict`, `appointments.public_page_enabled|disabled`,
   `appointments.premium_required` (avec `feature`), `agenda.feed_created|regenerated|revoked|invalid`
-  (uuids seulement, jamais le jeton).
+  (uuids seulement, jamais le jeton), `workspaces.created|deleted|directory_draft_created`,
+  `workspaces.premium_required` (avec `feature`), `copilot.generated` (type, uuids, nombre de
+  remplacements), `copilot.suggestion_applied`, `copilot.quota_exceeded` (avec `scope`),
+  `ai.completed` (fonctionnalité, modèle, jetons), `ai.unavailable` et `ai.provider_failed` (avec
+  `reason`), `ai.invalid_response`, `ai.budget_exceeded` (avec `scope`), `ai.budget_alert`,
+  `ai.usage_viewed`.
   **Jamais le contenu d'un message, d'une demande, d'un commentaire de signalement, la description
   d'un événement, son lien de connexion, le texte d'une annonce, le contenu d'un article, un motif,
   une donnée des inscrits, ni un numéro d'entreprise, un nom d'entreprise, un montant, une note ou
@@ -1334,7 +1465,8 @@ Obligatoire pour `admin` et `redacteur` (décision 17, `App\Support\TeamTwoFacto
   `BlogInputAndPrivacyTest` et `ComplianceInputAndPrivacyTest`), **ni une identité
   professionnelle, une ligne, un montant, un titre, un commentaire ou une empreinte d'un devis**
   (`MarketplacePrivacyTest`), **ni une note, un lieu, un téléphone, un lien de visio ou le titre
-  d'un rendez-vous** (`AppointmentsPrivacyTest`).
+  d'un rendez-vous** (`AppointmentsPrivacyTest`), **ni un titre, une description, une note d'un
+  workspace, le contenu envoyé à l'IA ou sa réponse** (`WorkspacesPrivacyTest`, `AiGatewayTest`).
   Les événements Laravel et Fortify sont journalisés par `App\Listeners\LogSecurityEvents`
   (listeners découverts automatiquement dans `app/Listeners`). Les tests gardent ce journal en
   mémoire (`securityLog()` dans `tests/Pest.php`).
@@ -1350,7 +1482,10 @@ Obligatoire pour `admin` et `redacteur` (décision 17, `App\Support\TeamTwoFacto
   `COMPLIANCE_REQUIRE_DISTINCT_VERIFIER` ou `MODERATION_REQUIRE_DISTINCT_APPEAL_REVIEWER` à false
   alors que deux admins ont la 2FA) ne bloquent pas. Modération : erreur sans
   `MODERATION_CONTACT_EMAIL` ou `MODERATION_AUTHORITIES_EMAIL` valides, ou sans référence pour une
-  clause des CGU (`config/moderation.php`, `terms_clauses`). Le schéma est lu par `App\Support\Database\TimestampSchema` (MySQL et MariaDB seulement) ;
+  clause des CGU (`config/moderation.php`, `terms_clauses`). IA activée (`AI_DRIVER` autre que
+  `disabled`) : erreur pour un pilote simulé ou inconnu, une clé `MISTRAL_API_KEY` vide, un
+  `MISTRAL_BASE_URL` autre que l'endpoint de l'UE en https, un modèle sans prix, un plafond nul ou
+  un `max_execution_time` du php.ini inférieur à `AI_TIMEOUT` + 15 s (hébergement mutualisé). Le schéma est lu par `App\Support\Database\TimestampSchema` (MySQL et MariaDB seulement) ;
   relancer la commande après `migrate`. Toute nouvelle variable de sécurité doit y être ajoutée,
   avec son test dans `tests/Feature/Security/CheckConfigCommandTest.php`.
 - URL générées : `AppServiceProvider` force la racine et le schéma de `APP_URL` (jamais l'en-tête
@@ -1441,7 +1576,7 @@ composer security            # composer audit : vulnérabilités connues des dé
   `sellerProfilePayload()`, `marketplaceProvider()`, `offerPayload()`, `publishedOfferOf()`,
   `acceptedQuoteRequest()`, `quotePayload()`, `sentQuote()`, `appointmentProvider()`,
   `appointmentCalendarOf()`, `appointmentTypeOf()`, `weeklyAvailability()`,
-  `appointmentRelation()`, images…) sont dans
+  `appointmentRelation()`, `workspaceOwner()`, `workspaceOf()`, images…) sont dans
   `tests/Pest.php`. Les fonctions des fichiers de test sont globales : leur nom doit être unique
   dans tout `tests/`. Un test qui fixe l'horloge (`Carbon::setTestNow`) y revient avec
   `travelTo(<date fixe>)`, jamais `travelBack()` (qui revient à l'heure réelle). Une donnée de

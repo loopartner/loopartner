@@ -481,6 +481,77 @@ L'export général (droit d'accès et portabilité, RGPD art. 15 et 20) est pré
 > juriste (tableau de la section 7) ; reprendre le tableau ci-dessus dans la politique de
 > confidentialité ; prévoir dans les CGU la page de réservation Premium et l'annulation libre.
 
+## Workspaces, copilote et IA : données personnelles et durées de conservation
+
+Module Workspaces, brique d'IA et parcours d'accueil du noyau (lot 5, décisions 60 à 70 ;
+sources, contenu exact envoyé à l'IA, textes et points à faire valider :
+`docs/v1/workspaces-rules.md`).
+
+- **Workspaces privés** : visibles de leur seul propriétaire (404 pour tout autre utilisateur,
+  **administrateurs compris**) ; aucune route publique. Titres, descriptions, notes, cahiers des
+  charges et réponses du copilote sont **chiffrés en base** (`APP_KEY`). Un texte ne devient
+  visible d'autrui que si l'utilisateur crée lui-même un brouillon Directory puis le publie (il
+  est alors signalable comme tout projet).
+- **IA désactivée par défaut** (`AI_DRIVER=disabled`). Fournisseur retenu : **Mistral AI,
+  endpoint régional de l'UE** (`https://api.eu.mistral.ai`) ; le pilote refuse tout autre hôte.
+  Avant l'activation, l'exploitant désactive l'opt-out d'entraînement, demande la conservation
+  nulle (ZDR) et renseigne la clé (étapes : `workspaces-rules.md`, section 7).
+- **L'IA ne doit pas être activée sur l'hébergement mutualisé** : l'appel est synchrone (45 s au
+  plus) ; `security:check-config` échoue si `max_execution_time` est inférieur à `AI_TIMEOUT`
+  + 15 s, et l'API refuse l'appel (503).
+- **Contenu envoyé** : liste blanche (titre et description du workspace **expurgés** des emails,
+  téléphones, IBAN, liens et numéros d'entreprise ; pays, budget, mois de début, titres des
+  étapes, type de compte, catégories publiques). **Jamais** le nom, l'email, un identifiant, la
+  ville, les notes ni une donnée d'un autre utilisateur. L'utilisateur voit le contenu exact avant
+  l'envoi (prévisualisation) et doit avoir lu l'information sur l'IA (version). Email vérifié
+  exigé pour toute génération.
+- **Réponse de l'IA = donnée non fiable** : schéma JSON imposé, puis nettoyage (HTML écarté,
+  caractères invisibles et liens retirés, catégories actives seulement, longueurs bornées) ;
+  gardée comme suggestion, appliquée seulement par l'utilisateur ; marquée `ai_generated`.
+- **Coûts** : plafonds par utilisateur (0,50 $ par mois) et globaux (50 $ par mois, 5 $ par jour)
+  réservés sous verrou avant chaque appel ; alerte des admins à 80 % et 100 % ; suivi sans
+  identité ni contenu (`GET /admin/ai/usage`).
+- **Journaux** : le canal security et la table `ai_usages` ne contiennent **jamais** le contenu
+  envoyé ni la réponse (fonctionnalité, modèle, jetons, coût, statut, uuids seulement ;
+  `WorkspacesPrivacyTest`, `AiGatewayTest`). La clé d'API n'apparaît dans aucune exception ni
+  aucun journal.
+
+| Données | Conservation | Ensuite |
+|---|---|---|
+| Workspace, objectifs, étapes, tâches, cahiers des charges | tant que le compte existe | supprimés avec le compte |
+| Suggestion du copilote (réponse de l'IA) | 90 jours après sa génération | supprimée (`workspaces:prune`) |
+| Décompte des générations (type, date) | tant que le compte existe (quota gratuit à vie) | supprimé avec le compte |
+| Journal des appels à l'IA (sans contenu) | 13 mois | supprimé (`ai:prune`) ; détaché du compte dès sa suppression |
+| Totaux par jour, fonctionnalité et modèle | sans limite | aucune donnée personnelle |
+| Choix du parcours d'accueil | tant que le compte existe | supprimés avec le compte |
+| Chez Mistral AI | 30 jours (surveillance des abus), aucune avec la ZDR | supprimés par le fournisseur |
+
+- **Suppression de compte** : workspaces, contenu, suggestions, décompte, compteurs de coût de
+  l'utilisateur et choix du parcours supprimés ; journal des appels détaché.
+- **Base légale proposée** (à faire valider par le juriste, J6) : exécution du contrat
+  (fonctionnalité demandée et lancée par l'utilisateur). AIPD recommandée avant l'activation (J7).
+- **Réglage** : durées dans `backend/config/security.php` (`retention.copilot_suggestions_days`,
+  `retention.ai_usages_months`).
+
+### Inventaire pour l'export général des données (lot 11)
+
+| Table | Rattachement | Contenu personnel | Repris par |
+|---|---|---|---|
+| `workspaces` | `user_id` | titre, description (chiffrés), pays, budget, dates | `WorkspacesPersonalData` |
+| `workspace_goals`, `workspace_steps`, `workspace_tasks` | workspace | titres, descriptions, notes (chiffrés), échéances | `WorkspacesPersonalData` |
+| `workspace_specifications` | workspace | cahiers des charges (chiffrés) | `WorkspacesPersonalData` |
+| `workspace_copilot_suggestions` | workspace | réponses du copilote (chiffrées) | `WorkspacesPersonalData` |
+| `workspace_copilot_entries` | `user_id` | type et date des générations | `WorkspacesPersonalData` |
+| `ai_usages` | `user_id` (null après suppression) | fonctionnalité, modèle, jetons, coût, statut | `AiUsagePersonalData` |
+| `ai_budgets` (portée `user:<id>`) | `user_id` | dépense du mois | non repris (technique) |
+| `onboarding_states` | `user_id` (unique) | étapes passées, parcours masqué | `AiUsagePersonalData` |
+
+> **À faire avant l'ouverture au public** : faire valider les points J1 à J11 de
+> `docs/v1/workspaces-rules.md` ; réaliser l'AIPD ; reprendre le tableau ci-dessus et le
+> sous-traitant (Mistral AI, traitement dans l'UE) dans la politique de confidentialité ; tracer
+> la formation de l'équipe à l'IA (règlement sur l'IA, art. 4) ; activer l'IA seulement hors de
+> l'hébergement mutualisé.
+
 ## Vérifications avant chaque mise en production
 
 Depuis `backend/`, sur le serveur de production :
@@ -512,7 +583,10 @@ Depuis `backend/`, sur le serveur de production :
 7. **Fichiers** : `backend/.env` non accessible depuis le web (seul `backend/public` est exposé),
    `APP_KEY` propre à la production et sauvegardée hors du serveur (voir « `APP_KEY` : sauvegarde
    et rotation » : sans elle, les données chiffrées sont perdues).
-8. **Contrôle rapide après déploiement** : `GET /up` répond 200, une réponse de l'API porte bien
+8. **IA** : laisser `AI_DRIVER=disabled` sur l'hébergement mutualisé. Ailleurs, après les étapes
+   de `docs/v1/workspaces-rules.md` (section 7) : `security:check-config` (clé, endpoint de l'UE,
+   plafonds, `max_execution_time`), puis `php artisan ai:test-connection`.
+9. **Contrôle rapide après déploiement** : `GET /up` répond 200, une réponse de l'API porte bien
    `Strict-Transport-Security` et `Content-Security-Policy`, et `/` ne renvoie pas de page HTML.
 
 ## Chantiers de sécurité à venir
