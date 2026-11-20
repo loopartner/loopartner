@@ -174,7 +174,8 @@ class SendDigests
                     $window = (clone $base)
                         ->whereDate('due_on', '>=', $today->toDateString())
                         ->whereDate('due_on', '<=', $today->addDays(self::WEEKLY_DAYS)->toDateString())
-                        ->orderBy('due_on');
+                        ->orderBy('due_on')
+                        ->orderBy('id');
 
                     foreach ($window->get() as $deadline) {
                         $candidates[] = [$deadline, null];
@@ -185,7 +186,7 @@ class SendDigests
             }
 
             foreach ($offsets as $offset) {
-                foreach ((clone $base)->whereDate('due_on', $today->addDays($offset)->toDateString())->get() as $deadline) {
+                foreach ((clone $base)->whereDate('due_on', $today->addDays($offset)->toDateString())->orderBy('id')->get() as $deadline) {
                     $candidates[] = [$deadline, $offset];
                 }
             }

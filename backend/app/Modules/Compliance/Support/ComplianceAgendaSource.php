@@ -43,6 +43,7 @@ class ComplianceAgendaSource implements AgendaSource
                 ->whereDate('due_on', '<', $to->toDateString())
                 ->with('rule')
                 ->orderBy('due_on')
+                ->orderBy('id')
                 ->limit(500)
                 ->get();
 

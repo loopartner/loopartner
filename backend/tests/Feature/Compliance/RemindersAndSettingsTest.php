@@ -3,6 +3,7 @@
 use App\Modules\Compliance\Actions\ManageDeadline;
 use App\Modules\Compliance\Models\Company;
 use App\Modules\Compliance\Models\ComplianceRule;
+use App\Modules\Compliance\Models\ComplianceSettings;
 use App\Modules\Compliance\Models\Deadline;
 use App\Modules\Compliance\Models\ThresholdAlert;
 use App\Modules\Compliance\Notifications\ComplianceDigestNotification;
@@ -65,6 +66,20 @@ describe('réglages', function (): void {
             ->assertJsonPath('data.reminder_offsets', [14])
             ->assertJsonPath('data.reminder_frequency', 'weekly')
             ->assertJsonPath('data.emails_enabled', false);
+    });
+
+    it('recommence au lieu de répondre 500 quand une autre requête crée les réglages au même moment', function (): void {
+        $user = complianceUser();
+
+        simulateConcurrentRequest(ComplianceSettings::class, 'creating', function () use ($user): void {
+            ComplianceSettings::for($user->id)->forceFill(['emails_enabled' => false])->save();
+        });
+
+        $this->actingAs($user)->patchJson('/api/v1/me/compliance/settings', ['reminder_frequency' => 'weekly'])
+            ->assertOk()
+            ->assertJsonPath('data.reminder_frequency', 'weekly');
+
+        expect(ComplianceSettings::query()->where('user_id', $user->id)->count())->toBe(1);
     });
 
     it('réserve plusieurs délais et les paliers personnalisés au premium', function (array $payload, string $feature): void {

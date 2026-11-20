@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Modules\Compliance\Models\CalendarFeed;
 use App\Modules\Compliance\Support\CalendarFeedToken;
 use App\Support\SecurityLog;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -21,9 +22,14 @@ class ManageCalendarFeed
      */
     public function issue(User $user): string
     {
-        return DB::transaction(function () use ($user): string {
+        // Verrou de la ligne users (elle existe toujours) : un verrou sur un abonnement encore
+        // absent ne protège rien et fait s'interbloquer deux créations simultanées sous InnoDB.
+        // Si l'index unique user_id refuse malgré tout l'insertion, la seconde tentative
+        // régénère l'abonnement créé entre-temps.
+        return retry(2, fn (): string => DB::transaction(function () use ($user): string {
+            User::query()->whereKey($user->id)->lockForUpdate()->first();
             $token = CalendarFeedToken::generate();
-            $feed = CalendarFeed::query()->where('user_id', $user->id)->lockForUpdate()->first();
+            $feed = CalendarFeed::query()->where('user_id', $user->id)->first();
             $event = $feed === null ? 'compliance.calendar_feed_created' : 'compliance.calendar_feed_regenerated';
 
             $feed ??= new CalendarFeed;
@@ -37,7 +43,7 @@ class ManageCalendarFeed
             SecurityLog::record($event, ['user_id' => $user->id]);
 
             return CalendarFeedToken::url($token['token']);
-        });
+        }), 0, fn (\Throwable $e): bool => $e instanceof UniqueConstraintViolationException);
     }
 
     /**

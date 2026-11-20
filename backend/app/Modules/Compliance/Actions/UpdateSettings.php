@@ -41,24 +41,20 @@ class UpdateSettings
             }
         }
 
-        $settings = ComplianceSettings::for($user->id);
-
-        foreach (['emails_enabled', 'reminder_frequency'] as $field) {
-            if (array_key_exists($field, $data)) {
-                $settings->forceFill([$field => $data[$field]]);
+        return ComplianceSettings::change($user->id, function (ComplianceSettings $settings) use ($data): void {
+            foreach (['emails_enabled', 'reminder_frequency'] as $field) {
+                if (array_key_exists($field, $data)) {
+                    $settings->forceFill([$field => $data[$field]]);
+                }
             }
-        }
 
-        foreach (['reminder_offsets', 'threshold_levels'] as $field) {
-            if (array_key_exists($field, $data)) {
-                $values = array_values(array_unique(array_map('intval', $data[$field])));
-                sort($values);
-                $settings->forceFill([$field => $values]);
+            foreach (['reminder_offsets', 'threshold_levels'] as $field) {
+                if (array_key_exists($field, $data)) {
+                    $values = array_values(array_unique(array_map('intval', $data[$field])));
+                    sort($values);
+                    $settings->forceFill([$field => $values]);
+                }
             }
-        }
-
-        $settings->save();
-
-        return $settings;
+        });
     }
 }

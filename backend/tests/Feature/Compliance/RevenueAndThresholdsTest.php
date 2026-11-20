@@ -2,6 +2,7 @@
 
 use App\Modules\Compliance\Models\Company;
 use App\Modules\Compliance\Models\ComplianceRule;
+use App\Modules\Compliance\Models\RevenueEntry;
 use App\Modules\Compliance\Models\ThresholdAlert;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -70,6 +71,29 @@ describe('saisie', function (): void {
 
         $this->actingAs($user)->deleteJson(revenueUri($company, '/revenue/2026-10'))->assertNoContent();
         $this->actingAs($user)->getJson(revenueUri($company, '/revenue'))->assertJsonPath('data.total', 0);
+    });
+
+    it('saisit le même mois en même temps sans erreur : verrou de l\'entreprise, puis nouvelle tentative', function (): void {
+        $user = complianceUser();
+        $company = complianceCompanyOf($user);
+
+        simulateConcurrentRequest(RevenueEntry::class, 'creating', function () use ($company): void {
+            (new RevenueEntry)->forceFill(['company_id' => $company->id, 'period' => '2026-10-01', 'activity_type' => 'services_commercial', 'amount' => 1])->save();
+        });
+        $queries = recordQueries();
+
+        $this->actingAs($user)->putJson(revenueUri($company, '/revenue/2026-10'), ['lines' => ['services_commercial' => 412_050]])
+            ->assertOk()
+            ->assertJsonPath('data.lines', ['services_commercial' => 412_050]);
+
+        expect(RevenueEntry::query()->count())->toBe(1);
+
+        $first = collect($queries)->first(fn (array $query): bool => $query['depth'] > 0 && preg_match('/\b(compliance_companies|compliance_revenue_entries)\b/', str_replace(['"', '`'], '', $query['sql'])) === 1);
+        expect($first['sql'])->toContain('compliance_companies');
+
+        if (DB::getDriverName() !== 'sqlite') {
+            expect($first['sql'])->toContain('for update');
+        }
     });
 
     it('refuse un montant qui n\'est pas un entier de centimes dans les bornes', function (mixed $amount): void {

@@ -46,6 +46,27 @@ describe('abonnement au calendrier', function (): void {
             ->assertJsonMissingPath('data.url');
     });
 
+    it('verrouille la ligne users et recommence si une autre requête crée l\'abonnement au même moment', function (): void {
+        $company = complianceCompanyOf();
+
+        simulateConcurrentRequestAfterQuery('from compliance_calendar_feeds where user_id', function () use ($company): void {
+            DB::table('compliance_calendar_feeds')->insert(['user_id' => $company->user_id, 'selector' => str_repeat('a', 16), 'verifier_hash' => str_repeat('0', 64), 'created_at' => now(), 'updated_at' => now()]);
+        });
+        $queries = recordQueries();
+
+        $url = issueFeed($company);
+
+        $this->get(feedPath($url))->assertOk();
+        expect(CalendarFeed::query()->count())->toBe(1);
+
+        $first = collect($queries)->first(fn (array $query): bool => $query['depth'] > 0 && preg_match('/\b(users|compliance_calendar_feeds)\b/', str_replace(['"', '`'], '', $query['sql'])) === 1);
+        expect($first['sql'])->toContain('users')->not->toContain('compliance_calendar_feeds');
+
+        if (DB::getDriverName() !== 'sqlite') {
+            expect($first['sql'])->toContain('for update');
+        }
+    });
+
     it('sert les titres et dates des échéances, sans montant ni note, sans être connecté', function (): void {
         $company = complianceCompanyOf();
         app(ManageDeadline::class)->create($company, ['title' => 'Rendez-vous ; banque', 'due_on' => '2026-11-20', 'notes' => 'Note privée 4 120,50']);

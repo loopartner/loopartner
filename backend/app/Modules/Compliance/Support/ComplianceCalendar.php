@@ -35,6 +35,7 @@ final class ComplianceCalendar
                 ->whereDate('due_on', '>=', $from)
                 ->with('rule')
                 ->orderBy('due_on')
+                ->orderBy('id')
                 ->get();
 
             foreach ($deadlines as $deadline) {

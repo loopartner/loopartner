@@ -2,10 +2,14 @@
 
 namespace App\Modules\Compliance\Models;
 
+use App\Models\User;
 use App\Modules\Compliance\Enums\ReminderFrequency;
 use Carbon\CarbonInterface;
+use Closure;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Réglages du suivi administratif d'un utilisateur (une ligne au plus, créée à la première
@@ -63,6 +67,31 @@ class ComplianceSettings extends Model
         ]);
 
         return $settings;
+    }
+
+    /**
+     * Seul point d'écriture des réglages : applique $change aux réglages de l'utilisateur
+     * (créés au besoin), puis les enregistre.
+     *
+     * Les écritures d'un utilisateur passent l'une après l'autre (verrou de sa ligne users) :
+     * sans lui, deux premières écritures simultanées (réglages, entreprise active) inséraient
+     * chacune la ligne et la seconde heurtait l'index unique user_id ; deux modifications
+     * partielles se lisaient aussi l'une l'autre avant écriture. Si l'index refuse malgré tout
+     * l'insertion, la seconde tentative modifie la ligne créée entre-temps.
+     *
+     * @param  Closure(self): void  $change
+     */
+    public static function change(int $userId, Closure $change): self
+    {
+        return retry(2, fn (): self => DB::transaction(function () use ($userId, $change): self {
+            User::query()->whereKey($userId)->lockForUpdate()->first();
+
+            $settings = self::for($userId);
+            $change($settings);
+            $settings->save();
+
+            return $settings;
+        }), 0, fn (\Throwable $e): bool => $e instanceof UniqueConstraintViolationException);
     }
 
     /**

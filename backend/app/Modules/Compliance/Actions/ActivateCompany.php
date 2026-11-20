@@ -5,7 +5,6 @@ namespace App\Modules\Compliance\Actions;
 use App\Modules\Compliance\Models\Company;
 use App\Modules\Compliance\Models\ComplianceSettings;
 use App\Modules\Compliance\Support\Entitlements;
-use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 /**
@@ -28,9 +27,8 @@ class ActivateCompany
             throw new ConflictHttpException('Toutes vos entreprises sont déjà actives.');
         }
 
-        DB::transaction(function () use ($company, $userId): void {
-            $settings = ComplianceSettings::for($userId);
-            $settings->forceFill(['active_company_id' => $company->id])->save();
+        ComplianceSettings::change($userId, function (ComplianceSettings $settings) use ($company): void {
+            $settings->forceFill(['active_company_id' => $company->id]);
         });
     }
 }
