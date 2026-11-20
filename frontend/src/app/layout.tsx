@@ -5,6 +5,7 @@ import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { ConsentGate } from '@/components/ConsentGate';
+import { DemoBanner } from '@/components/DemoBanner';
 import { SessionProvider } from '@/lib/session';
 
 export const metadata: Metadata = {
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="fr">
       <body>
+        <DemoBanner />
         <SessionProvider>
           {children}
           <ConsentGate />

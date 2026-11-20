@@ -1986,3 +1986,9 @@ textarea {
     padding: 4px 0;
   }
 }
+
+/* Mode démonstration (aperçus Vercel seulement) */
+.demo-banner{position:sticky;top:0;z-index:100;background:#1f2a37;color:#fff;font-size:14px;line-height:1.4;padding:8px 16px;text-align:center}
+.demo-banner__toggle{background:none;border:0;color:#99cefb;text-decoration:underline;cursor:pointer;font:inherit;padding:0}
+.demo-banner__accounts{list-style:none;margin:6px 0 0;padding:0;display:flex;gap:6px 24px;justify-content:center;flex-wrap:wrap}
+.demo-banner code{background:rgba(255,255,255,.12);border-radius:4px;padding:1px 6px}

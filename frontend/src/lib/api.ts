@@ -9,6 +9,8 @@
  * Utilisable côté navigateur (pages connectées) et côté serveur (pages publiques), sans cookie.
  */
 
+import { DEMO_MODE, DemoError, demoApi } from './demo';
+
 export const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000').replace(/\/+$/, '');
 
 export type FieldErrors = Record<string, string[]>;
@@ -87,6 +89,16 @@ function buildUrl(path: string, query?: RequestOptions['query']): string {
 
 async function send<T>(path: string, options: RequestOptions, retried: boolean): Promise<T> {
   const method = options.method ?? 'GET';
+
+  // Mode démonstration (aperçu Vercel) : réponses fictives, aucun appel réseau.
+  if (DEMO_MODE) {
+    try {
+      return (await Promise.resolve(demoApi(path, method, options.query ?? {}, options.body))) as T;
+    } catch (error) {
+      if (error instanceof DemoError) throw new ApiError(error.status, error.body);
+      throw error;
+    }
+  }
   const isForm = typeof FormData !== 'undefined' && options.body instanceof FormData;
 
   if (method !== 'GET') await ensureCsrf();
