@@ -26,6 +26,7 @@ class GetPremiumStatus
         $grant = PremiumGrant::query()
             ->active()
             ->where('user_id', $userId)
+            ->orderBy('id')
             ->get()
             ->sortByDesc(fn (PremiumGrant $grant): int => $grant->ends_at?->getTimestamp() ?? PHP_INT_MAX)
             ->first();
