@@ -49,6 +49,7 @@ class AdminModerationController extends Controller
             ->orderByDesc('urgent')
             ->orderBy('due_at')
             ->orderBy('target_ref')
+            ->orderBy('target_type')
             ->paginate(Pagination::perPage($request));
 
         $all = DB::query()->fromSub($cases, 'cases');
