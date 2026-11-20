@@ -112,9 +112,9 @@ class ProjectQuotesController extends Controller
         $quotes = $this->receivedQuotes($this->user($request), $projectId, [QuoteStatus::Sent, QuoteStatus::Accepted])
             ->whereNull('moderation_restricted_at')
             ->get()
-            ->sortByDesc('sent_at')
+            ->sortBy([['sent_at', 'desc'], ['id', 'desc']])
             ->take((int) config('marketplace.comparison.max_quotes'))
-            ->sortBy('sent_at')
+            ->sortBy([['sent_at', 'asc'], ['id', 'asc']])
             ->values();
 
         return $quotes;

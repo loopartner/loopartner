@@ -152,7 +152,7 @@ class Quote extends Model
      */
     public function lines(): HasMany
     {
-        return $this->hasMany(QuoteLine::class)->orderBy('position');
+        return $this->hasMany(QuoteLine::class)->orderBy('position')->orderBy('id');
     }
 
     /**

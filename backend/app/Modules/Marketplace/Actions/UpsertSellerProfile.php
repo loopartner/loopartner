@@ -6,6 +6,8 @@ use App\Models\User;
 use App\Modules\Marketplace\Models\SellerProfile;
 use App\Modules\Marketplace\Support\BusinessNumbers;
 use App\Support\SecurityLog;
+use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Crée ou remplace l'identité professionnelle d'un prestataire et enregistre son
@@ -13,13 +15,32 @@ use App\Support\SecurityLog;
  *
  * Changer de numéro d'entreprise efface une vérification d'immatriculation passée (lot 6) :
  * elle ne portait que sur l'ancien numéro.
+ *
+ * Deux premiers enregistrements simultanés créent la même ligne (user_id unique) : le second
+ * recommence et remplace la ligne créée par le premier (représentation complète : la dernière
+ * écriture l'emporte), comme UpsertProviderProfile.
  */
 class UpsertSellerProfile
 {
+    private const MAX_ATTEMPTS = 2;
+
     /**
      * @param  array<string, mixed>  $data  données validées
      */
     public function handle(User $user, array $data): SellerProfile
+    {
+        return retry(
+            self::MAX_ATTEMPTS,
+            fn (): SellerProfile => DB::transaction(fn (): SellerProfile => $this->save($user, $data)),
+            0,
+            fn (\Throwable $e): bool => $e instanceof UniqueConstraintViolationException,
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $data  données validées
+     */
+    private function save(User $user, array $data): SellerProfile
     {
         $profile = SellerProfile::query()->firstOrNew(['user_id' => $user->id]);
         $previousNumber = $profile->exists ? $profile->registration_number : null;

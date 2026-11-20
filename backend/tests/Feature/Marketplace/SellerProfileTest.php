@@ -61,6 +61,21 @@ describe('enregistrement', function (): void {
             ->and(securityLog('marketplace.seller_profile_updated'))->toHaveCount(2);
     });
 
+    it('recommence au lieu de répondre 500 quand une autre requête crée l\'identité au même moment', function (): void {
+        $user = sellerUser();
+
+        simulateConcurrentRequest(SellerProfile::class, 'creating', function () use ($user): void {
+            SellerProfile::factory()->create(['user_id' => $user->id, 'legal_name' => 'Requête concurrente']);
+        });
+
+        $this->actingAs($user)->putJson('/api/v1/me/seller-profile', sellerProfilePayload())
+            ->assertSuccessful()
+            ->assertJsonPath('data.legal_name', 'Camille Exemple');
+
+        expect(SellerProfile::query()->count())->toBe(1)
+            ->and(securityLog('marketplace.seller_profile_updated'))->toHaveCount(1);
+    });
+
     it('chiffre l\'identité en base et ne l\'écrit pas dans le journal', function (): void {
         $user = sellerUser();
         $this->actingAs($user)->putJson('/api/v1/me/seller-profile', sellerProfilePayload())->assertCreated();
