@@ -8,6 +8,7 @@
  * La session et les créations (projets, inscriptions) restent dans le navigateur (localStorage).
  */
 
+import { demoMatching } from './demo-matching';
 import type { ArticleDetail, ArticleSummary, BrowsableProject, Category, Me, OwnEvent, OwnProject, PublicEvent, Role } from './types';
 
 export const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
@@ -355,6 +356,20 @@ export function demoApi(path: string, method: string, query: Record<string, unkn
   const input = (body ?? {}) as Record<string, unknown>;
   const route = path.replace(/^\/+/, '').replace(/\/+$/, '');
 
+  // Mise en relation, messagerie et signalement (demo-matching.ts)
+  const session = currentUser();
+  const matching = demoMatching(
+    route,
+    method,
+    query,
+    input,
+    session ? { email: session.email, isProvider: session.roles.includes('prestataire') } : null,
+    (status, payload) => {
+      throw new DemoError(status, payload);
+    },
+  );
+  if (matching) return matching.value;
+
   // Authentification
   if (route === 'auth/login') {
     const email = String(input.email ?? '').trim().toLowerCase();
@@ -415,10 +430,6 @@ export function demoApi(path: string, method: string, query: Record<string, unkn
     if (!project) throw new DemoError(404, { message: 'Projet introuvable.' });
     return { data: project };
   }
-  if (/^projects\/[^/]+\/proposals$/.test(route)) {
-    requireUser();
-    return { data: { uuid: crypto.randomUUID(), status: 'pending' } };
-  }
   if (route === 'me/projects' && method === 'GET') {
     requireUser();
     return paginate(ownProjects, query);
@@ -465,6 +476,20 @@ export function demoApi(path: string, method: string, query: Record<string, unkn
       PROVIDERS.filter((provider) => (!query.category || provider.categories.some((item) => item.slug === query.category)) && (!q || provider.display_name.toLowerCase().includes(q))),
       query,
     );
+  }
+
+  const providerProfile = /^providers\/([^/]+)$/.exec(route);
+  if (providerProfile) {
+    const provider = PROVIDERS.find((item) => item.slug === providerProfile[1]);
+    if (!provider) throw new DemoError(404, { message: 'Prestataire introuvable.' });
+    return {
+      data: {
+        ...provider,
+        bio: `${provider.display_name} accompagne les créateurs et les dirigeants de TPE depuis plusieurs années. Profil de démonstration : les informations sont fictives.`,
+        website: null,
+        published_at: ago(60 * 24 * 90),
+      },
+    };
   }
 
   // Articles

@@ -1637,7 +1637,7 @@ Dossier `frontend/`, décisions 2 (modifiée), 71 à 74. Maquettes : fichier Fig
   `apiOrNull` pour les pages publiques rendues côté serveur (API injoignable : état vide).
 - **Mode démonstration** (`src/lib/demo.ts`, `NEXT_PUBLIC_DEMO_MODE=true`, **aperçus Vercel
   seulement, jamais en production**) : le client de l'API répond avec des données fictives
-  (projets, articles, événements, prestataires) sans appel réseau, bandeau permanent, comptes de
+  (projets, articles, événements, prestataires, demandes, conversations ; `demo-matching.ts`) sans appel réseau, bandeau permanent, comptes de
   test `client@`, `entrepreneur@`, `prestataire@`, `comptable@` et `marques@demo.loopartner.fr` (mot de passe
   `DEMO_PASSWORD`, sans existence côté API) ; session et créations dans le `localStorage`.
 - **Session** (`src/lib/session.tsx`) : `GET /me` au chargement, `useSession()` (`user`,
@@ -1649,6 +1649,12 @@ Dossier `frontend/`, décisions 2 (modifiée), 71 à 74. Maquettes : fichier Fig
   `/legal/[type]`, `/espace` (projets du porteur, raccourcis, renvoi du lien de vérification),
   `/prestataires`, `/articles`, `/articles/[slug]`, `/articles/rediger`, `/evenements`,
   `/evenements/[slug]` (inscription), `/evenements/proposer`, `/mes-evenements`.
+  Messagerie (étape 1 du deuxième passage) : `/demandes` (reçues et envoyées : accepter, refuser,
+  retirer, bloquer, signaler), `/messages?c=<uuid>` (conversations, nouveaux messages toutes les
+  10 s avec `after`, marqueur de lecture, blocage, signalement d'un message) et
+  `/prestataires/[slug]/contacter`. Compteur de non-lus dans l'en-tête (`useUnreadCount`, chaque
+  minute). Signalement public (DSA) : `ReportButton` sur les projets, articles et événements
+  (`POST /moderation/notices`, jeton de suivi montré une fois sans compte). Menu mobile sous 1200 px.
   `/login`, `/forgot-password` et `/reset-password` (liens des emails de l'API) redirigent vers
   les pages françaises.
 - **Règles d'affichage** : dates de l'API en UTC, affichées dans `Europe/Paris` (ou le fuseau de
