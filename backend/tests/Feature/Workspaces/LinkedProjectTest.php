@@ -2,6 +2,7 @@
 
 use App\Modules\Directory\Enums\ProjectStatus;
 use App\Modules\Directory\Models\Project;
+use App\Modules\Workspaces\Models\Workspace;
 
 /*
 | Lien entre un workspace et un projet Directory (décision 69) : seulement un projet de
@@ -84,4 +85,41 @@ it('détache le projet supprimé du workspace', function (): void {
     $this->actingAs($user)->deleteJson('/api/v1/me/projects/'.$project->uuid)->assertNoContent();
 
     expect($workspace->fresh()?->linked_project_id)->toBeNull();
+});
+
+describe('requêtes simultanées', function (): void {
+    it('répond 409 quand une autre requête relie le même projet juste avant (index unique)', function (): void {
+        $user = workspaceOwner();
+        makePremium($user);
+        $workspace = workspaceOf($user);
+        $other = workspaceOf($user);
+        $project = publishedProjectOf($user);
+
+        simulateConcurrentRequest(Workspace::class, 'updating', function () use ($other, $project): void {
+            $other->forceFill(['linked_project_id' => $project->id])->save();
+        });
+
+        $this->actingAs($user)->postJson('/api/v1/me/workspaces/'.$workspace->uuid.'/linked-project', ['project' => $project->uuid])
+            ->assertConflict();
+
+        expect($workspace->fresh()?->linked_project_id)->toBeNull();
+    });
+
+    it('ne crée pas de second brouillon quand une autre requête vient de relier le workspace', function (): void {
+        $user = workspaceOwner();
+        $workspace = workspaceOf($user, ['description' => 'Un site vitrine de cinq pages pour présenter mes créations.']);
+        $project = publishedProjectOf($user);
+
+        // L'autre requête relie le workspace après son chargement par celle du test.
+        simulateConcurrentRequest(Workspace::class, 'retrieved', function () use ($workspace, $project): void {
+            Workspace::query()->whereKey($workspace->id)->update(['linked_project_id' => $project->id]);
+        });
+
+        $this->actingAs($user)->postJson('/api/v1/me/workspaces/'.$workspace->uuid.'/directory-draft', ['category' => 'site-vitrine'])
+            ->assertConflict();
+
+        expect(Project::query()->count())->toBe(1)
+            ->and($workspace->fresh()?->linked_project_id)->toBe($project->id)
+            ->and(securityLog('workspaces.directory_draft_created'))->toHaveCount(0);
+    });
 });
