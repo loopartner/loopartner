@@ -9,21 +9,22 @@ entrepreneurs.
 
 ## V1 2027 : feuille de route et décisions (à lire au début de chaque session)
 
-- **`docs/v1/ROADMAP.md`** : lots 0 à 11 de la V1 commercialisable (Billing est le lot 10 ; le lot 3 Marketplace est fusionné, validations externes en attente ; le lot 4 Rendez-vous et agenda est fusionné, validation du juriste en attente ; le lot 5 Workspaces et onboarding est codé sur `feature/workspaces`, validation du juriste en attente ; le prochain est le lot 6), avec leurs critères
+- **`docs/v1/ROADMAP.md`** : lots 0 à 11 de la V1 commercialisable (Billing est le lot 10 ; le lot 3 Marketplace est fusionné, validations externes en attente ; le lot 4 Rendez-vous et agenda est fusionné, validation du juriste en attente ; le lot 5 Workspaces et onboarding est fusionné, validation du juriste en attente ; le prochain est le lot 6 ; le frontend est démarré en parallèle, décisions 71 à 74), avec leurs critères
   d'acceptation et leur état. Ne commence jamais un lot sans validation explicite de son plan
   détaillé par l'utilisateur.
 - **`docs/v1/DECISIONS.md`** : décisions produit et techniques validées, datées. Ne les remets pas
   en cause sans le demander ; une nouvelle décision s'y ajoute avec sa date.
 - Rappels : pas de refonte ; aucun taux, seuil ou montant réglementaire dans le code ; aucun
   module ni parcours incomplet présenté comme terminé ; base MySQL/MariaDB (jamais PostgreSQL) ;
-  le frontend démarre une fois tous les lots backend terminés, Billing compris ; un plan est
+  le frontend est développé en parallèle des lots 6 à 11 (décision 2 modifiée le 2026-11-20) ; un plan est
   toujours présenté avant de coder, les décisions purement techniques y sont tranchées (décision 20).
 
 ## Dépôt
 
 - `backend/` : API Laravel 13, PHP 8.4. Elle ne sert aucune vue : elle renvoie uniquement du JSON.
-- `frontend/` (à venir, après tous les lots backend) : Next.js et TypeScript, servi sur un autre sous-domaine.
-  Il consomme l'API avec des cookies de session.
+- `frontend/` : Next.js 16 et TypeScript (voir « Frontend »), déployé sur Vercel (dossier racine
+  `frontend`), servi sur un autre sous-domaine du même domaine que l'API. Il consomme l'API avec
+  des cookies de session.
 - `docs/v1/` : feuille de route et décisions de la V1 (voir ci-dessus), règles de la modération
   (`moderation-rules.md`), de la facturation (`billing-rules.md`), de la Marketplace
   (`marketplace-rules.md`), des rendez-vous (`appointments-rules.md`) et des workspaces et de
@@ -436,6 +437,13 @@ ceux qu'il ne garde plus.
   `country`, `remote_ok` (`true`/`false`/`1`/`0`), `budget_min`, `budget_max` (fourchettes qui se
   recouvrent ; projets sans budget exclus) et `currency` (EUR par défaut dès qu'un filtre de budget est
   présent). Tri par `published_at` décroissant. Brouillon, clos, expiré ou inconnu : 404.
+- **Vitrine publique** (décision 71) : `GET /public/projects` (filtres `category` avec
+  sous-catégories, `country` ; tri par `published_at`) et `GET /public/projects/{uuid}`, sans
+  compte, limiteur par IP `public-projects` (30/min, 1 000/j). `PublicProjectResource` :
+  `uuid`, `title`, `category`, `budget_min`, `budget_max`, `currency`, `country`, `remote_ok`,
+  `published_at` seulement (jamais la description, la ville, la date de début ni rien du
+  porteur). Projets `browsable()` sortis de la fenêtre d'accès anticipé. Testé par
+  `tests/Feature/Directory/PublicProjectShowcaseTest.php`.
 - **Confidentialité** : `PublishedProjectResource` n'expose ni l'email, ni le nom, ni l'identifiant du
   porteur de projet, seulement `owner.account_type` (particulier ou entrepreneur) et `owner.country`
   (`users.country`). Le contact passera par la mise en relation (à venir).
@@ -829,8 +837,8 @@ art. 18 : `docs/v1/moderation-rules.md` (**à faire valider par le juriste**). R
 `config/moderation.php`, limites et durées dans `config/security.php`.
 
 - **Contenus signalables** (contrat du noyau `ModerationTarget`, `config/moderation.php`,
-  `targets`) : `provider_profile` (slug), `project` (uuid, visible des seuls prestataires qui
-  consultent les projets), `event` (slug), `event_announcement` (uuid, visible des inscrits),
+  `targets`) : `provider_profile` (slug), `project` (uuid, signalable par tout visiteur de la vitrine
+  publique, décision 71), `event` (slug), `event_announcement` (uuid, visible des inscrits),
   `article` (slug), `offer` (slug), `message`, `match_request` et `quote` (privés : messagerie et
   page du devis seulement). Chaque adaptateur vit dans
   son module (`Support/…ModerationTarget`) : `findVisible()` (404 si le visiteur ne le voit pas),
@@ -1383,7 +1391,7 @@ Obligatoire pour `admin` et `redacteur` (décision 17, `App\Support\TeamTwoFacto
   connexion en cours), `register` (30/h par IP), `forgot-password` (5/h par email, 20/h par IP),
   `reset-password` (10/h par IP), `password-update` et `password-confirm` (5/min par utilisateur),
   `verification` (3/min, 10/h), `api` (60/min), `media-uploads` (20/min), `account-deletion` (6/min), `legal-acceptances` (20/h),
-  `projects-browse` (30/min, 500/j), `match-requests` (10/h, 20/j, propositions et contacts confondus),
+  `projects-browse` (30/min, 500/j), `public-projects` (30/min et 1 000/j par IP), `match-requests` (10/h, 20/j, propositions et contacts confondus),
   `messages` (10/min, 300/j), `reports` (10/j), `blocks` (20/j), `event-writes` (60/h, 300/j),
   `event-submissions` (5/h, 15/j), `event_revisions` (10/h, 30/j, compté par `SubmitRevision`),
   `event-registrations` (20/h, 60/j), `event-registrant-removals` (20/j), `event-announcements`
@@ -1607,3 +1615,42 @@ composer security            # composer audit : vulnérabilités connues des dé
 - Les tests simulent l'API Have I Been Pwned avec `Http::fake` (voir `tests/Pest.php`).
 - Fais des commits séparés et lisibles. Ne travaille pas directement sur `main` et ne pousse rien sans
   demande explicite.
+
+## Frontend (Next.js)
+
+Dossier `frontend/`, décisions 2 (modifiée), 71 à 74. Maquettes : fichier Figma « Crevia ».
+
+- **Pile** : Next.js 16 (App Router), React 19, TypeScript strict, ESLint (`eslint-config-next`).
+  Aucun framework CSS : `src/app/globals.css` porte le système de design (fond `#f3f3ed`,
+  bandeau bleu `#6aa6da` → `#99cefb`, vert-anis `#e1e4ab`, cartes arrondies de 33 px, police
+  Outfit pour l'interface, Inter pour les textes ; polices auto-hébergées par
+  `@fontsource-variable/*`). Logos dans `public/images`. Aucun paquet sans accord de
+  l'utilisateur (comme le backend).
+- **Variables** : `NEXT_PUBLIC_API_URL` (adresse de l'API, sans slash final ; `frontend/.env.example`).
+  Côté API : `FRONTEND_URL` (CORS et liens des emails), `SANCTUM_STATEFUL_DOMAINS` et
+  `SESSION_DOMAIN` (domaine parent commun, par exemple `.loopartner.com`). Les aperçus Vercel en
+  `*.vercel.app` n'ont pas de session (autre domaine) : seules les pages publiques y fonctionnent.
+- **Client de l'API** (`src/lib/api.ts`) : `credentials: 'include'`, `GET /sanctum/csrf-cookie`
+  avant toute écriture, en-tête `X-XSRF-TOKEN`, un nouvel essai après un 419 ; `ApiError` garde
+  `status`, `code` (`consent_required`, `premium_required`, `email_not_verified`…) et les erreurs
+  de champ. Un 403 `consent_required` ouvre `ConsentGate` (acceptation des CGU en vigueur).
+  `apiOrNull` pour les pages publiques rendues côté serveur (API injoignable : état vide).
+- **Session** (`src/lib/session.tsx`) : `GET /me` au chargement, `useSession()` (`user`,
+  `hasRole`, `refresh`, `logout`).
+- **Pages** : `/` (accueil), `/projets` et `/projets/[uuid]` (vitrine publique ; description et
+  proposition pour les prestataires connectés), `/publier` (4 étapes, brouillon gardé dans
+  l'onglet le temps de se connecter) et `/publier/confirmation`, `/connexion` (2FA comprise),
+  `/inscription` (choix du profil puis compte), `/mot-de-passe-oublie`, `/nouveau-mot-de-passe`,
+  `/legal/[type]`, `/espace` (projets du porteur, raccourcis, renvoi du lien de vérification),
+  `/prestataires`, `/articles`, `/articles/[slug]`, `/articles/rediger`, `/evenements`,
+  `/evenements/[slug]` (inscription), `/evenements/proposer`, `/mes-evenements`.
+  `/login`, `/forgot-password` et `/reset-password` (liens des emails de l'API) redirigent vers
+  les pages françaises.
+- **Règles d'affichage** : dates de l'API en UTC, affichées dans `Europe/Paris` (ou le fuseau de
+  l'événement) ; jamais de HTML venu de l'API (`dangerouslySetInnerHTML` interdit) : le corps des
+  articles est rendu bloc par bloc (`ArticleBody`) avec le `rel` fourni ; une URL écrite dans un
+  texte libre n'est jamais rendue cliquable ; avertissements affichés (ni conseil juridique, IA,
+  données sensibles près des champs libres) ; aucun chiffre ni label inventé (décision 74).
+- **Contrôles** (depuis `frontend/`) : `npm run lint`, `npm run typecheck`, `npm run build`,
+  `npm audit --omit=dev`. Job « Frontend (Next.js) » de la CI : 5 jobs doivent être verts avant
+  une fusion.

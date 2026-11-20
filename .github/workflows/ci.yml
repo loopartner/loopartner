@@ -10,6 +10,7 @@
 #    migrations réelles, données de référence, données de démonstration, puis toute la suite de
 #    tests. Raison : un nom d'index de 65 caractères (erreur 1059) n'était visible que sur
 #    MariaDB ; SQLite ne voit ni cette limite ni le piège des colonnes TIMESTAMP.
+# 3. frontend : ESLint, TypeScript et build de Next.js (dossier frontend/).
 name: CI
 
 on:
@@ -166,3 +167,41 @@ jobs:
 
       - name: Tests (base réelle, recréée par RefreshDatabase)
         run: php artisan test --compact
+
+  # 3. frontend (Next.js, décision 71) : installation figée par package-lock.json, ESLint,
+  #    TypeScript, build de production. Aucune API n'est jointe : les pages dynamiques ne
+  #    sont pas pré-rendues au build.
+  frontend:
+    name: Frontend (Next.js)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+      NEXT_PUBLIC_API_URL: 'http://127.0.0.1:8000'
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Node.js 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Dépendances
+        run: npm ci --no-audit --no-fund
+
+      - name: Audit des dépendances
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: TypeScript
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build

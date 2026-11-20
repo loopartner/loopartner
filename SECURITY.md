@@ -72,6 +72,17 @@ signalement n'y est jamais écrit.**
 > **À faire avant l'ouverture au public** : cette journalisation (données collectées, finalité,
 > base légale, durée de conservation) doit figurer dans la **politique de confidentialité**.
 
+## Vitrine publique des projets (décision 71)
+
+`GET /public/projects` et `GET /public/projects/{uuid}` sont ouverts sans compte. Ils ne montrent
+que le titre, la catégorie, le budget, le pays, le travail à distance et la date de publication
+d'un projet consultable, après la fenêtre d'accès anticipé ; jamais la description, la ville, la
+date de début, ni le nom, le type de compte ou le pays du porteur. Le titre étant public, le
+parcours de publication le dit au porteur, et la description reste réservée aux prestataires
+connectés (consultation journalisée, limiteur `projects-browse`). Limiteur par IP
+`public-projects` (30 par minute, 1 000 par jour) contre la collecte massive. À reporter dans
+les CGU et la politique de confidentialité (juriste).
+
 ## Mise en relation et messagerie : données personnelles et durées de conservation
 
 Les demandes de mise en relation et les messages sont des données personnelles. Ils ne sont visibles
