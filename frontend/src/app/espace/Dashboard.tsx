@@ -37,6 +37,8 @@ export function Dashboard() {
       ) : null}
 
       <div className="card-grid card-grid--3">
+        <Shortcut href="/messages" title="Mes messages" text="Vos conversations avec les prestataires et les porteurs de projets." />
+        <Shortcut href="/demandes" title="Mes demandes" text="Propositions et demandes de contact reçues ou envoyées." />
         {hasRole('particulier', 'entrepreneur') ? (
           <Shortcut href="/publier" title="Publier un projet" text="Décrivez votre besoin et recevez des propositions." />
         ) : null}

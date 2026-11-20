@@ -156,3 +156,85 @@ export interface LegalDocumentSummary {
   title: string;
   effective_at: string;
 }
+
+/* ---------------------------------------------------------------- Mise en relation et messagerie */
+
+export type MatchRequestStatus = 'pending' | 'accepted' | 'declined' | 'withdrawn' | 'expired';
+
+/** Interlocuteur : prestataire (résumé public) ou porteur de projet (nom après acceptation). */
+export interface Counterpart {
+  deleted: boolean;
+  account_type: 'particulier' | 'prestataire' | 'entrepreneur' | null;
+  country: string | null;
+  name: string | null;
+  provider: { display_name: string; slug: string | null; headline: string | null; city: string | null; country: string | null; logo_url: string | null } | null;
+}
+
+export interface MatchRequest {
+  uuid: string;
+  type: 'proposal' | 'contact';
+  status: MatchRequestStatus;
+  role: 'author' | 'recipient';
+  message: string | null;
+  price: { amount: number; currency: string } | null;
+  project: {
+    uuid: string;
+    title: string;
+    description: string;
+    category: Category | null;
+    budget_min: number | null;
+    budget_max: number | null;
+    currency: string;
+    country: string;
+    city: string | null;
+    remote_ok: boolean;
+  } | null;
+  counterpart: Counterpart;
+  conversation: { uuid: string } | null;
+  created_at: string;
+  expires_at: string | null;
+  responded_at: string | null;
+}
+
+export interface Conversation {
+  uuid: string;
+  match_request: { uuid: string; type: 'proposal' | 'contact' } | null;
+  project: { uuid: string; title: string } | null;
+  counterpart: Counterpart;
+  last_message: { uuid: string; excerpt: string | null; mine: boolean; sent_at: string } | null;
+  unread_count: number;
+  blocked_by_me: boolean;
+  can_send: boolean;
+  created_at: string;
+  last_activity_at: string | null;
+}
+
+export interface ChatMessage {
+  uuid: string;
+  body: string | null;
+  mine: boolean;
+  sent_at: string;
+}
+
+export interface ProviderProfile {
+  display_name: string;
+  slug: string;
+  headline: string | null;
+  bio: string | null;
+  city: string | null;
+  country: string | null;
+  website: string | null;
+  logo_url: string | null;
+  categories: Category[];
+  published_at: string | null;
+}
+
+/* ---------------------------------------------------------------- Signalement (DSA) */
+
+export interface ModerationInfo {
+  contact: { users_email: string | null; authorities_email: string | null; languages: string[] };
+  target_types: Array<{ key: string; label: string }>;
+  categories: Array<{ key: string; label: string; priority: 'urgent' | 'standard'; identity_optional: boolean }>;
+  appeal_window_months: number;
+  explanation: { min: number; max: number };
+}

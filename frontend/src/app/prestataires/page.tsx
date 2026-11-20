@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { Icon } from '@/components/Icon';
 import { Highlight, PageShell } from '@/components/PageShell';
 import { Pagination } from '@/components/Pagination';
 import { apiOrNull } from '@/lib/api';
@@ -83,6 +84,9 @@ export default async function ProvidersPage({ searchParams }: { searchParams: Pr
                   </span>
                 ))}
               </div>
+              <Link href={`/prestataires/${provider.slug}/contacter`} className="link-arrow" style={{ marginTop: 'auto' }}>
+                Contacter <Icon name="arrowRight" size={16} />
+              </Link>
             </article>
           ))}
         </div>
