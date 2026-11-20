@@ -8,6 +8,7 @@ import { apiOrNull } from '@/lib/api';
 import { dateBadge, duration, eventFormatName, formatDate, formatTime, initials, languageName } from '@/lib/format';
 import type { Paginated, PublicEvent } from '@/lib/types';
 import { RegisterButton } from './RegisterButton';
+import { ReportButton } from '@/components/ReportButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -76,6 +77,7 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
           <p className="disclaimer" style={{ textAlign: 'left', borderTop: '1px solid var(--border)', paddingTop: 24, marginTop: 32 }}>
             Cet événement est informatif et ne remplace pas un conseil personnalisé.
           </p>
+          <ReportButton type="event" reference={event.slug} label="Signaler cet événement" />
         </article>
 
         <aside className="aside-stack">

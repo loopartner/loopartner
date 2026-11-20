@@ -7,6 +7,7 @@ import { PageShell } from '@/components/PageShell';
 import { apiOrNull } from '@/lib/api';
 import { dateBadge, duration, eventFormatName, formatDate, initials, languageName } from '@/lib/format';
 import type { ArticleDetail, Paginated, PublicEvent } from '@/lib/types';
+import { ReportButton } from '@/components/ReportButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,6 +54,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
             <p className="disclaimer" style={{ textAlign: 'left', borderTop: '1px solid var(--border)', paddingTop: 24, marginTop: 32 }}>
               Cet article est informatif et ne constitue pas un conseil juridique personnalisé.
             </p>
+            <ReportButton type="article" reference={article.slug} label="Signaler cet article" />
           </article>
         </div>
 

@@ -8,6 +8,7 @@ import { apiOrNull } from '@/lib/api';
 import { countryName, formatBudget, timeAgo } from '@/lib/format';
 import type { Paginated, PublicProject } from '@/lib/types';
 import { ProviderPanel } from './ProviderPanel';
+import { ReportButton } from '@/components/ReportButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -104,6 +105,9 @@ export default async function ProjectPage({ params }: { params: Promise<{ uuid: 
             <Link href={`/publier${project.category ? `?categorie=${project.category.slug}` : ''}`} className="btn btn--lime btn--block">
               Publier un projet similaire
             </Link>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <ReportButton type="project" reference={project.uuid} label="Signaler ce projet" />
           </div>
         </aside>
       </div>

@@ -3,6 +3,9 @@
 const PATHS = {
   arrowRight: 'M5 12h14M13 6l6 6-6 6',
   arrowLeft: 'M19 12H5M11 6l-6 6 6 6',
+  flag: 'M5 21V4M5 4h11l-2 4 2 4H5',
+  ban: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM5.6 5.6l12.8 12.8',
+  inbox: 'M3 13h5l1 3h6l1-3h5M5 5h14l2 8v6H3v-6z',
   close: 'M6 6l12 12M18 6L6 18',
   lock: 'M7 11V8a5 5 0 0 1 10 0v3M6 11h12v10H6z',
   check: 'M5 13l4 4L19 7',
