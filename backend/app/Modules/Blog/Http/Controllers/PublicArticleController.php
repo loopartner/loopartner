@@ -185,6 +185,7 @@ class PublicArticleController extends Controller
             ->whereHas('categories', fn (Builder $categories) => $categories->whereIn('service_categories.id', $categoryIds))
             ->with(self::RELATIONS)
             ->orderByDesc('published_at')
+            ->orderByDesc('id')
             ->limit((int) config('blog.related_count'))
             ->get();
     }

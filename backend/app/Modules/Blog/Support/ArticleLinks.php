@@ -69,6 +69,7 @@ final class ArticleLinks
             ->where('status', ArticleStatus::Published->value)
             ->when($articleId !== null, fn ($query) => $query->whereKeyNot($articleId))
             ->latest('published_at')
+            ->latest('id')
             ->limit(self::HISTORY_LIMIT)
             ->get()
             ->each(function (Article $article) use (&$hosts): void {

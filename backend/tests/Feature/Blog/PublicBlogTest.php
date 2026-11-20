@@ -121,6 +121,18 @@ describe('détail', function (): void {
         expectNoPrivateFields($response->json());
     });
 
+    it('classe les articles liés publiés au même instant du plus récent au plus ancien (id)', function (): void {
+        $article = articleOf(articleAuthor(), 'published');
+        $at = now()->subDay();
+        $older = articleOf(articleAuthor(), 'published', ['published_at' => $at]);
+        $newer = articleOf(articleAuthor(), 'published', ['published_at' => $at]);
+
+        $this->getJson("/api/v1/articles/{$article->slug}")
+            ->assertOk()
+            ->assertJsonPath('data.related.0.slug', $newer->slug)
+            ->assertJsonPath('data.related.1.slug', $older->slug);
+    });
+
     it('répond 404 pour un article non publié', function (string $state, array $attributes): void {
         $article = articleOf(articleAuthor(), $state, $attributes);
         $slug = $article->slug ?? 'bien-choisir-le-statut-juridique-de-son-entreprise';
