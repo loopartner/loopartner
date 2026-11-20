@@ -24,7 +24,7 @@ datée, avec sa justification ; une décision modifiée garde sa trace (date et 
 | # | Sujet | Décision |
 |---|---|---|
 | 1 | Travail Compliance non commité | Commité comme commit 7 après revue du diff (fait le 2026-11-16, `c19b068`). |
-| 2 | Frontend | Next.js et TypeScript dans `frontend/`, **démarré une fois tous les lots backend terminés, Billing compris**. *Modifiée le 2026-11-16 (raison : terminer le backend avant de commencer l'interface). Ancienne version : « démarré après le lot 1, puis développé en parallèle des lots suivants ».* |
+| 2 | Frontend | Next.js et TypeScript dans `frontend/`, **démarré le 2026-11-20 à partir des maquettes Figma, en parallèle des lots 6 à 11** (décision 71). *Modifiée le 2026-11-20 (raison : décision de l'utilisateur de construire et brancher l'interface sans attendre). Version du 2026-11-16 : « démarré une fois tous les lots backend terminés, Billing compris » ; version initiale : « démarré après le lot 1, puis développé en parallèle des lots suivants ».* |
 | 3 | Projets | Nouveau module **Workspaces** (pilotage : objectifs, étapes, tâches), **privé par défaut**, relié facultativement à une annonce Directory. Aucune donnée d'un workspace ne devient publique sans action explicite de l'utilisateur. |
 | 4 | Paiement | **Remplacée le 2026-11-16** : **Stripe retenu**, voir « Décision 4 révisée » ci-dessous. |
 | 5 | Offres | **Remplacée le 2026-11-16** : voir « Décision 5 révisée » ci-dessous. |
@@ -406,3 +406,29 @@ réponse gardée comme **suggestion** que l'utilisateur applique ; brique du noy
 `DescribeOwnProject` ; adaptateur d'agenda `WorkspacesAgendaSource` ; classes internes
 `WorkspacesPersonalData` et `AiUsagePersonalData` pour l'export du lot 11 ; aucun texte d'un
 workspace n'est visible d'autrui, donc aucun nouvel adaptateur de modération.
+
+## Décisions du frontend (validées le 2026-11-20)
+
+L'utilisateur a fourni les maquettes Figma (fichier « Crevia ») : accueil, tous les projets, détail
+d'un projet, connexion, choix du profil, inscription, publication d'un projet en 4 étapes et
+confirmation, articles (catalogue, détail, rédaction), événements (catalogue, détail, proposer un
+webinar, tableau de bord). Les écarts entre les maquettes et le backend sont tranchés ainsi.
+
+| # | Sujet | Décision |
+|---|---|---|
+| 71 | Démarrage et vitrine publique des projets | Frontend démarré maintenant (décision 2 modifiée), hébergé sur **Vercel** (dossier racine `frontend`), API sur Hostinger puis le VPS. Les maquettes montrent les projets aux visiteurs : **vitrine publique limitée** `GET /public/projects` et `GET /public/projects/{uuid}` (titre, catégorie, budget, pays, travail à distance, date de publication) ; **jamais la description, la ville, la date de début ni rien du porteur**. Accès anticipé Premium respecté (un projet n'entre dans la vitrine qu'après sa fenêtre de 24 h), projets masqués exclus, limite par IP `public-projects` (30/min, 1 000/j). La description complète et la proposition restent réservées aux prestataires connectés (`GET /projects`, inchangé). Le porteur est prévenu à la publication que titre, catégorie et budget sont publics. À reporter dans les CGU et la politique de confidentialité (juriste). |
+| 72 | Contact | **Messagerie Loopartner seulement** : le choix « Adresse e-mail visible par les prestataires » de l'étape 4 est retiré ; l'email d'un utilisateur n'est jamais montré (règle inchangée). |
+| 73 | Inscription | Adaptée au backend : « Client » ouvre le choix **Particulier / Entrepreneur** ; « Pseudo » devient **Nom affiché** ; **pas de connexion Google** pour l'instant (nouveau paquet et nouveau service : à présenter plus tard) ; acceptation des versions en vigueur des CGU et de la politique (décision 14) ; pays demandé. Connexion par email seulement (pas de pseudo). |
+| 74 | Contenus des maquettes non conformes à la réalité | Retirés ou reformulés tant qu'ils ne sont pas vrais : « 500+ prestataires vérifiés », « Prestataires vérifiés » (devient « Professionnels déclarés »), « Messages traduits » (devient « Messagerie sécurisée »), carte « réseau mondial » (plateforme France et UE, décision 12), « +1500 experts », badge « Profil vérifié » (le badge « Entreprise immatriculée vérifiée » arrive au lot 6), nombres d'offres, de vues et d'interactions et avatars des proposants (non exposés par l'API), « profil du client réservé aux prestataires abonnés » (le nom est révélé à l'acceptation, décision 53), lien de visio « communiqué 15 minutes avant » (il est visible des inscrits dans leur espace). Les **photos de personnes** des maquettes (banques d'images, dont une marquée shutterstock) ne sont pas reprises : licence commerciale et accord des personnes à vérifier, et elles laisseraient croire à de vrais experts. |
+
+Décisions techniques (décision 20) : Next.js 16 (App Router) et TypeScript, **sans framework CSS**
+(feuille `globals.css` tirée des maquettes) ; polices Outfit et Inter auto-hébergées
+(`@fontsource-variable/*`, aucun appel à Google Fonts) ; pages publiques rendues côté serveur
+(`force-dynamic`, aucune donnée figée au build), pages connectées côté navigateur ; client
+`src/lib/api.ts` (cookie CSRF de Sanctum, `X-XSRF-TOKEN`, erreurs à code stable, 403
+`consent_required` ouvrant la fenêtre d'acceptation des CGU) ; redirections `/login`,
+`/forgot-password`, `/reset-password` (liens des emails de l'API) vers les pages françaises ;
+nouveau job « Frontend (Next.js) » dans la CI (ESLint, TypeScript, `npm audit`, build).
+Paquets npm installés : `next`, `react`, `react-dom`, `@fontsource-variable/outfit`,
+`@fontsource-variable/inter` et, en développement, `typescript`, `eslint`, `eslint-config-next`,
+`@types/*`.
