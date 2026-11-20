@@ -16,7 +16,10 @@ export const DEMO_PASSWORD = 'Demo-Loopartner-2026';
 
 export const DEMO_ACCOUNTS: Record<string, { role: Role; name: string; label: string }> = {
   'client@demo.loopartner.fr': { role: 'particulier', name: 'Camille Durand', label: 'Client (particulier)' },
-  'prestataire@demo.loopartner.fr': { role: 'prestataire', name: 'Cabinet Morel Conseil', label: 'Prestataire' },
+  'entrepreneur@demo.loopartner.fr': { role: 'entrepreneur', name: 'Lucas Bernard', label: 'Client (entrepreneur)' },
+  'prestataire@demo.loopartner.fr': { role: 'prestataire', name: 'Cabinet Morel Conseil', label: 'Prestataire (juriste)' },
+  'comptable@demo.loopartner.fr': { role: 'prestataire', name: 'Compta Claire', label: 'Prestataire (comptable)' },
+  'marques@demo.loopartner.fr': { role: 'prestataire', name: 'Marques & Co', label: 'Prestataire (propriété intellectuelle)' },
 };
 
 export class DemoError extends Error {
@@ -141,6 +144,8 @@ const PROJECTS: BrowsableProject[] = [
 }));
 
 const ORGANIZERS = [
+  { kind: 'provider' as const, name: 'Compta Claire', slug: 'compta-claire', headline: 'Expertise comptable pour indépendants', logo_url: null },
+  { kind: 'provider' as const, name: 'Marques & Co', slug: 'marques-et-co', headline: 'Conseil en propriété industrielle', logo_url: null },
   { kind: 'provider' as const, name: 'Cabinet Morel Conseil', slug: 'cabinet-morel-conseil', headline: "Juristes en droit des sociétés", logo_url: null },
   { kind: 'named' as const, name: 'Marc L.', slug: null, headline: 'Expert-comptable', logo_url: null },
   { kind: 'named' as const, name: 'Sarah B.', slug: null, headline: 'Comptable', logo_url: null },
@@ -153,6 +158,13 @@ const EVENTS: PublicEvent[] = [
   ['Comptabilité pour débutants', 'comptabilite', 18, 15, 60, 0],
   ['Dépôt de marque : les fondamentaux', 'propriete-intellectuelle', 21, 11, 60, 25],
   ['TVA et premières déclarations', 'fiscalite', 23, 14, 60, 8],
+  ['Domiciliation : siège, adresse et courrier', 'domiciliation', 0, 12, 45, 18],
+  ['Lever ses premiers fonds : le pacte d’associés', 'creation-societe', 0, 18, 90, 6],
+  ['Facturation : les mentions obligatoires', 'comptabilite', 0, 9, 45, 20],
+  ['Protéger un logiciel ou une application', 'propriete-intellectuelle', 0, 17, 60, 14],
+  ['CGV et CGU : ce qu’il faut prévoir', 'juridique', 0, 11, 60, 2],
+  ['Charges sociales de l’indépendant', 'fiscalite', 0, 15, 60, 22],
+  ['Ouvrir un compte bancaire professionnel', 'domiciliation', 0, 10, 30, 30],
 ].map(([title, category, day, hour, minutes, spots], index) => {
   void day;
   const starts = ahead(index * 2 + 3, hour as number);
@@ -182,6 +194,12 @@ const EVENTS: PublicEvent[] = [
 
 const segment = (text: string, marks: Array<'bold' | 'italic'> = []) => ({ text, marks, link: null });
 
+const PROVIDER_AUTHORS = [
+  ['Cabinet Morel Conseil', 'cabinet-morel-conseil', 'Juristes en droit des sociétés'],
+  ['Compta Claire', 'compta-claire', 'Expertise comptable pour indépendants'],
+  ['Marques & Co', 'marques-et-co', 'Conseil en propriété industrielle'],
+];
+
 const ARTICLES: ArticleSummary[] = [
   ['Le guide pour créer sa SASU en 2026', 'creation-societe', 'editorial'],
   'Optimisation fiscale : les questions à se poser,fiscalite,provider'.split(','),
@@ -191,6 +209,14 @@ const ARTICLES: ArticleSummary[] = [
   ['Tenir sa comptabilité en ligne : les avantages', 'comptabilite', 'provider'],
   ['SARL ou SAS : le comparatif', 'creation-societe', 'entrepreneur'],
   ['TVA : comprendre la franchise en base', 'fiscalite', 'editorial'],
+  ['Les 7 erreurs à éviter en créant sa société', 'creation-societe', 'provider'],
+  ['Micro-entreprise : quand changer de statut ?', 'fiscalite', 'editorial'],
+  ['Rédiger un devis professionnel', 'comptabilite', 'provider'],
+  ['Choisir le nom de son entreprise', 'propriete-intellectuelle', 'entrepreneur'],
+  ['Mentions légales : le minimum obligatoire', 'juridique', 'editorial'],
+  ['Associé ou salarié : bien s’entourer', 'creation-societe', 'entrepreneur'],
+  ['Tenir ses premiers comptes sans stress', 'comptabilite', 'editorial'],
+  ['Adresse de domiciliation ou bureau : comparer', 'domiciliation', 'provider'],
 ].map(([title, category, kind], index) => ({
   slug: `article-demo-${index + 1}`,
   title,
@@ -202,10 +228,10 @@ const ARTICLES: ArticleSummary[] = [
     kind === 'editorial'
       ? { kind: 'editorial' as const, name: 'Rédaction Loopartner', slug: null, headline: null, logo_url: null }
       : kind === 'provider'
-        ? { kind: 'provider' as const, name: 'Cabinet Morel Conseil', slug: 'cabinet-morel-conseil', headline: 'Juristes en droit des sociétés', logo_url: null }
+        ? { kind: 'provider' as const, name: PROVIDER_AUTHORS[index % 3][0], slug: PROVIDER_AUTHORS[index % 3][1], headline: PROVIDER_AUTHORS[index % 3][2], logo_url: null }
         : { kind: 'entrepreneur' as const, name: 'Claire M.', slug: null, headline: null, logo_url: null },
   reading_time_minutes: 4 + (index % 4),
-  published_at: ago((index + 1) * 2 * 24 * 60),
+  published_at: ago((index + 1) * 26 * 60),
 }));
 
 const ARTICLE_BODY = {
@@ -239,6 +265,14 @@ const PROVIDERS = [
   { slug: 'compta-claire', display_name: 'Compta Claire', headline: 'Expertise comptable pour indépendants', city: 'Nantes', country: 'FR', logo_url: null, categories: [cat('comptabilite'), cat('fiscalite')] },
   { slug: 'marques-et-co', display_name: 'Marques & Co', headline: 'Conseil en propriété industrielle', city: 'Paris', country: 'FR', logo_url: null, categories: [cat('propriete-intellectuelle')] },
   { slug: 'domicile-pro', display_name: 'Domicile Pro', headline: "Domiciliation d'entreprises", city: 'Bordeaux', country: 'FR', logo_url: null, categories: [cat('domiciliation')] },
+  { slug: 'avocats-delaunay', display_name: 'Delaunay Avocats', headline: 'Avocats en droit des affaires et des start-up', city: 'Paris', country: 'FR', logo_url: null, categories: [cat('juridique'), cat('creation-societe')] },
+  { slug: 'fisca-conseil', display_name: 'Fisca Conseil', headline: 'Optimisation et conformité fiscale', city: 'Toulouse', country: 'FR', logo_url: null, categories: [cat('fiscalite')] },
+  { slug: 'atelier-compta', display_name: 'Atelier Compta', headline: 'Comptabilité en ligne pour TPE', city: 'Lille', country: 'FR', logo_url: null, categories: [cat('comptabilite')] },
+  { slug: 'statuts-express', display_name: 'Statuts Express', headline: 'Création de société clés en main', city: 'Marseille', country: 'FR', logo_url: null, categories: [cat('creation-societe'), cat('domiciliation')] },
+  { slug: 'innov-ip', display_name: 'Innov IP', headline: 'Brevets, marques et logiciels', city: 'Grenoble', country: 'FR', logo_url: null, categories: [cat('propriete-intellectuelle')] },
+  { slug: 'rgpd-solutions', display_name: 'RGPD Solutions', headline: 'Mise en conformité RGPD des sites et boutiques', city: 'Rennes', country: 'FR', logo_url: null, categories: [cat('juridique')] },
+  { slug: 'gestion-independants', display_name: 'Gestion Indépendants', headline: 'Accompagnement des micro-entrepreneurs', city: 'Strasbourg', country: 'FR', logo_url: null, categories: [cat('comptabilite'), cat('fiscalite')] },
+  { slug: 'siege-lyon', display_name: 'Siège Lyon Centre', headline: 'Domiciliation et bureaux à la carte', city: 'Lyon', country: 'FR', logo_url: null, categories: [cat('domiciliation')] },
 ];
 
 /* ---------------------------------------------------------------- Stockage local */
