@@ -92,6 +92,7 @@ final class EventLinks
             ->when($eventId !== null, fn ($query) => $query->whereKeyNot($eventId))
             ->whereIn('status', [EventStatus::Published->value, EventStatus::Past->value])
             ->latest('published_at')
+            ->latest('id')
             ->limit(self::HISTORY_LIMIT)
             ->get()
             ->each(function (Event $event) use (&$hosts): void {
