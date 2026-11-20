@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Directory\Models\Project;
 use App\Modules\Moderation\Enums\NoticePriority;
 use App\Modules\Moderation\Enums\NoticeSource;
 use App\Modules\Moderation\Enums\NoticeStatus;
@@ -241,14 +242,23 @@ describe('signalement avec un compte', function (): void {
             ->assertJsonValidationErrors(['target_ref']);
     });
 
-    it('ne laisse signaler un projet qu\'aux prestataires qui le voient', function (): void {
+    it('laisse signaler un projet de la vitrine publique par toute personne (décision 71)', function (): void {
         $project = publishedProjectOf();
         $payload = noticePayload('project', $project->uuid);
         unset($payload['name'], $payload['email']);
 
-        $this->postJson('/api/v1/moderation/notices', noticePayload('project', $project->uuid))->assertNotFound();
-        $this->actingAs(projectOwner('entrepreneur'))->postJson('/api/v1/moderation/notices', $payload)->assertNotFound();
+        $this->postJson('/api/v1/moderation/notices', noticePayload('project', $project->uuid))->assertCreated();
+        $this->actingAs(projectOwner('entrepreneur'))->postJson('/api/v1/moderation/notices', $payload)->assertCreated();
         $this->actingAs(browsingProvider())->postJson('/api/v1/moderation/notices', $payload)->assertCreated();
+    });
+
+    it('ne laisse signaler ni un brouillon ni un projet encore en accès anticipé (404)', function (): void {
+        config(['directory.early_access_hours' => 24]);
+        $draft = Project::factory()->draft()->create();
+        $fresh = Project::factory()->published(now()->subHour())->create();
+
+        $this->postJson('/api/v1/moderation/notices', noticePayload('project', $draft->uuid))->assertNotFound();
+        $this->postJson('/api/v1/moderation/notices', noticePayload('project', $fresh->uuid))->assertNotFound();
     });
 });
 

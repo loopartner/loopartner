@@ -93,6 +93,13 @@ return [
             'per_day' => 500,
         ],
 
+        // Vitrine publique des projets (GET /public/projects et détail, décision 71), par IP :
+        // contenu limité, mais ouvert à tous ; freine la collecte massive.
+        'public_projects' => [
+            'per_minute' => 30,
+            'per_day' => 1000,
+        ],
+
         // Demandes de mise en relation envoyées (propositions et contacts confondus), par
         // utilisateur. Un dépassement est un signe de spam : "match_requests.limit_exceeded" est
         // écrit dans le journal security. S'ajoute au plafond de demandes en attente
