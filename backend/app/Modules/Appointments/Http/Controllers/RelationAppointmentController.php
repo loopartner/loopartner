@@ -74,6 +74,7 @@ class RelationAppointmentController extends Controller
         $appointments = Appointment::query()
             ->where('match_request_id', $context['match_request_id'])
             ->orderByDesc('starts_at')
+            ->orderByDesc('id')
             ->limit(100)
             ->get();
 

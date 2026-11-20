@@ -25,6 +25,7 @@ class AppointmentsAgendaSource implements AgendaSource
             ->where('ends_at', '>', $from)
             ->with('type')
             ->orderBy('starts_at')
+            ->orderBy('id')
             ->limit(500)
             ->get()
             ->map(fn (Appointment $appointment): AgendaItem => new AgendaItem(

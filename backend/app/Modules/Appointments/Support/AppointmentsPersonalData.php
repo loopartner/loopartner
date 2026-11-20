@@ -54,13 +54,13 @@ final class AppointmentsPersonalData
                     'is_active' => $type->is_active,
                     'created_at' => $type->created_at?->toIso8601ZuluString(),
                 ])->values()->all(),
-            'availability_rules' => $calendar === null ? [] : AvailabilityRule::query()->where('calendar_id', $calendar->id)->orderBy('weekday')->orderBy('start_minute')->get()
+            'availability_rules' => $calendar === null ? [] : AvailabilityRule::query()->where('calendar_id', $calendar->id)->orderBy('weekday')->orderBy('start_minute')->orderBy('id')->get()
                 ->map(fn (AvailabilityRule $rule): array => [
                     'weekday' => $rule->weekday,
                     'start' => TimeOfDay::format($rule->start_minute),
                     'end' => TimeOfDay::format($rule->end_minute),
                 ])->values()->all(),
-            'availability_exceptions' => $calendar === null ? [] : AvailabilityException::query()->where('calendar_id', $calendar->id)->orderBy('date')->get()
+            'availability_exceptions' => $calendar === null ? [] : AvailabilityException::query()->where('calendar_id', $calendar->id)->orderBy('date')->orderBy('start_minute')->orderBy('id')->get()
                 ->map(fn (AvailabilityException $exception): array => [
                     'date' => $exception->date->toDateString(),
                     'kind' => $exception->kind->value,
@@ -71,6 +71,7 @@ final class AppointmentsPersonalData
                 ->where(fn ($query) => $query->where('client_id', $user->id)->orWhere('provider_id', $user->id))
                 ->with('notes')
                 ->orderBy('starts_at')
+                ->orderBy('id')
                 ->get()
                 ->map(fn (Appointment $appointment): array => self::appointment($appointment, $user))
                 ->values()

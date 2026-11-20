@@ -61,6 +61,7 @@ class ReplaceAvailabilityRules
             ->where('calendar_id', $calendar->id)
             ->orderBy('weekday')
             ->orderBy('start_minute')
+            ->orderBy('id')
             ->get();
     }
 

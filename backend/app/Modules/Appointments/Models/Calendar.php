@@ -84,7 +84,7 @@ class Calendar extends Model
      */
     public function rules(): HasMany
     {
-        return $this->hasMany(AvailabilityRule::class)->orderBy('weekday')->orderBy('start_minute');
+        return $this->hasMany(AvailabilityRule::class)->orderBy('weekday')->orderBy('start_minute')->orderBy('id');
     }
 
     /**
@@ -92,6 +92,6 @@ class Calendar extends Model
      */
     public function exceptions(): HasMany
     {
-        return $this->hasMany(AvailabilityException::class)->orderBy('date')->orderBy('start_minute');
+        return $this->hasMany(AvailabilityException::class)->orderBy('date')->orderBy('start_minute')->orderBy('id');
     }
 }

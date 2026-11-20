@@ -52,6 +52,7 @@ class AvailabilityController extends Controller
             ->where('date', '>=', LocalTime::localDate(now(), $calendar->timezone))
             ->orderBy('date')
             ->orderBy('start_minute')
+            ->orderBy('id')
             ->get();
 
         return response()->json([
