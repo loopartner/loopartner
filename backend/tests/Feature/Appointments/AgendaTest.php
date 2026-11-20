@@ -6,6 +6,7 @@ use App\Modules\Compliance\Enums\DeadlineStatus;
 use App\Modules\Compliance\Models\Deadline;
 use App\Modules\Events\Enums\EventStatus;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 
@@ -153,6 +154,29 @@ describe('abonnement unique', function (): void {
         expect(securityLog('agenda.feed_created'))->toHaveCount(1)
             ->and(securityLog('agenda.feed_regenerated'))->toHaveCount(1)
             ->and(securityLog('agenda.feed_revoked'))->toHaveCount(1);
+    });
+
+    it('verrouille la ligne users et recommence si une autre requête crée l\'abonnement au même moment', function (): void {
+        $user = projectOwner('particulier');
+
+        simulateConcurrentRequestAfterQuery('from agenda_feeds where user_id', function () use ($user): void {
+            DB::table('agenda_feeds')->insert(['user_id' => $user->id, 'selector' => Str::random(16), 'verifier_hash' => str_repeat('0', 64), 'created_at' => now(), 'updated_at' => now()]);
+        });
+        $queries = recordQueries();
+
+        $url = $this->actingAs($user)->postJson('/api/v1/me/agenda/feed')->assertCreated()->json('data.url');
+
+        $this->get(parse_url($url, PHP_URL_PATH))->assertOk();
+        expect(DB::table('agenda_feeds')->where('user_id', $user->id)->count())->toBe(1);
+
+        // Premier ordre de la transaction : le verrou de la ligne users (jamais un verrou sur un
+        // abonnement absent, qui fait s'interbloquer deux créations sous InnoDB).
+        $first = collect($queries)->first(fn (array $query): bool => $query['depth'] > 0 && preg_match('/\b(users|agenda_feeds)\b/', $query['sql']) === 1);
+        expect($first['sql'])->toContain('users')->not->toContain('agenda_feeds');
+
+        if (DB::getDriverName() !== 'sqlite') {
+            expect($first['sql'])->toContain('for update');
+        }
     });
 
     it('refuse un jeton inconnu et ne le journalise qu\'une fois par heure et par IP', function (): void {

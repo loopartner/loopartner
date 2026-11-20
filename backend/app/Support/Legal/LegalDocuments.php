@@ -10,6 +10,7 @@ use App\Rules\NoInvisibleCharacters;
 use App\Support\Locale;
 use App\Support\SecurityLog;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -152,7 +153,17 @@ final class LegalDocuments
                     'legal_document_id' => $document->id,
                     'accepted_at' => now(),
                     'ip_address' => $ip,
-                ])->save();
+                ]);
+
+                // Double clic : une requête simultanée vient d'enregistrer la même acceptation
+                // (index unique). L'insertion a son propre point de sauvegarde : son échec
+                // n'annule pas la transaction englobante (inscription comprise), et l'action
+                // répétée réussit sans rien enregistrer de plus.
+                try {
+                    LegalAcceptance::query()->withSavepointIfNeeded(fn (): bool => $acceptance->save());
+                } catch (UniqueConstraintViolationException) {
+                    continue;
+                }
 
                 SecurityLog::record('legal.accepted', [
                     'user_id' => $user->id,

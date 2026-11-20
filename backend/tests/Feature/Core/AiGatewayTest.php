@@ -127,6 +127,24 @@ it('appelle le pilote, enregistre le coût réel et journalise sans le contenu',
         ->and(json_encode(AiUsage::query()->get()))->not->toContain(AI_TEST_SECRET);
 });
 
+it('n\'insère aucun compteur dans une transaction (interblocage de deux appels simultanés)', function (): void {
+    $user = User::factory()->create();
+    fakeAi()->respondWith(['answer' => 'Réponse générée']);
+    app(AiGateway::class)->generate($user, aiTestRequest());
+
+    // Deuxième appel : les lignes existent, INSERT IGNORE y poserait un verrou partagé.
+    $queries = recordQueries();
+    app(AiGateway::class)->generate($user, aiTestRequest());
+
+    $inserts = collect($queries)->filter(fn (array $query): bool => preg_match('/^insert\b.*\b(ai_budgets|ai_usage_stats)\b/', str_replace(['"', '`'], '', $query['sql'])) === 1);
+    $locks = collect($queries)->filter(fn (array $query): bool => $query['depth'] > 0 && str_contains(str_replace(['"', '`'], '', $query['sql']), 'from ai_budgets'));
+
+    expect($inserts)->toHaveCount(4)
+        ->and($inserts->pluck('depth')->unique()->all())->toBe([0])
+        ->and($locks)->not->toBeEmpty()
+        ->and((int) DB::table('ai_usage_stats')->value('requests'))->toBe(2);
+});
+
 it('ne fait rien payer à l\'utilisateur quand le fournisseur échoue (503 provider)', function (): void {
     $user = User::factory()->create();
     fakeAi()->respondWith(new AiProviderFailure('timeout'));

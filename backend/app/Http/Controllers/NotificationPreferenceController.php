@@ -9,7 +9,6 @@ use App\Support\Locale;
 use App\Support\Notifications\NotificationCategories;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Préférences de notifications de l'utilisateur connecté (noyau) : catégories qu'il voit selon
@@ -28,22 +27,19 @@ class NotificationPreferenceController extends Controller
         $data = $request->validated();
         $user = self::user($request);
 
-        DB::transaction(function () use ($user, $data): void {
-            foreach ($data['preferences'] as $choice) {
-                $preference = NotificationPreference::query()
-                    ->where('user_id', $user->id)
-                    ->where('category', $choice['category'])
-                    ->where('channel', $choice['channel'])
-                    ->first() ?? new NotificationPreference;
-
-                $preference->forceFill([
-                    'user_id' => $user->id,
-                    'category' => $choice['category'],
-                    'channel' => $choice['channel'],
-                    'enabled' => $choice['enabled'],
-                ])->save();
-            }
-        });
+        // Une seule instruction atomique (index unique user_id, category, channel) : deux envois
+        // simultanés ne tentent pas d'insérer deux fois la même préférence. Les paires sont
+        // distinctes (validation), ce qu'exige ON CONFLICT sous SQLite.
+        NotificationPreference::query()->upsert(
+            array_map(fn (array $choice): array => [
+                'user_id' => $user->id,
+                'category' => $choice['category'],
+                'channel' => $choice['channel'],
+                'enabled' => $choice['enabled'],
+            ], $data['preferences']),
+            ['user_id', 'category', 'channel'],
+            ['enabled'],
+        );
 
         return $this->respond($request);
     }

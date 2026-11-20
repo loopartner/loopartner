@@ -1589,7 +1589,12 @@ composer security            # composer audit : vulnérabilités connues des dé
   `acceptedQuoteRequest()`, `quotePayload()`, `sentQuote()`, `appointmentProvider()`,
   `appointmentCalendarOf()`, `appointmentTypeOf()`, `weeklyAvailability()`,
   `appointmentRelation()`, `workspaceOwner()`, `workspaceOf()`, images…) sont dans
-  `tests/Pest.php`. Les fonctions des fichiers de test sont globales : leur nom doit être unique
+  `tests/Pest.php`. Requêtes simultanées : `simulateConcurrentRequest()` (écriture d'une
+  « autre requête » au premier événement Eloquent donné), `simulateConcurrentRequestAfterQuery()`
+  (juste après une requête SQL, par exemple entre « existe déjà ? » et l'insertion) et
+  `recordQueries()` (requêtes et profondeur de transaction, pour vérifier un verrou ou une
+  insertion hors transaction ; `for update` n'apparaît que sous MySQL et MariaDB). Une écriture
+  simulée dans une transaction du code testé est annulée avec elle. Les fonctions des fichiers de test sont globales : leur nom doit être unique
   dans tout `tests/`. Un test qui fixe l'horloge (`Carbon::setTestNow`) y revient avec
   `travelTo(<date fixe>)`, jamais `travelBack()` (qui revient à l'heure réelle). Une donnée de
   session (`withSession`) sur une route `/api/v1` hors Fortify exige `fromFrontend()` : Sanctum

@@ -10,6 +10,7 @@ use App\Support\Calendar\FeedToken;
 use App\Support\Locale;
 use App\Support\SecurityLog;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -71,9 +72,14 @@ class AgendaFeedController extends Controller
     {
         $user = self::user($request);
 
-        $url = DB::transaction(function () use ($user): string {
+        // Verrou de la ligne users (elle existe toujours) : un verrou sur un abonnement encore
+        // absent ne protège rien et fait s'interbloquer deux créations simultanées sous InnoDB.
+        // Si l'index unique user_id refuse malgré tout l'insertion, la seconde tentative
+        // régénère l'abonnement créé entre-temps.
+        $url = retry(2, fn (): string => DB::transaction(function () use ($user): string {
+            User::query()->whereKey($user->id)->lockForUpdate()->first();
             $token = FeedToken::generate();
-            $feed = AgendaFeed::query()->where('user_id', $user->id)->lockForUpdate()->first();
+            $feed = AgendaFeed::query()->where('user_id', $user->id)->first();
             $event = $feed === null ? 'agenda.feed_created' : 'agenda.feed_regenerated';
 
             $feed ??= new AgendaFeed;
@@ -87,7 +93,7 @@ class AgendaFeedController extends Controller
             SecurityLog::record($event, ['user_id' => $user->id]);
 
             return rtrim((string) config('app.url'), '/').'/api/v1/agenda/'.$token['token'].'.ics';
-        });
+        }), 0, fn (\Throwable $e): bool => $e instanceof UniqueConstraintViolationException);
 
         return response()->json([
             'data' => [

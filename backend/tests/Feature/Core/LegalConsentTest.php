@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Support\Legal\LegalDocuments;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\RoleSeeder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 
@@ -173,6 +174,28 @@ describe('nouvelle version en vigueur', function (): void {
 
         $this->actingAs($user)->getJson('/api/v1/me')->assertOk();
         expect(securityLog('legal.accepted'))->toHaveCount(2);
+    });
+
+    it('accepte un double clic sans erreur ni seconde acceptation (requêtes simultanées)', function (): void {
+        $documents = publishedLegalDocuments();
+        $user = User::factory()->create();
+
+        // L'autre requête enregistre l'acceptation des CGU après la vérification de celle du test.
+        simulateConcurrentRequestAfterQuery('select exists(select * from legal_acceptances', function () use ($user, $documents): void {
+            DB::table('legal_acceptances')->insert([
+                'user_id' => $user->id,
+                'legal_document_id' => $documents['terms']->id,
+                'accepted_at' => now(),
+                'ip_address' => '127.0.0.1',
+            ]);
+        });
+
+        $this->actingAs($user)->postJson('/api/v1/me/legal/accept', ['documents' => ['terms' => 'cgu-1', 'privacy' => 'confidentialite-1']])
+            ->assertOk()
+            ->assertJsonPath('data.consent_required', false);
+
+        expect(LegalAcceptance::query()->where('user_id', $user->id)->count())->toBe(2)
+            ->and(securityLog('legal.accepted'))->toHaveCount(1);
     });
 
     it('laisse supprimer son compte, avec ses acceptations', function (): void {

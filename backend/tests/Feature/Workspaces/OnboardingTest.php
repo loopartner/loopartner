@@ -2,6 +2,7 @@
 
 use App\Models\OnboardingState;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 
 /*
@@ -84,6 +85,20 @@ it('passe une étape facultative, refuse de passer une étape obligatoire, et ma
 
     $this->actingAs($user)->postJson('/api/v1/me/onboarding/dismiss')->assertOk()->assertJsonPath('data.dismissed', true);
 });
+
+it('verrouille la ligne users avant l\'état du parcours (pas d\'interblocage entre deux clics)', function (string $route): void {
+    $user = workspaceOwner();
+    $queries = recordQueries();
+
+    $this->actingAs($user)->postJson($route)->assertOk();
+
+    $first = collect($queries)->first(fn (array $query): bool => $query['depth'] > 0 && preg_match('/\b(users|onboarding_states)\b/', str_replace(['"', '`'], '', $query['sql'])) === 1);
+    expect($first['sql'])->toContain('users')->not->toContain('onboarding_states');
+
+    if (DB::getDriverName() !== 'sqlite') {
+        expect($first['sql'])->toContain('for update');
+    }
+})->with(['/api/v1/me/onboarding/dismiss', '/api/v1/me/onboarding/steps/publish_project/skip']);
 
 it('traduit les libellés', function (): void {
     $this->actingAs(workspaceOwner())->getJson('/api/v1/me/onboarding?locale=en')

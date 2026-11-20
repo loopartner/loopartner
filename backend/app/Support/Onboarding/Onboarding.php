@@ -141,8 +141,15 @@ final class Onboarding
             ?? (new OnboardingState)->forceFill(['user_id' => $user->id]);
     }
 
+    /**
+     * État verrouillé jusqu'à la fin de la transaction, créé au besoin. La ligne users est
+     * verrouillée d'abord : sans elle, deux requêtes simultanées (double clic) posaient chacune
+     * par INSERT IGNORE un verrou partagé sur la même ligne, puis attendaient le verrou
+     * exclusif de l'autre (interblocage sous InnoDB).
+     */
     private function lockedState(User $user): OnboardingState
     {
+        User::query()->whereKey($user->id)->lockForUpdate()->first();
         OnboardingState::query()->insertOrIgnore(['user_id' => $user->id, 'created_at' => now(), 'updated_at' => now()]);
 
         return OnboardingState::query()->where('user_id', $user->id)->lockForUpdate()->firstOrFail();

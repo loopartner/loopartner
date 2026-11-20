@@ -35,11 +35,13 @@ use App\Support\Moderation\ModerationTargets;
 use App\Support\TwoFactorSession;
 use Database\Factories\Modules\Blog\ArticleFactory;
 use Database\Seeders\RoleSeeder;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\RefreshDatabaseState;
 use Illuminate\Http\Client\Factory;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event as EventFacade;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
@@ -1054,4 +1056,75 @@ function workspaceOwner(string $role = 'particulier', bool $verified = true): Us
 function workspaceOf(User $user, array $attributes = []): Workspace
 {
     return Workspace::factory()->for($user)->create($attributes);
+}
+
+/*
+|--------------------------------------------------------------------------
+| Requêtes simultanées
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * Simule une requête simultanée qui passe juste avant celle du test : à la première
+ * occurrence de l'événement Eloquent $event (creating, updating, retrieved…) sur $model,
+ * $competitor écrit ce qu'aurait écrit l'autre requête (une seule fois, même si $competitor
+ * déclenche à son tour l'événement).
+ *
+ * Limite : $competitor passe par la même connexion ; si l'événement survient dans une
+ * transaction du code testé, ce qu'il écrit est annulé avec elle.
+ *
+ * @param  class-string  $model
+ */
+function simulateConcurrentRequest(string $model, string $event, Closure $competitor): void
+{
+    $fired = false;
+
+    EventFacade::listen("eloquent.{$event}: {$model}", function () use (&$fired, $competitor): void {
+        if ($fired) {
+            return;
+        }
+
+        $fired = true;
+        $competitor();
+    });
+}
+
+/**
+ * Variante de simulateConcurrentRequest() : $competitor s'exécute une fois, juste après la
+ * première requête SQL qui contient $sqlFragment (en minuscules, sans guillemets ni accents
+ * graves autour des noms : même fragment sous SQLite, MySQL et MariaDB), par exemple entre la
+ * vérification « existe déjà ? » et l'insertion du code testé.
+ */
+function simulateConcurrentRequestAfterQuery(string $sqlFragment, Closure $competitor): void
+{
+    $fired = false;
+
+    DB::listen(function (QueryExecuted $query) use (&$fired, $sqlFragment, $competitor): void {
+        if ($fired || ! str_contains(str_replace(['"', '`'], '', strtolower($query->sql)), $sqlFragment)) {
+            return;
+        }
+
+        $fired = true;
+        $competitor();
+    });
+}
+
+/**
+ * Requêtes SQL exécutées à partir de maintenant, avec leur profondeur de transaction par
+ * rapport à celle du test (RefreshDatabase en ouvre déjà une) : 0 = hors de toute transaction
+ * du code testé.
+ *
+ * @return ArrayObject<int, array{sql: string, depth: int}>
+ */
+function recordQueries(): ArrayObject
+{
+    $baseline = DB::transactionLevel();
+    /** @var ArrayObject<int, array{sql: string, depth: int}> $queries */
+    $queries = new ArrayObject;
+
+    DB::listen(function (QueryExecuted $query) use ($queries, $baseline): void {
+        $queries->append(['sql' => strtolower($query->sql), 'depth' => $query->connection->transactionLevel() - $baseline]);
+    });
+
+    return $queries;
 }

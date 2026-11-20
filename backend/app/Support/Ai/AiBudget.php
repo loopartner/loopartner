@@ -9,6 +9,7 @@ use App\Support\Ai\Exceptions\AiUnavailable;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use RuntimeException;
 
 /**
  * Plafonds de coût de l'IA (décision 62) : par utilisateur et par mois, et au global par mois
@@ -36,9 +37,11 @@ final class AiBudget
     {
         $estimate = AiPricing::cost($model, $request->estimatedInputTokens(), $request->maxOutputTokens);
         $now = CarbonImmutable::now('UTC');
+        $counters = self::counters($user, $now);
+        self::ensureCounters($counters);
 
-        return DB::transaction(function () use ($user, $request, $provider, $model, $estimate, $now): AiUsage {
-            $limits = $this->lockCounters($user, $now);
+        return DB::transaction(function () use ($user, $request, $provider, $model, $estimate, $now, $counters): AiUsage {
+            $limits = $this->lockCounters($counters);
 
             foreach ($limits as $scope => [$row, $limit]) {
                 if ((int) $row->spent_micros + (int) $row->reserved_micros + $estimate <= $limit) {
@@ -110,9 +113,10 @@ final class AiBudget
                 'output_tokens' => $outputTokens,
                 'cost_micros' => $cost,
             ])->save();
-
-            $this->recordStats($created->toDateString(), $usage->feature, $model, $failureReason !== null, $inputTokens, $outputTokens, $cost);
         });
+
+        // Après la transaction : voir recordStats().
+        $this->recordStats($created->toDateString(), $usage->feature, $model, $failureReason !== null, $inputTokens, $outputTokens, $cost);
 
         if ($cost > 0) {
             $this->alerts->check($created);
@@ -137,21 +141,32 @@ final class AiBudget
     }
 
     /**
-     * Crée au besoin puis verrouille les compteurs de l'appel, toujours dans le même ordre
-     * (global du mois, global du jour, utilisateur) pour éviter les interblocages.
+     * Compteurs d'un appel, toujours dans le même ordre (global du mois, global du jour,
+     * utilisateur) pour éviter les interblocages.
      *
-     * @return array<string, array{0: object, 1: int}>
+     * @return array<string, array{0: string, 1: string, 2: int|null, 3: int}> scope, période, user_id, plafond en cents
      */
-    private function lockCounters(User $user, CarbonImmutable $now): array
+    private static function counters(User $user, CarbonImmutable $now): array
     {
-        $counters = [
+        return [
             'global_month' => [self::GLOBAL_MONTH, $now->format('Y-m'), null, (int) config('ai.budgets.global_monthly_cents')],
             'global_day' => [self::GLOBAL_DAY, $now->format('Y-m-d'), null, (int) config('ai.budgets.global_daily_cents')],
             'user' => ['user:'.$user->id, $now->format('Y-m'), $user->id, (int) config('ai.budgets.user_monthly_cents')],
         ];
-        $locked = [];
+    }
 
-        foreach ($counters as $name => [$scope, $period, $userId, $cents]) {
+    /**
+     * Crée les compteurs absents, **hors de la transaction qui les verrouille** : sous InnoDB,
+     * INSERT IGNORE pose un verrou partagé sur la ligne existante, gardé jusqu'à la fin de la
+     * transaction. Dans la transaction, deux réservations simultanées tenaient chacune ce verrou
+     * partagé puis attendaient le verrou exclusif de l'autre (interblocage à chaque appel
+     * concurrent). En autocommit, le verrou est rendu dès la fin de l'instruction.
+     *
+     * @param  array<string, array{0: string, 1: string, 2: int|null, 3: int}>  $counters
+     */
+    private static function ensureCounters(array $counters): void
+    {
+        foreach ($counters as [$scope, $period, $userId]) {
             DB::table('ai_budgets')->insertOrIgnore([
                 'scope_key' => $scope,
                 'period' => $period,
@@ -159,15 +174,34 @@ final class AiBudget
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
+        }
+    }
 
-            $row = DB::table('ai_budgets')->where('scope_key', $scope)->where('period', $period)->lockForUpdate()->first();
+    /**
+     * Verrouille les compteurs (déjà créés par ensureCounters()), dans leur ordre.
+     *
+     * @param  array<string, array{0: string, 1: string, 2: int|null, 3: int}>  $counters
+     * @return array<string, array{0: object, 1: int}>
+     */
+    private function lockCounters(array $counters): array
+    {
+        $locked = [];
+
+        foreach ($counters as $name => [$scope, $period, , $cents]) {
+            $row = DB::table('ai_budgets')->where('scope_key', $scope)->where('period', $period)->lockForUpdate()->first()
+                ?? throw new RuntimeException("Compteur de budget d'IA absent : {$scope} {$period}.");
             $locked[$name] = [$row, AiPricing::centsToMicros($cents)];
         }
 
-        /** @var array<string, array{0: object, 1: int}> */
         return $locked;
     }
 
+    /**
+     * Totaux par jour, sans utilisateur. Appelé hors de toute transaction : deux instructions
+     * en autocommit (création au besoin, puis incréments atomiques), qui ne gardent aucun
+     * verrou. Dans la transaction de settle(), INSERT IGNORE puis UPDATE sur une même ligne
+     * faisaient s'interbloquer deux appels simultanés, comme les compteurs de budget.
+     */
     private function recordStats(string $day, string $feature, string $model, bool $failed, int $inputTokens, int $outputTokens, int $cost): void
     {
         DB::table('ai_usage_stats')->insertOrIgnore([
