@@ -12,10 +12,11 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
 /**
- * Projet publié signalable (module Moderation), désigné par son uuid. Seuls ceux qui voient
- * les projets peuvent les signaler : un prestataire avec un profil publié (ProjectPolicy::browse) ;
- * pour tout autre visiteur, le projet n'existe pas (404). Masqué, il disparaît de la
- * consultation et ses propositions en attente expirent (match-requests:expire).
+ * Projet publié signalable (module Moderation), désigné par son uuid. Un prestataire qui
+ * consulte les projets (ProjectPolicy::browse) signale ce qu'il voit ; toute autre personne,
+ * avec ou sans compte, signale un projet de la vitrine publique (décision 71), une fois la
+ * fenêtre d'accès anticipé passée. Sinon : 404. Masqué, il disparaît de la consultation et de la
+ * vitrine, et ses propositions en attente expirent (match-requests:expire).
  */
 class ProjectModerationTarget implements ModerationTarget
 {
@@ -26,11 +27,22 @@ class ProjectModerationTarget implements ModerationTarget
 
     public function findVisible(string $ref, ?User $viewer): ?TargetContent
     {
-        if ($viewer === null || ! $viewer->hasVerifiedEmail() || ! Gate::forUser($viewer)->allows('browse', Project::class)) {
-            return null;
+        // Prestataire qui consulte les projets : ce qu'il voit, fenêtre d'accès anticipé comprise.
+        if ($viewer !== null && $viewer->hasVerifiedEmail() && Gate::forUser($viewer)->allows('browse', Project::class)) {
+            $project = app(EarlyAccess::class)->constrain(Project::query()->browsable(), $viewer)->where('uuid', $ref)->first();
+
+            return $project === null ? null : self::content($project);
         }
 
-        $project = app(EarlyAccess::class)->constrain(Project::query()->browsable(), $viewer)->where('uuid', $ref)->first();
+        // Tout autre visiteur, avec ou sans compte : un projet de la vitrine publique (décision 71),
+        // signalable par toute personne (DSA art. 16).
+        $query = Project::query()->browsable()->where('uuid', $ref);
+
+        if (EarlyAccess::hours() > 0) {
+            $query->where('published_at', '<=', now()->subHours(EarlyAccess::hours()));
+        }
+
+        $project = $query->first();
 
         return $project === null ? null : self::content($project);
     }

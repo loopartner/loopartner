@@ -63,6 +63,8 @@ const API_ROUTES = [
     'DELETE api/v1/me/projects/{uuid}' => 'auth',
     'POST api/v1/me/projects/{uuid}/publish' => 'auth',
     'POST api/v1/me/projects/{uuid}/close' => 'auth',
+    'GET api/v1/public/projects' => 'public',
+    'GET api/v1/public/projects/{uuid}' => 'public',
     'GET api/v1/projects' => 'auth',
     'GET api/v1/projects/{uuid}' => 'auth',
     // Mise en relation et messagerie (voir aussi MatchingAuthorizationTest).

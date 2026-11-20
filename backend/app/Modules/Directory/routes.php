@@ -11,6 +11,7 @@ use App\Modules\Directory\Http\Controllers\MatchRequestController;
 use App\Modules\Directory\Http\Controllers\MessageController;
 use App\Modules\Directory\Http\Controllers\OwnProjectController;
 use App\Modules\Directory\Http\Controllers\ProjectBrowseController;
+use App\Modules\Directory\Http\Controllers\PublicProjectController;
 use Illuminate\Support\Facades\Route;
 
 // Projets publiés : prestataires connectés avec un email vérifié et un profil publié (voir
@@ -20,6 +21,14 @@ Route::middleware(['auth:sanctum', 'verified', 'throttle:projects-browse'])->gro
     Route::get('projects/{uuid}', [ProjectBrowseController::class, 'show'])
         ->whereUuid('uuid')
         ->name('directory.projects.show');
+});
+
+// Vitrine publique des projets (décision 71) : tout visiteur, contenu limité, limite par IP.
+Route::middleware('throttle:public-projects')->group(function (): void {
+    Route::get('public/projects', [PublicProjectController::class, 'index'])->name('directory.public-projects.index');
+    Route::get('public/projects/{uuid}', [PublicProjectController::class, 'show'])
+        ->whereUuid('uuid')
+        ->name('directory.public-projects.show');
 });
 
 // Projets de l'utilisateur connecté (particuliers et entrepreneurs, voir ProjectPolicy).

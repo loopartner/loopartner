@@ -163,6 +163,12 @@ class AppServiceProvider extends ServiceProvider
             Limit::perDay(self::limit('projects_browse.per_day'))->by('day:'.$this->userOrIp($request)),
         ]);
 
+        // Vitrine publique des projets (liste et détail comptés ensemble) : par IP.
+        RateLimiter::for('public-projects', fn (Request $request): array => [
+            Limit::perMinute(self::limit('public_projects.per_minute'))->by('minute:ip:'.$request->ip()),
+            Limit::perDay(self::limit('public_projects.per_day'))->by('day:ip:'.$request->ip()),
+        ]);
+
         // Suppression de compte (DELETE /me) : par utilisateur.
         RateLimiter::for('account-deletion', fn (Request $request): Limit => Limit::perMinute(self::limit('account_deletion.per_minute'))->by($this->userOrIp($request)));
 

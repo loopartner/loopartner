@@ -25,6 +25,7 @@ use Illuminate\Support\Str;
 const PUBLIC_CONTENT_ROUTES = [
     'api/v1/providers/{slug}' => 'provider_profile',
     'api/v1/projects/{uuid}' => 'project',
+    'api/v1/public/projects/{uuid}' => 'project',
     'api/v1/events/{slug}' => 'event',
     'api/v1/articles/{slug}' => 'article',
     'api/v1/offers/{slug}' => 'offer',
