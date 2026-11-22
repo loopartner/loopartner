@@ -13,12 +13,14 @@ type State =
   | { kind: 'visitor' }
   | { kind: 'not-provider' }
   | { kind: 'denied'; message: string }
+  | { kind: 'premium' }
   | { kind: 'ready'; project: BrowsableProject };
 
 /**
- * Partie du détail réservée aux prestataires connectés avec un profil publié : proposition
- * (POST /projects/{uuid}/proposals). La description est publique (décision 80) ; GET
- * /projects/{uuid} sert à vérifier que le prestataire peut répondre (profil publié, accès anticipé).
+ * Partie du détail réservée aux prestataires connectés avec un profil publié et Premium
+ * (décision 81) : proposition (POST /projects/{uuid}/proposals). La description est publique
+ * (décision 80) ; GET /projects/{uuid} vérifie que le prestataire peut répondre (profil publié,
+ * Premium, accès anticipé). Sans Premium : 403 premium_required, invitation à passer Premium.
  */
 export function ProviderPanel({ uuid }: { uuid: string }) {
   const { user, loading, hasRole } = useSession();
@@ -31,7 +33,9 @@ export function ProviderPanel({ uuid }: { uuid: string }) {
     api<{ data: BrowsableProject }>(`projects/${uuid}`)
       .then((response) => setFetched({ kind: 'ready', project: response.data }))
       .catch((error: unknown) =>
-        setFetched({
+        error instanceof ApiError && error.code === 'premium_required'
+          ? setFetched({ kind: 'premium' })
+          : setFetched({
           kind: 'denied',
           message:
             error instanceof ApiError && error.status === 404
@@ -74,6 +78,30 @@ export function ProviderPanel({ uuid }: { uuid: string }) {
             )}
           </span>
         </p>
+      </div>
+    );
+  }
+
+  if (state.kind === 'premium') {
+    return (
+      <div className="premium-gate">
+        <h3>
+          <Icon name="lock" size={18} /> Réservé aux prestataires Premium
+        </h3>
+        <p style={{ fontFamily: 'var(--font-text)', margin: 0, lineHeight: 1.6 }}>
+          Vous voyez la présentation publique de ce projet. Avec Premium, vous accédez à son détail et vous pouvez envoyer votre proposition au
+          porteur.
+        </p>
+        <ul>
+          <li>Ville, date de début souhaitée et type de porteur</li>
+          <li>Propositions aux porteurs de projet, avec un prix indicatif</li>
+          <li>Nouveaux projets visibles dès leur publication</li>
+        </ul>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <Link href="/premium" className="btn btn--dark">
+            Découvrir Premium
+          </Link>
+        </div>
       </div>
     );
   }

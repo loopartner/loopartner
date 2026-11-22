@@ -16,11 +16,11 @@ export const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
 export const DEMO_PASSWORD = 'Demo-Loopartner-2026';
 
-export const DEMO_ACCOUNTS: Record<string, { role: Role; name: string; label: string }> = {
+export const DEMO_ACCOUNTS: Record<string, { role: Role; name: string; label: string; premium?: boolean }> = {
   'client@demo.loopartner.fr': { role: 'particulier', name: 'Camille Durand', label: 'Client (particulier)' },
   'entrepreneur@demo.loopartner.fr': { role: 'entrepreneur', name: 'Lucas Bernard', label: 'Client (entrepreneur)' },
   'prestataire@demo.loopartner.fr': { role: 'prestataire', name: 'Cabinet Morel Conseil', label: 'Prestataire (juriste)' },
-  'comptable@demo.loopartner.fr': { role: 'prestataire', name: 'Compta Claire', label: 'Prestataire (comptable)' },
+  'comptable@demo.loopartner.fr': { role: 'prestataire', name: 'Compta Claire', label: 'Prestataire Premium (comptable)', premium: true },
   'marques@demo.loopartner.fr': { role: 'prestataire', name: 'Marques & Co', label: 'Prestataire (propriété intellectuelle)' },
 };
 
@@ -328,8 +328,10 @@ function currentUser(): Me | null {
     email_verified: true,
     two_factor_enabled: false,
     two_factor_required: false,
-    premium: { active: false, source: null, starts_at: null, ends_at: null },
-    article_quota: account.role === 'prestataire' ? { premium: false, limit: 2, used: 0, remaining: 2 } : null,
+    premium: account.premium
+      ? { active: true, source: 'manual', starts_at: '2026-11-01T00:00:00Z', ends_at: null }
+      : { active: false, source: null, starts_at: null, ends_at: null },
+    article_quota: account.role === 'prestataire' ? (account.premium ? { premium: true, limit: null, used: 0, remaining: null } : { premium: false, limit: 2, used: 0, remaining: 2 }) : null,
   };
 }
 
@@ -369,6 +371,14 @@ export function demoApi(path: string, method: string, query: Record<string, unkn
 
   // Mise en relation, messagerie et signalement (demo-matching.ts)
   const session = currentUser();
+  // Détail des projets et propositions : prestataires Premium seulement (décision 81).
+  if (/^projects\/[^/]+(\/proposals)?$/.test(route) && session?.roles.includes('prestataire') && !session.premium?.active) {
+    throw new DemoError(403, {
+      message: 'Le détail des projets et les propositions sont réservés aux prestataires Premium. Les projets restent visibles dans la vitrine publique.',
+      code: 'premium_required',
+      feature: 'project_access',
+    });
+  }
   const matching = demoMatching(
     route,
     method,

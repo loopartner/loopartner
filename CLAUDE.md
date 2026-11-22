@@ -1681,6 +1681,12 @@ Dossier `frontend/`, décisions 2 (modifiée), 71 à 74. Maquettes : fichier Fig
   `/espace/identite` (PUT `/me/seller-profile` ; texte et version de la déclaration sur l'honneur
   recopiés de `config/marketplace.php` : à changer ensemble), `/espace/offres` (créer, modifier,
   publier, retirer, supprimer ; 409 `seller_profile_incomplete` renvoie vers l'identité).
+  Premium (décision 81) : `/premium` (offre et avantages par rôle, `src/lib/premium.ts` recopié
+  des décisions 32, 35 et 81 ; souscription désactivée jusqu'au lot 10), `/devenir-prestataire`
+  (étapes, gratuit ou Premium) ; un prestataire sans Premium voit sur `/projets/[uuid]`
+  l'invitation à passer Premium au lieu du formulaire (403 `premium_required`) ; « Passer
+  Premium » dans le menu du compte ; démonstration : `comptable@` est Premium, `prestataire@` et
+  `marques@` ne le sont pas.
   `/login`, `/forgot-password` et `/reset-password` (liens des emails de l'API) redirigent vers
   les pages françaises.
 - **Règles d'affichage** : dates de l'API en UTC, affichées dans `Europe/Paris` (ou le fuseau de

@@ -46,6 +46,12 @@ export function SiteFooter() {
               <li>
                 <Link href="/publier">Publier un projet</Link>
               </li>
+              <li>
+                <Link href="/devenir-prestataire">Devenir prestataire</Link>
+              </li>
+              <li>
+                <Link href="/premium">Premium</Link>
+              </li>
             </ul>
           </div>
           <div>

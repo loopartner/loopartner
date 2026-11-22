@@ -101,8 +101,8 @@ export default async function ProjectPage({ params }: { params: Promise<{ uuid: 
               <Icon name="lock" size={18} />
             </span>
             <p>Le nom du porteur de projet vous est révélé lorsqu&apos;il accepte votre proposition.</p>
-            <Link href="/inscription?profil=prestataire" className="btn btn--outline btn--block">
-              Créer un compte prestataire
+            <Link href="/devenir-prestataire" className="btn btn--outline btn--block">
+              Devenir prestataire
             </Link>
           </div>
           <div className="card aside-card">

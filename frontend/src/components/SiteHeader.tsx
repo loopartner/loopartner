@@ -140,6 +140,11 @@ export function SiteHeader() {
                       </Link>
                     </>
                   ) : null}
+                  {!user.premium?.active && hasRole('particulier', 'prestataire', 'entrepreneur') ? (
+                    <Link role="menuitem" href="/premium" className="profile-menu__premium">
+                      <Icon name="gift" size={16} /> Passer Premium
+                    </Link>
+                  ) : null}
                   <hr />
                   <button type="button" role="menuitem" onClick={() => void signOut()}>
                     <Icon name="logout" size={16} /> Déconnexion
