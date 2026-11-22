@@ -45,6 +45,7 @@
              test sont visibles tout de suite) ; tests/Feature/Directory/EarlyAccessTest.php le
              réactive avec la valeur de production. -->
         <env name="DIRECTORY_EARLY_ACCESS_HOURS" value="0"/>
+        <env name="DIRECTORY_FREE_PROJECT_ACCESS" value="true"/>
         <!-- IA simulée (aucun appel réseau, Http::preventStrayRequests en plus) : les tests du
              pilote désactivé et du pilote Mistral changent ai.driver eux-mêmes. -->
         <env name="AI_DRIVER" value="fake"/>

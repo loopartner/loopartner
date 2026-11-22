@@ -265,7 +265,7 @@ utilitaires du module), `Console/Commands/` (commandes Artisan du module), `Noti
   `config/blog.php` ou `config/compliance.php` ; une clé inconnue lève une exception, jamais
   « illimité »). Une fonctionnalité absente est fermée. Les noms contiennent un point : ne pas
   utiliser la notation pointée de `config()` pour une fonctionnalité. Blog (`blog.article_quota`),
-  Compliance (`compliance.*`), Directory (`directory.project_early_access`), Marketplace
+  Compliance (`compliance.*`), Directory (`directory.project_early_access`, `directory.project_access`), Marketplace
   (`marketplace.quote_branding`, `marketplace.quote_comparison`,
   `marketplace.quote_comparison_export`), Appointments (`appointments.*`) et Workspaces
   (`workspaces.active`, `workspaces.templates`, `copilot.roadmap_generations`,
@@ -429,7 +429,11 @@ ceux qu'il ne garde plus.
 - `GET /projects` et `GET /projects/{uuid}` : prestataires connectés avec un email vérifié **et un
   profil prestataire publié avec au moins une catégorie** (`auth:sanctum`, `verified`,
   `ProjectPolicy::browse`, qui appelle l'Action publique `Accounts\Actions\HasPublishedProviderProfile` ;
-  403 avec un message explicite sinon). Limiteur dédié `projects-browse` (30/min et 500/jour par
+  403 avec un message explicite sinon) **et Premium** (décision 81 : droit `directory.project_access`,
+  réglage `directory.free_project_access`, false en production ; sinon **403
+  `{"code": "premium_required", "feature": "project_access"}`**, `Exceptions/PremiumFeatureRequired`,
+  aussi pour les propositions ; `phpunit.xml` l'ouvre pour le reste de la suite,
+  `tests/Feature/Directory/ProjectAccessPremiumTest.php` le referme). Limiteur dédié `projects-browse` (30/min et 500/jour par
   prestataire, liste et détail confondus). Chaque consultation est journalisée dans le canal
   `security` (`RecordProjectConsultation` : utilisateur, IP, route, page, filtres ou uuid) et un
   avertissement `projects.scraping_suspected` est écrit une fois par jour au-delà de

@@ -3,8 +3,10 @@
 namespace App\Modules\Directory\Policies;
 
 use App\Models\User;
+use App\Modules\Accounts\Actions\GetEntitlements;
 use App\Modules\Accounts\Actions\HasPublishedProviderProfile;
 use App\Modules\Accounts\Enums\AccountType;
+use App\Modules\Directory\Exceptions\PremiumFeatureRequired;
 use App\Modules\Directory\Models\Project;
 use App\Modules\Directory\Models\UserBlock;
 use Illuminate\Auth\Access\Response;
@@ -20,7 +22,13 @@ class ProjectPolicy
 {
     private const NOT_FOUND = 'Projet introuvable.';
 
-    public function __construct(private HasPublishedProviderProfile $hasPublishedProviderProfile) {}
+    /** Droit qui ouvre le détail des projets et les propositions (décision 81). */
+    public const PROJECT_ACCESS = 'directory.project_access';
+
+    public function __construct(
+        private HasPublishedProviderProfile $hasPublishedProviderProfile,
+        private GetEntitlements $entitlements,
+    ) {}
 
     /**
      * Lister ses propres projets (GET /me/projects).
@@ -81,6 +89,9 @@ class ProjectPolicy
      * Consulter les projets publiés (GET /projects). L'email vérifié est exigé par le
      * middleware "verified" de la route. Il faut en plus un profil prestataire publié avec au
      * moins une catégorie : s'inscrire comme prestataire ne suffit pas pour collecter les projets.
+     * Enfin, le droit directory.project_access (Premium, décision 81) : sans lui, le refus porte
+     * le code premium_required, que les appelants transforment en 403 explicite
+     * (Exceptions\PremiumFeatureRequired). Le prestataire garde la vitrine publique.
      */
     public function browse(User $user): Response
     {
@@ -88,9 +99,13 @@ class ProjectPolicy
             return Response::deny();
         }
 
-        return $this->hasPublishedProviderProfile->handle($user)
+        if (! $this->hasPublishedProviderProfile->handle($user)) {
+            return Response::deny('Publiez votre profil prestataire, avec au moins une catégorie, pour consulter les projets.');
+        }
+
+        return $this->entitlements->handle($user)->allows(self::PROJECT_ACCESS)
             ? Response::allow()
-            : Response::deny('Publiez votre profil prestataire, avec au moins une catégorie, pour consulter les projets.');
+            : Response::deny('Le détail des projets et les propositions sont réservés aux prestataires Premium.', PremiumFeatureRequired::CODE);
     }
 
     /**

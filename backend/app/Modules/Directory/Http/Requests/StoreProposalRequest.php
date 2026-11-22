@@ -3,6 +3,7 @@
 namespace App\Modules\Directory\Http\Requests;
 
 use App\Models\User;
+use App\Modules\Directory\Exceptions\PremiumFeatureRequired;
 use App\Modules\Directory\Models\Project;
 use App\Modules\Directory\Support\EarlyAccess;
 use App\Modules\Directory\Support\MatchingRules;
@@ -25,7 +26,10 @@ class StoreProposalRequest extends FormRequest
 
     public function authorize(): Response
     {
-        return Gate::inspect('propose', $this->project());
+        $response = Gate::inspect('propose', $this->project());
+        PremiumFeatureRequired::throwIfDenied($response);
+
+        return $response;
     }
 
     protected function prepareForValidation(): void

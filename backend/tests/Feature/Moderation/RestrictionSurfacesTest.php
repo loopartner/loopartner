@@ -2,6 +2,7 @@
 
 use App\Modules\Accounts\Actions\HasPublishedProviderProfile;
 use App\Modules\Directory\Enums\MatchRequestStatus;
+use App\Modules\Directory\Models\Project;
 use App\Modules\Events\Enums\AnnouncementStatus;
 use App\Modules\Events\Enums\EventNotice;
 use App\Modules\Events\Models\EventAnnouncement;
@@ -124,13 +125,15 @@ describe('projet', function (): void {
         $this->actingAs($provider)->getJson("/api/v1/projects/{$project->uuid}")->assertOk();
     });
 
-    it('n\'existe que pour un prestataire qui peut consulter les projets', function (): void {
+    it('est visible de tous dans la vitrine publique, mais pas en brouillon (décision 71)', function (): void {
         $project = publishedProjectOf();
+        $draft = Project::factory()->create();
         $adapter = ModerationTargets::get('project');
 
-        expect($adapter->findVisible($project->uuid, null))->toBeNull()
-            ->and($adapter->findVisible($project->uuid, projectOwner('particulier')))->toBeNull()
-            ->and($adapter->findVisible($project->uuid, browsingProvider())?->ownerId)->toBe($project->user_id);
+        expect($adapter->findVisible($project->uuid, null)?->ownerId)->toBe($project->user_id)
+            ->and($adapter->findVisible($project->uuid, projectOwner('particulier'))?->ownerId)->toBe($project->user_id)
+            ->and($adapter->findVisible($project->uuid, browsingProvider())?->ownerId)->toBe($project->user_id)
+            ->and($adapter->findVisible($draft->uuid, null))->toBeNull();
     });
 });
 

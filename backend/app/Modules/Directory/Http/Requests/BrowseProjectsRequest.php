@@ -2,6 +2,7 @@
 
 namespace App\Modules\Directory\Http\Requests;
 
+use App\Modules\Directory\Exceptions\PremiumFeatureRequired;
 use App\Modules\Directory\Models\Project;
 use App\Modules\Directory\Support\ProjectRules;
 use App\Rules\ActiveServiceCategory;
@@ -27,7 +28,10 @@ class BrowseProjectsRequest extends FormRequest
      */
     public function authorize(): Response
     {
-        return Gate::inspect('browse', Project::class);
+        $response = Gate::inspect('browse', Project::class);
+        PremiumFeatureRequired::throwIfDenied($response);
+
+        return $response;
     }
 
     protected function prepareForValidation(): void
