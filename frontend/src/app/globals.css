@@ -2285,3 +2285,4 @@ textarea {
   .account__nav{position:static;flex-direction:row;flex-wrap:wrap}
   .account__grid,.account__grid--2{grid-template-columns:1fr}
 }
+.inbox>*{min-width:0}.inbox__list-card{overflow:hidden}.inbox__item{min-width:0;max-width:100%}

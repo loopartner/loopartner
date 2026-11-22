@@ -1631,7 +1631,9 @@ Dossier `frontend/`, décisions 2 (modifiée), 71 à 74. Maquettes : fichier Fig
   Outfit pour l'interface, Inter pour les textes ; polices auto-hébergées par
   `@fontsource-variable/*`). Logos dans `public/images`. Aucun paquet sans accord de
   l'utilisateur (comme le backend).
-- **Variables** : `NEXT_PUBLIC_API_URL` (adresse de l'API, sans slash final ; `frontend/.env.example`).
+- **Variables** : `NEXT_PUBLIC_API_URL` (adresse de l'API, sans slash final ; `frontend/.env.example`),
+  `NEXT_PUBLIC_SITE_URL` (adresse publique du site : `metadataBase`, `robots.txt` qui exclut les
+  pages privées et tout le site en démonstration, `sitemap.xml` des pages publiques).
   Côté API : `FRONTEND_URL` (CORS et liens des emails), `SANCTUM_STATEFUL_DOMAINS` et
   `SESSION_DOMAIN` (domaine parent commun, par exemple `.loopartner.com`). Les aperçus Vercel en
   `*.vercel.app` n'ont pas de session (autre domaine) : seules les pages publiques y fonctionnent.

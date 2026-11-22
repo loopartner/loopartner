@@ -7,8 +7,11 @@ import type { ReactNode } from 'react';
 import { ConsentGate } from '@/components/ConsentGate';
 import { DemoBanner } from '@/components/DemoBanner';
 import { SessionProvider } from '@/lib/session';
+import { SITE_URL } from '@/lib/site';
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
+  openGraph: { siteName: 'Loopartner', locale: 'fr_FR', type: 'website' },
   title: {
     default: 'Loopartner — Lancez votre entreprise avec les bons experts',
     template: '%s · Loopartner',
