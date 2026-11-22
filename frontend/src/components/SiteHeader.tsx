@@ -9,6 +9,13 @@ import { useSession } from '@/lib/session';
 import { useUnreadCount } from '@/lib/unread';
 import { Icon } from './Icon';
 
+/** Liens montrés aux visiteurs non connectés (le reste est dans le pied de page). */
+const GUEST_LINKS = [
+  { href: '/projets', label: 'Projets' },
+  { href: '/prestataires', label: 'Prestataires' },
+  { href: '/articles', label: 'Articles' },
+];
+
 /**
  * En-tête posé sur le bandeau bleu : logo à gauche ; à droite « Publier un projet », l'icône des
  * messages (avec le nombre de non-lus) et la photo du compte, qui ouvre le menu du profil
@@ -59,13 +66,22 @@ export function SiteHeader() {
       </Link>
 
       <div className="site-header__actions">
+        {!loading && !user ? (
+          <nav className="site-header__links" aria-label="Navigation principale">
+            {GUEST_LINKS.map((link) => (
+              <Link key={link.href} href={link.href} aria-current={pathname.startsWith(link.href) ? 'page' : undefined}>
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+        ) : null}
         {isProvider ? (
           <Link className="btn btn--lime site-header__cta" href="/projets">
-            Voir<span className="site-header__cta-more"> les projets</span>
+            Voir<span className="site-header__cta-more">{'\u00a0'}les projets</span>
           </Link>
         ) : (
           <Link className="btn btn--lime site-header__cta" href="/publier">
-            Publier<span className="site-header__cta-more"> un projet</span>
+            Publier<span className="site-header__cta-more">{'\u00a0'}un projet</span>
           </Link>
         )}
 

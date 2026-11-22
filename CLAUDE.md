@@ -1665,8 +1665,8 @@ Dossier `frontend/`, décisions 2 (modifiée), 71 à 74. Maquettes : fichier Fig
   **En-tête** (`SiteHeader`) : logo, « Publier un projet » (« Voir les projets » pour un
   prestataire), icône des messages avec pastille (`useUnreadCount` : messages non lus et demandes
   reçues en attente, chaque minute), avatar ouvrant le menu du compte (dont la déconnexion).
-  Aucune barre de navigation : projets, prestataires, offres, articles et événements sont dans
-  le pied de page.
+  Visiteur non connecté : liens Projets, Prestataires et Articles (masqués sous 900 px) ;
+  connecté : aucune barre de navigation. Tous les liens du site sont dans le pied de page.
   Prestataires et offres (étape 2) : `/prestataires/[slug]` (profil public, offres, articles),
   `/offres` et `/offres/[slug]` (prix indicatif TTC, qualité déclarée du vendeur, jamais ses
   coordonnées), `/espace/profil` (PUT `/me/provider-profile`, logo, 1 à 5 catégories, publication),

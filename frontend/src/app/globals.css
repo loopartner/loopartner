@@ -2176,3 +2176,7 @@ textarea {
 .shortcut-list a:hover{background:var(--bg)}
 .messages-card h3{display:flex;align-items:center;gap:8px}
 .site-header__cta{gap:0}
+.site-header__links{display:flex;align-items:center;gap:28px;margin-right:12px}
+.site-header__links a{color:#fff;font-weight:500;font-size:16px;text-decoration:none}
+.site-header__links a:hover,.site-header__links a[aria-current=page]{text-decoration:underline;text-underline-offset:6px}
+@media (max-width:900px){.site-header__links{display:none}}
