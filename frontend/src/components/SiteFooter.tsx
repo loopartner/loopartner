@@ -27,6 +27,9 @@ export function SiteFooter() {
                 <Link href="/prestataires">Trouver un prestataire</Link>
               </li>
               <li>
+                <Link href="/offres">Les offres</Link>
+              </li>
+              <li>
                 <Link href="/#comment-ca-marche">Comment ça marche</Link>
               </li>
               <li>

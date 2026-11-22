@@ -11,6 +11,7 @@ import { Icon } from './Icon';
 const NAV = [
   { href: '/projets', label: 'Voir les projets' },
   { href: '/prestataires', label: 'Prestataires' },
+  { href: '/offres', label: 'Offres' },
   { href: '/articles', label: 'Articles' },
   { href: '/evenements', label: 'Événements' },
 ];

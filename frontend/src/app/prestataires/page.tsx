@@ -72,7 +72,9 @@ export default async function ProvidersPage({ searchParams }: { searchParams: Pr
                   <span className="avatar avatar--lg">{initials(provider.display_name)}</span>
                 )}
                 <div>
-                  <h2 style={{ margin: 0, fontSize: 18 }}>{provider.display_name}</h2>
+                  <h2 style={{ margin: 0, fontSize: 18 }}>
+                    <Link href={`/prestataires/${provider.slug}`}>{provider.display_name}</Link>
+                  </h2>
                   <small style={{ color: 'var(--muted)' }}>{[provider.city, countryName(provider.country)].filter(Boolean).join(', ')}</small>
                 </div>
               </div>
@@ -84,9 +86,14 @@ export default async function ProvidersPage({ searchParams }: { searchParams: Pr
                   </span>
                 ))}
               </div>
-              <Link href={`/prestataires/${provider.slug}/contacter`} className="link-arrow" style={{ marginTop: 'auto' }}>
-                Contacter <Icon name="arrowRight" size={16} />
-              </Link>
+              <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                <Link href={`/prestataires/${provider.slug}`} className="link-arrow">
+                  Voir le profil <Icon name="arrowRight" size={16} />
+                </Link>
+                <Link href={`/prestataires/${provider.slug}/contacter`} className="link-arrow">
+                  Contacter
+                </Link>
+              </div>
             </article>
           ))}
         </div>
