@@ -127,6 +127,9 @@ export function SiteHeader() {
                   <Link role="menuitem" href="/agenda">
                     Mon agenda
                   </Link>
+                  <Link role="menuitem" href="/compte">
+                    Mon compte
+                  </Link>
                   <Link role="menuitem" href="/messages">
                     Messages
                   </Link>

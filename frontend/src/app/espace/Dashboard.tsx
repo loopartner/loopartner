@@ -75,6 +75,7 @@ export function Dashboard() {
               {isProvider ? <Shortcut href="/espace/identite" icon="shield" label="Identité professionnelle" /> : null}
               <Shortcut href="/prestataires" icon="search" label="Trouver un prestataire" />
               <Shortcut href="/agenda" icon="calendar" label="Mon agenda" />
+              <Shortcut href="/compte" icon="lock" label="Mon compte et sécurité" />
               <Shortcut href="/evenements" icon="video" label="Tous les événements" />
               {hasRole('prestataire', 'entrepreneur', 'redacteur', 'admin') ? <Shortcut href="/mes-evenements" icon="briefcase" label="Mes webinars organisés" /> : null}
               {hasRole('prestataire', 'entrepreneur', 'redacteur', 'admin') ? <Shortcut href="/articles/rediger" icon="book" label="Rédiger un article" /> : null}

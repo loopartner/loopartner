@@ -316,17 +316,17 @@ function currentUser(): Me | null {
   const email = load<string | null>(SESSION_KEY, null);
   const account = email ? DEMO_ACCOUNTS[email] : undefined;
   if (!email || !account) return null;
-  const edits = load<{ name?: string; country?: string; avatar_url?: string | null }>(profileKey(email), {});
+  const edits = load<{ name?: string; country?: string; avatar_url?: string | null; locale?: string; timezone?: string; two_factor_enabled?: boolean }>(profileKey(email), {});
   return {
     name: edits.name ?? account.name,
     email,
     roles: [account.role],
-    locale: 'fr',
-    timezone: 'Europe/Paris',
+    locale: edits.locale ?? 'fr',
+    timezone: edits.timezone ?? 'Europe/Paris',
     country: edits.country ?? 'FR',
     avatar_url: edits.avatar_url ?? null,
     email_verified: true,
-    two_factor_enabled: false,
+    two_factor_enabled: edits.two_factor_enabled ?? false,
     two_factor_required: false,
     premium: account.premium
       ? { active: true, source: 'manual', starts_at: '2026-11-01T00:00:00Z', ends_at: null }
@@ -419,6 +419,28 @@ export function demoApi(path: string, method: string, query: Record<string, unkn
   }
   if (route === 'auth/register') return { message: 'Démonstration : aucun compte n’est créé. Utilisez un compte de test pour vous connecter.' };
   if (route === 'auth/forgot-password') return { message: 'Démonstration : aucun email n’est envoyé.' };
+  if (route === 'auth/user/two-factor-qr-code') {
+    return {
+      svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 29 29" width="180" height="180"><rect width="29" height="29" fill="#fff"/><path d="M2 2h7v7H2zM20 2h7v7h-7zM2 20h7v7H2z" fill="none" stroke="#1d2939" stroke-width="2"/><path d="M12 3h2v2h-2zM15 6h2v2h-2zM12 12h5v2h-5zM20 13h2v4h-2zM13 20h3v3h-3zM18 22h4v2h-4zM24 18h2v6h-2z" fill="#1d2939"/></svg>',
+    };
+  }
+  if (route === 'auth/user/two-factor-secret-key') return { secretKey: 'DEMODEMODEMODEMO' };
+  if (route === 'auth/user/two-factor-recovery-codes' && method === 'GET') {
+    return ['demo1-abcde', 'demo2-fghij', 'demo3-klmno', 'demo4-pqrst', 'demo5-uvwxy', 'demo6-zabcd', 'demo7-efghi', 'demo8-jklmn'];
+  }
+  if (route === 'auth/user/confirmed-two-factor-authentication') {
+    const user = requireUser();
+    if (!/^\d{6}$/.test(String(input.code ?? ''))) throw new DemoError(422, { message: 'Code invalide.', errors: { code: ['Le code fourni est invalide (démonstration : n’importe quels 6 chiffres).'] } });
+    const edits = load<Record<string, unknown>>(profileKey(user.email), {});
+    save(profileKey(user.email), { ...edits, two_factor_enabled: true });
+    return ok;
+  }
+  if (route === 'auth/user/two-factor-authentication' && method === 'DELETE') {
+    const user = requireUser();
+    const edits = load<Record<string, unknown>>(profileKey(user.email), {});
+    save(profileKey(user.email), { ...edits, two_factor_enabled: false });
+    return undefined;
+  }
   if (route.startsWith('auth/')) return ok;
 
   // Références publiques
@@ -592,12 +614,48 @@ export function demoApi(path: string, method: string, query: Record<string, unkn
     const user = requireUser();
     const edits = load<Record<string, unknown>>(profileKey(user.email), {});
     if (typeof input.name === 'string') edits.name = input.name;
-    if (typeof input.country === 'string') edits.country = input.country;
+    if (typeof input.country === 'string' || input.country === null) edits.country = input.country ?? undefined;
+    if (typeof input.locale === 'string') edits.locale = input.locale;
+    if (typeof input.timezone === 'string') edits.timezone = input.timezone;
     if ('avatar' in input) edits.avatar_url = input.avatar ? (mediaUrls.get(String(input.avatar)) ?? null) : null;
     save(profileKey(user.email), edits);
     return { data: currentUser() };
   }
+  if (route === 'me' && method === 'DELETE') {
+    requireUser();
+    if (!input.password) throw new DemoError(422, { message: 'Mot de passe requis.', errors: { password: ['Le mot de passe est requis.'] } });
+    throw new DemoError(403, { message: 'Démonstration : les comptes de test ne peuvent pas être supprimés.' });
+  }
   if (route === 'me') return { data: requireUser() };
+  if (route === 'me/notification-preferences') {
+    const user = requireUser();
+    const key = `loopartner:demo-notifications:${user.email}`;
+    const disabled = new Set(load<string[]>(key, []));
+    if (method === 'PUT') {
+      for (const choice of (input.preferences as { category: string; enabled: boolean }[] | undefined) ?? []) {
+        if (choice.enabled) disabled.delete(choice.category);
+        else disabled.add(choice.category);
+      }
+      save(key, [...disabled]);
+    }
+    const provider = user.roles.includes('prestataire');
+    const categories: [string, string, boolean][] = [
+      ['account.security', 'Sécurité du compte', true],
+      ['directory.match_requests', 'Demandes et propositions', false],
+      ['directory.messages', 'Nouveaux messages', false],
+      ['events.participation', 'Mes inscriptions aux événements', true],
+      ['events.reminders', 'Rappels avant un événement', false],
+      ['events.announcements', 'Annonces des organisateurs', false],
+      ['marketplace.quotes', 'Devis reçus et refusés', false],
+      ['marketplace.quote_decisions', 'Devis acceptés et rétractations', true],
+      ['appointments.bookings', 'Rendez-vous', true],
+      ['appointments.reminders', 'Rappels de rendez-vous', false],
+      ...(provider || user.roles.includes('entrepreneur') ? ([['compliance.reminders', 'Rappels du suivi administratif', false]] as [string, string, boolean][]) : []),
+    ];
+    return {
+      data: categories.map(([category, label, mandatory]) => ({ category, label, mandatory, channels: { mail: mandatory || !disabled.has(category) } })),
+    };
+  }
   if (route === 'me/agenda') {
     const user = requireUser();
     const role = user.roles[0];
@@ -672,7 +730,17 @@ export function demoApi(path: string, method: string, query: Record<string, unkn
       .map((event) => ({ uuid: `reg-${event.slug}`, registered_at: ago(60 * 24), event: { ...event, status: 'published' } }));
     return paginate(list, query);
   }
-  if (route === 'me/legal') return { data: { consent_required: false, documents: [] } };
+  if (route === 'me/legal') {
+    return {
+      data: {
+        consent_required: false,
+        documents: [
+          { type: 'terms', version: 'demo-1', title: '[Démo] Conditions générales d’utilisation', accepted: true, accepted_at: '2026-11-01T09:00:00Z' },
+          { type: 'privacy', version: 'demo-1', title: '[Démo] Politique de confidentialité', accepted: true, accepted_at: '2026-11-01T09:00:00Z' },
+        ],
+      },
+    };
+  }
   if (route === 'media') {
     requireUser();
     const file = body instanceof FormData ? body.get('file') : null;

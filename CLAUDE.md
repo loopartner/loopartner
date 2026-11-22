@@ -1687,6 +1687,12 @@ Dossier `frontend/`, décisions 2 (modifiée), 71 à 74. Maquettes : fichier Fig
   l'invitation à passer Premium au lieu du formulaire (403 `premium_required`) ; « Passer
   Premium » dans le menu du compte ; démonstration : `comptable@` est Premium, `prestataire@` et
   `marques@` ne le sont pas.
+  Mon compte (`/compte`) : informations et préférences (`PATCH /me` : nom, pays, langue, fuseau),
+  mot de passe (`PUT /auth/user/password`), double authentification Fortify (mot de passe
+  confirmé sur 423, QR code affiché comme image `data:`, clé, code, codes de secours montrés une
+  fois ; désactivation impossible pour l'équipe), notifications (`GET|PUT
+  /me/notification-preferences`), abonnement, documents acceptés (`GET /me/legal`), suppression
+  du compte (`DELETE /me` avec le mot de passe et « SUPPRIMER »).
   `/login`, `/forgot-password` et `/reset-password` (liens des emails de l'API) redirigent vers
   les pages françaises.
 - **Règles d'affichage** : dates de l'API en UTC, affichées dans `Europe/Paris` (ou le fuseau de
