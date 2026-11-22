@@ -1662,11 +1662,11 @@ Dossier `frontend/`, décisions 2 (modifiée), 71 à 74. Maquettes : fichier Fig
   `/messages`. `/prestataires/[slug]/contacter`. Signalement public (DSA) : `ReportButton` sur
   les projets, articles, événements, offres et profils prestataires
   (`POST /moderation/notices`, jeton de suivi montré une fois sans compte).
-  **En-tête** (`SiteHeader`) : logo, « Publier un projet » (« Voir les projets » pour un
+  **En-tête** (`SiteHeader`) : Projets, Prestataires et Offres à gauche (dans le menu du compte
+  sous 900 px), logo au centre, « Publier un projet » (« Voir les projets » pour un
   prestataire), icône des messages avec pastille (`useUnreadCount` : messages non lus et demandes
   reçues en attente, chaque minute), avatar ouvrant le menu du compte (dont la déconnexion).
-  Visiteur non connecté : liens Projets, Prestataires et Articles (masqués sous 900 px) ;
-  connecté : aucune barre de navigation. Tous les liens du site sont dans le pied de page.
+  Articles et événements : pied de page seulement.
   Prestataires et offres (étape 2) : `/prestataires/[slug]` (profil public, offres, articles),
   `/offres` et `/offres/[slug]` (prix indicatif TTC, qualité déclarée du vendeur, jamais ses
   coordonnées), `/espace/profil` (PUT `/me/provider-profile`, logo, 1 à 5 catégories, publication),
