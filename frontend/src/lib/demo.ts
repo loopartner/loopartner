@@ -304,6 +304,9 @@ function save(key: string, value: unknown) {
 const SESSION_KEY = 'loopartner:demo-session';
 const PROJECTS_KEY = 'loopartner:demo-projects';
 const REGISTRATIONS_KEY = 'loopartner:demo-registrations';
+const FEED_KEY = 'loopartner:demo-agenda-feed';
+/** Inscriptions de départ, pour que l'agenda de démonstration ne soit pas vide. */
+const DEFAULT_REGISTRATIONS = ['webinar-demo-2', 'webinar-demo-5'];
 
 /** Photos envoyées pendant la démonstration (uuid → adresse locale, perdues au rechargement). */
 const mediaUrls = new Map<string, string>();
@@ -542,14 +545,14 @@ export function demoApi(path: string, method: string, query: Record<string, unkn
   const registration = /^events\/([^/]+)\/registration$/.exec(route);
   if (registration) {
     requireUser();
-    const slugs = load<string[]>(REGISTRATIONS_KEY, []);
+    const slugs = load<string[]>(REGISTRATIONS_KEY, DEFAULT_REGISTRATIONS);
     save(REGISTRATIONS_KEY, method === 'DELETE' ? slugs.filter((slug) => slug !== registration[1]) : [...new Set([...slugs, registration[1]])]);
     return method === 'DELETE' ? undefined : { data: { uuid: crypto.randomUUID() } };
   }
   const mine = /^me\/event-registrations\/([^/]+)$/.exec(route);
   if (mine) {
     requireUser();
-    if (!load<string[]>(REGISTRATIONS_KEY, []).includes(mine[1])) throw new DemoError(404, { message: 'Inscription introuvable.' });
+    if (!load<string[]>(REGISTRATIONS_KEY, DEFAULT_REGISTRATIONS).includes(mine[1])) throw new DemoError(404, { message: 'Inscription introuvable.' });
     return { data: { uuid: 'demo', event: { online_url: 'https://meet.example.org/demo' } } };
   }
   if (route === 'me/events' && method === 'GET') {
@@ -587,28 +590,77 @@ export function demoApi(path: string, method: string, query: Record<string, unkn
   if (route === 'me') return { data: requireUser() };
   if (route === 'me/agenda') {
     const user = requireUser();
-    const registered = load<string[]>(REGISTRATIONS_KEY, []);
+    const role = user.roles[0];
+    const registered = load<string[]>(REGISTRATIONS_KEY, DEFAULT_REGISTRATIONS);
+    const timed = (source: string, kind: string, ref: string, title: string, starts_at: string, ends_at: string, itemRole: string | null, status = 'confirmed') => ({
+      source, kind, ref, title, all_day: false, date: null, starts_at, ends_at, status, role: itemRole,
+    });
+    const allDay = (source: string, kind: string, ref: string, title: string, days: number, status = 'pending') => {
+      const starts = ahead(days, 1);
+      return { source, kind, ref, title, all_day: true, date: starts.slice(0, 10), starts_at: `${starts.slice(0, 10)}T00:00:00Z`, ends_at: `${starts.slice(0, 10)}T23:59:59Z`, status, role: null };
+    };
+    const counterpart = role === 'prestataire' ? 'Lucas Bernard' : 'Compta Claire';
     const items = [
-      ...EVENTS.filter((event) => registered.includes(event.slug)).map((event) => ({
-        source: 'events', kind: 'registration', ref: event.slug, title: event.title, all_day: false, date: null,
-        starts_at: event.starts_at, ends_at: event.ends_at, timezone: event.timezone, local: null, status: 'confirmed', role: 'participant',
-      })),
-      {
-        source: 'appointments', kind: 'appointment', ref: 'demo-rdv', title: user.roles.includes('prestataire') ? 'Rendez-vous : premier échange (Lucas Bernard)' : 'Rendez-vous : premier échange (Compta Claire)',
-        all_day: false, date: null, starts_at: ahead(3, 10), ends_at: ahead(3, 10, 30), timezone: 'Europe/Paris', local: null, status: 'confirmed', role: null,
-      },
-      ...(user.roles.includes('particulier')
+      ...EVENTS.filter((event) => registered.includes(event.slug)).map((event) =>
+        timed('events', 'event_registration', event.slug, event.title, event.starts_at, event.ends_at, 'participant'),
+      ),
+      ...(role === 'prestataire' || role === 'entrepreneur'
+        ? [timed('events', 'event_organized', EVENTS[6].slug, EVENTS[6].title, EVENTS[6].starts_at, EVENTS[6].ends_at, 'organizer', 'published')]
+        : []),
+      timed('appointments', 'appointment', 'demo-rdv-1', `Rendez-vous : premier échange (${counterpart})`, ahead(3, 10), ahead(3, 10, 30), role === 'prestataire' ? 'provider' : 'client'),
+      timed('appointments', 'appointment', 'demo-rdv-2', `Rendez-vous : point d’étape (${counterpart})`, ahead(12, 14), ahead(12, 15), role === 'prestataire' ? 'provider' : 'client'),
+      ...(role === 'particulier'
         ? []
-        : [{
-            source: 'compliance', kind: 'deadline', ref: 'demo-echeance', title: '[Démo] Déclaration de chiffre d’affaires', all_day: true,
-            date: ahead(9, 12).slice(0, 10), starts_at: ahead(9, 12), ends_at: ahead(9, 12), timezone: null, local: null, status: 'pending', role: null,
-          }]),
-      { ...EVENTS[0], source: 'events', kind: 'suggestion', ref: EVENTS[0].slug, all_day: false, date: null, local: null, status: 'published', role: null },
-    ]
-      .filter((item, index, all) => all.findIndex((other) => other.ref === item.ref) === index)
-      .map(({ source, kind, ref, title, all_day, date, starts_at, ends_at, status, role }) => ({ source, kind, ref, title, all_day, date, starts_at, ends_at, status, role }))
-      .sort((a, b) => a.starts_at.localeCompare(b.starts_at));
-    return { data: items, meta: {}, disclaimers: {} };
+        : [
+            allDay('compliance', 'deadline', 'demo-echeance-1', '[Démo] Déclaration de chiffre d’affaires', 9),
+            allDay('compliance', 'deadline', 'demo-echeance-2', '[Démo] Échéance trimestrielle', 38),
+          ]),
+      ...(role === 'particulier' || role === 'entrepreneur'
+        ? [
+            allDay('workspaces', 'step', 'demo-etape-1', 'Choisir le statut juridique', 6),
+            allDay('workspaces', 'task', 'demo-tache-1', 'Comparer trois devis', 20),
+          ]
+        : []),
+    ];
+    const from = typeof query.from === 'string' ? query.from : '0000-01-01';
+    const to = typeof query.to === 'string' ? `${query.to}T23:59:59Z` : '9999-12-31';
+    const inRange = items.filter((item) => item.ends_at >= from && item.starts_at <= to).sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+    const disclaimers =
+      role === 'particulier'
+        ? {}
+        : { compliance: { text: '[Démo] Le suivi administratif est une aide à l’organisation : il ne remplace pas un expert-comptable.', version: 'demo' } };
+    return { data: inRange, meta: { from, to: query.to ?? null, sources: ['appointments', 'events', 'compliance', 'workspaces'] }, disclaimers };
+  }
+  if (route === 'me/agenda/feed') {
+    requireUser();
+    if (method === 'DELETE') {
+      save(FEED_KEY, null);
+      return undefined;
+    }
+    if (method === 'POST') {
+      const created = new Date().toISOString();
+      save(FEED_KEY, created);
+      return {
+        data: {
+          active: true,
+          created_at: created,
+          last_accessed_at: null,
+          url: `https://api.loopartner.fr/api/v1/agenda/demo${crypto.randomUUID().replace(/-/g, '')}.ics`,
+          notice: 'Gardez cette adresse privée : toute personne qui la connaît peut lire les titres et les dates de votre agenda. Régénérez-la si elle a été partagée.',
+        },
+      };
+    }
+    const created = load<string | null>(FEED_KEY, null);
+    return { data: { active: created !== null, created_at: created, last_accessed_at: null } };
+  }
+  if (route === 'me/event-registrations') {
+    requireUser();
+    const registered = load<string[]>(REGISTRATIONS_KEY, DEFAULT_REGISTRATIONS);
+    const now = new Date().toISOString();
+    const list = EVENTS.filter((event) => registered.includes(event.slug) && (query.when === 'past' ? event.ends_at <= now : event.ends_at > now))
+      .sort((a, b) => a.starts_at.localeCompare(b.starts_at))
+      .map((event) => ({ uuid: `reg-${event.slug}`, registered_at: ago(60 * 24), event: { ...event, status: 'published' } }));
+    return paginate(list, query);
   }
   if (route === 'me/legal') return { data: { consent_required: false, documents: [] } };
   if (route === 'media') {

@@ -8,6 +8,7 @@ import { Dialog } from '@/components/Dialog';
 import { FormError, TextField } from '@/components/Field';
 import { Icon, type IconName } from '@/components/Icon';
 import { MediaUpload } from '@/components/MediaUpload';
+import { type AgendaResponse, type AgendaItem, itemHref, kindLabel, SOURCE_ICONS, utcDay } from '@/lib/agenda';
 import { api, ApiError } from '@/lib/api';
 import { countryName, dateBadge, formatBudget, formatDate, formatTime, initials } from '@/lib/format';
 import { useSession } from '@/lib/session';
@@ -60,6 +61,7 @@ export function Dashboard() {
         <div className="form-stack" style={{ gap: 28 }}>
           <ProfileCard user={user} isProvider={isProvider} />
           {user.email_verified ? <AgendaCard /> : null}
+          {user.email_verified ? <MyEventsCard organizer={hasRole('prestataire', 'entrepreneur', 'redacteur', 'admin')} /> : null}
           {isClient ? <OwnProjects /> : null}
         </div>
         <aside className="aside-stack">
@@ -72,8 +74,9 @@ export function Dashboard() {
               {isProvider ? <Shortcut href="/espace/offres" icon="wallet" label="Mes offres" /> : null}
               {isProvider ? <Shortcut href="/espace/identite" icon="shield" label="Identité professionnelle" /> : null}
               <Shortcut href="/prestataires" icon="search" label="Trouver un prestataire" />
-              <Shortcut href="/evenements" icon="calendar" label="Agenda des événements" />
-              {hasRole('prestataire', 'entrepreneur', 'redacteur', 'admin') ? <Shortcut href="/mes-evenements" icon="video" label="Mes webinars" /> : null}
+              <Shortcut href="/agenda" icon="calendar" label="Mon agenda" />
+              <Shortcut href="/evenements" icon="video" label="Tous les événements" />
+              {hasRole('prestataire', 'entrepreneur', 'redacteur', 'admin') ? <Shortcut href="/mes-evenements" icon="briefcase" label="Mes webinars organisés" /> : null}
               {hasRole('prestataire', 'entrepreneur', 'redacteur', 'admin') ? <Shortcut href="/articles/rediger" icon="book" label="Rédiger un article" /> : null}
             </nav>
           </div>
@@ -257,21 +260,6 @@ function EditProfileDialog({ user, onClose, onSaved }: { user: Me; onClose: () =
   );
 }
 
-interface AgendaItem {
-  source: string;
-  kind: string;
-  ref: string;
-  title: string;
-  all_day: boolean;
-  date: string | null;
-  starts_at: string;
-  ends_at: string;
-  status: string;
-}
-
-const SOURCE_ICONS: Record<string, IconName> = { appointments: 'calendar', events: 'video', compliance: 'file', workspaces: 'check' };
-const SOURCE_LABELS: Record<string, string> = { appointments: 'Rendez-vous', events: 'Événement', compliance: 'Échéance', workspaces: 'Étape de projet' };
-
 /** Les 30 prochains jours (GET /me/agenda) : événements, rendez-vous, échéances. */
 function AgendaCard() {
   const [items, setItems] = useState<AgendaItem[] | null>(null);
@@ -281,8 +269,7 @@ function AgendaCard() {
     let active = true;
     const today = new Date();
     const to = new Date(today.getTime() + 30 * 86_400_000);
-    const day = (date: Date) => date.toISOString().slice(0, 10);
-    api<{ data: AgendaItem[] }>('me/agenda', { query: { from: day(today), to: day(to) } })
+    api<AgendaResponse>('me/agenda', { query: { from: utcDay(today), to: utcDay(to) } })
       .then((response) => active && setItems(response.data))
       .catch(() => active && setFailed(true));
     return () => {
@@ -296,8 +283,8 @@ function AgendaCard() {
         <h2 className="section-title" style={{ fontSize: 22, margin: 0 }}>
           Mon agenda
         </h2>
-        <Link href="/evenements" className="link-arrow" style={{ fontSize: 14 }}>
-          Tous les événements <Icon name="arrowRight" size={14} />
+        <Link href="/agenda" className="link-arrow" style={{ fontSize: 14 }}>
+          Voir tout l&apos;agenda <Icon name="arrowRight" size={14} />
         </Link>
       </div>
       {failed ? (
@@ -309,9 +296,10 @@ function AgendaCard() {
       ) : (
         <ul className="agenda-list">
           {items.slice(0, 6).map((item) => {
-            const badge = dateBadge(item.starts_at);
-            return (
-              <li key={`${item.source}:${item.ref}`}>
+            const badge = dateBadge(item.all_day && item.date ? `${item.date}T12:00:00Z` : item.starts_at);
+            const href = itemHref(item);
+            const body = (
+              <>
                 <span className="date-badge date-badge--sm">
                   <strong>{badge.day}</strong>
                   <span>{badge.month}</span>
@@ -319,15 +307,139 @@ function AgendaCard() {
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <strong className="agenda-list__title">{item.title}</strong>
                   <small>
-                    <Icon name={SOURCE_ICONS[item.source] ?? 'calendar'} size={13} /> {SOURCE_LABELS[item.source] ?? 'Agenda'}
+                    <Icon name={SOURCE_ICONS[item.source] ?? 'calendar'} size={13} /> {kindLabel(item)}
                     {item.all_day ? '' : ` · ${formatTime(item.starts_at)}`}
                   </small>
                 </span>
+              </>
+            );
+            return <li key={`${item.source}:${item.ref}`}>{href ? <Link href={href}>{body}</Link> : body}</li>;
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+interface MyRegistration {
+  uuid: string;
+  event: { slug: string; title: string; starts_at: string; timezone: string; format: string; status: string; cover_url: string | null };
+}
+
+interface OrganizedEvent {
+  uuid: string;
+  slug: string | null;
+  status: string;
+  title: string;
+  starts_at: string | null;
+  timezone: string;
+  registrations_count?: number | null;
+}
+
+/** Mes événements : inscriptions à venir et, pour un organisateur, ses webinars. */
+function MyEventsCard({ organizer }: { organizer: boolean }) {
+  const [registrations, setRegistrations] = useState<MyRegistration[] | null>(null);
+  const [organized, setOrganized] = useState<OrganizedEvent[] | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    api<Paginated<MyRegistration>>('me/event-registrations', { query: { when: 'upcoming', per_page: 4 } })
+      .then((response) => active && setRegistrations(response.data))
+      .catch(() => active && setFailed(true));
+    if (organizer) {
+      api<Paginated<OrganizedEvent>>('me/events', { query: { per_page: 50 } })
+        .then((response) => active && setOrganized(response.data))
+        .catch(() => active && setOrganized([]));
+    }
+    return () => {
+      active = false;
+    };
+  }, [organizer]);
+
+  const upcomingOrganized = (organized ?? []).filter((event) => event.status === 'published' || event.status === 'pending_review').slice(0, 3);
+
+  return (
+    <section className="card">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+        <h2 className="section-title" style={{ fontSize: 22, margin: 0 }}>
+          Mes événements
+        </h2>
+        <Link href="/evenements" className="link-arrow" style={{ fontSize: 14 }}>
+          Trouver un événement <Icon name="arrowRight" size={14} />
+        </Link>
+      </div>
+
+      <h3 className="profile-card__label">Mes inscriptions</h3>
+      {failed ? (
+        <p className="empty">Vos inscriptions ne peuvent pas être chargées pour le moment.</p>
+      ) : registrations === null ? (
+        <div className="skeleton" style={{ height: 80 }} />
+      ) : registrations.length === 0 ? (
+        <p className="empty" style={{ padding: '8px 0' }}>Vous n&apos;êtes inscrit à aucun événement à venir.</p>
+      ) : (
+        <ul className="agenda-list">
+          {registrations.map(({ uuid, event }) => {
+            const badge = dateBadge(event.starts_at, event.timezone);
+            return (
+              <li key={uuid}>
+                <Link href={`/evenements/${encodeURIComponent(event.slug)}`}>
+                  <span className="date-badge date-badge--sm">
+                    <strong>{badge.day}</strong>
+                    <span>{badge.month}</span>
+                  </span>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <strong className="agenda-list__title">{event.title}</strong>
+                    <small>
+                      <Icon name="video" size={13} /> {event.status === 'cancelled' ? 'Annulé' : 'Inscrit'} · {formatTime(event.starts_at, event.timezone)}
+                    </small>
+                  </span>
+                </Link>
               </li>
             );
           })}
         </ul>
       )}
+
+      {organizer ? (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginTop: 24 }}>
+            <h3 className="profile-card__label" style={{ margin: 0 }}>
+              Organisés par moi
+            </h3>
+            <Link href="/mes-evenements" className="link-arrow" style={{ fontSize: 14 }}>
+              Gérer <Icon name="arrowRight" size={14} />
+            </Link>
+          </div>
+          {organized === null ? (
+            <div className="skeleton" style={{ height: 60, marginTop: 12 }} />
+          ) : upcomingOrganized.length === 0 ? (
+            <p className="empty" style={{ padding: '8px 0' }}>
+              Aucun webinar à venir. <Link href="/evenements/proposer">Proposer un webinar</Link>
+            </p>
+          ) : (
+            <ul className="agenda-list" style={{ marginTop: 12 }}>
+              {upcomingOrganized.map((event) => {
+                const badge = event.starts_at ? dateBadge(event.starts_at, event.timezone) : null;
+                return (
+                  <li key={event.uuid}>
+                    <span className="date-badge date-badge--sm">
+                      <strong>{badge?.day ?? '–'}</strong>
+                      <span>{badge?.month ?? ''}</span>
+                    </span>
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <strong className="agenda-list__title">{event.title}</strong>
+                      <small>
+                        <Icon name="briefcase" size={13} /> {event.status === 'pending_review' ? 'En validation' : `Publié · ${event.registrations_count ?? 0} inscrits`}
+                      </small>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </>
+      ) : null}
     </section>
   );
 }

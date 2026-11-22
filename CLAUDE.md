@@ -1651,7 +1651,11 @@ Dossier `frontend/`, décisions 2 (modifiée), 71 à 74. Maquettes : fichier Fig
   `/inscription` (choix du profil puis compte), `/mot-de-passe-oublie`, `/nouveau-mot-de-passe`,
   `/legal/[type]`, `/espace` (profil comme le voient les autres : photo, nom, rôle, pays,
   modification par `PATCH /me` ; agenda des 30 prochains jours `GET /me/agenda` ; projets du
-  porteur ; messages et raccourcis ; renvoi du lien de vérification),
+  porteur ; mes événements : inscriptions à venir `GET /me/event-registrations` et, pour un
+  organisateur, ses webinars `GET /me/events` ; messages et raccourcis ; renvoi du lien de
+  vérification), `/agenda` (vue du mois et de la journée de `GET /me/agenda`, filtres par source,
+  avertissements `disclaimers`, abonnement `GET|POST|DELETE /me/agenda/feed` : URL montrée une
+  seule fois ; `src/lib/agenda.ts`),
   `/prestataires`, `/articles`, `/articles/[slug]`, `/articles/rediger`, `/evenements`,
   `/evenements/[slug]` (inscription), `/evenements/proposer`, `/mes-evenements`.
   Messagerie (étape 1 du deuxième passage, présentation inspirée de codeur.com) : `/messages`
