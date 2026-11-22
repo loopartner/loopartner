@@ -3,22 +3,16 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { initials } from '@/lib/format';
 import { useSession } from '@/lib/session';
 import { useUnreadCount } from '@/lib/unread';
 import { Icon } from './Icon';
 
-const NAV = [
-  { href: '/projets', label: 'Voir les projets' },
-  { href: '/prestataires', label: 'Prestataires' },
-  { href: '/offres', label: 'Offres' },
-  { href: '/articles', label: 'Articles' },
-  { href: '/evenements', label: 'Événements' },
-];
-
 /**
- * En-tête des pages publiques, posé sur le bandeau bleu : liens à gauche, logo au centre,
- * compte et « Publier un projet » à droite. Sur mobile, tout passe dans un menu déroulant.
+ * En-tête posé sur le bandeau bleu : logo à gauche ; à droite « Publier un projet », l'icône des
+ * messages (avec le nombre de non-lus) et la photo du compte, qui ouvre le menu du profil
+ * (espace, profil, déconnexion). La navigation du site est dans le pied de page.
  */
 export function SiteHeader() {
   const { user, loading, logout, hasRole } = useSession();
@@ -27,6 +21,7 @@ export function SiteHeader() {
   const unread = useUnreadCount();
   const [menuOpen, setMenuOpen] = useState(false);
   const [openedAt, setOpenedAt] = useState(pathname);
+  const menu = useRef<HTMLDivElement>(null);
 
   // Le menu se referme quand on change de page.
   if (menuOpen && openedAt !== pathname) {
@@ -37,19 +32,21 @@ export function SiteHeader() {
   useEffect(() => {
     if (!menuOpen) return;
     const onKey = (event: KeyboardEvent) => event.key === 'Escape' && setMenuOpen(false);
+    const onClick = (event: MouseEvent) => {
+      if (menu.current && !menu.current.contains(event.target as Node)) setMenuOpen(false);
+    };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('mousedown', onClick);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('mousedown', onClick);
+    };
   }, [menuOpen]);
 
-  const isClient = hasRole('particulier', 'entrepreneur');
-  const badge =
-    unread > 0 ? (
-      <span className="badge" aria-label={`${unread} non lu${unread > 1 ? 's' : ''}`}>
-        {unread > 99 ? '99+' : unread}
-      </span>
-    ) : null;
+  const isProvider = hasRole('prestataire');
 
   async function signOut() {
+    setMenuOpen(false);
     await logout();
     router.push('/');
     router.refresh();
@@ -57,89 +54,83 @@ export function SiteHeader() {
 
   return (
     <header className="container site-header">
-      <nav className="site-header__nav" aria-label="Navigation principale">
-        {NAV.map((item) => (
-          <Link key={item.href} className="site-header__link" href={item.href}>
-            {item.label}
-          </Link>
-        ))}
-      </nav>
-
       <Link href="/" className="site-header__logo" aria-label="Loopartner, accueil">
         <Image src="/images/logo-white.png" alt="" width={640} height={214} priority />
       </Link>
 
       <div className="site-header__actions">
-        {loading ? null : user ? (
-          <>
-            <Link className="site-header__link" href="/messages">
-              Messages
-              {badge}
-            </Link>
-            <Link className="site-header__link" href="/espace">
-              Mon espace
-            </Link>
-            <button type="button" className="site-header__link site-header__button" onClick={() => void signOut()}>
-              Déconnexion
-            </button>
-          </>
+        {isProvider ? (
+          <Link className="btn btn--lime site-header__cta" href="/projets">
+            Voir<span className="site-header__cta-more"> les projets</span>
+          </Link>
         ) : (
-          <Link className="site-header__link" href="/connexion">
-            Connexion
+          <Link className="btn btn--lime site-header__cta" href="/publier">
+            Publier<span className="site-header__cta-more"> un projet</span>
           </Link>
         )}
-        {!user || isClient ? (
-          <Link className="btn btn--lime" href="/publier">
-            Publier un projet
-          </Link>
-        ) : null}
-      </div>
 
-      <button
-        type="button"
-        className="site-header__menu"
-        aria-expanded={menuOpen}
-        aria-controls="mobile-menu"
-        onClick={() => {
-          setOpenedAt(pathname);
-          setMenuOpen((open) => !open);
-        }}
-      >
-        <Icon name={menuOpen ? 'close' : 'list'} />
-        <span className="visually-hidden">Menu</span>
-        {!menuOpen ? badge : null}
-      </button>
-
-      {menuOpen ? (
-        <nav id="mobile-menu" className="mobile-menu" aria-label="Menu">
-          {NAV.map((item) => (
-            <Link key={item.href} href={item.href}>
-              {item.label}
+        {loading ? null : user ? (
+          <>
+            <Link className="site-header__icon" href="/messages" aria-label={unread > 0 ? `Messages, ${unread} non lu${unread > 1 ? 's' : ''}` : 'Messages'}>
+              <Icon name="message" size={22} />
+              {unread > 0 ? <span className="site-header__count">{unread > 99 ? '99+' : unread}</span> : null}
             </Link>
-          ))}
-          <hr />
-          {user ? (
-            <>
-              <Link href="/messages">Messages {badge}</Link>
-              <Link href="/demandes">Mes demandes</Link>
-              <Link href="/espace">Mon espace</Link>
-              <button type="button" onClick={() => void signOut()}>
-                Déconnexion
+            <div className="site-header__profile" ref={menu}>
+              <button
+                type="button"
+                className="site-header__avatar"
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                aria-label="Mon compte"
+                onClick={() => {
+                  setOpenedAt(pathname);
+                  setMenuOpen((open) => !open);
+                }}
+              >
+                {user.avatar_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={user.avatar_url} alt="" />
+                ) : (
+                  <span>{initials(user.name)}</span>
+                )}
               </button>
-            </>
-          ) : (
-            <>
-              <Link href="/connexion">Connexion</Link>
-              <Link href="/inscription">Inscription gratuite</Link>
-            </>
-          )}
-          {!user || isClient ? (
-            <Link className="btn btn--lime btn--block" href="/publier">
-              Publier un projet
-            </Link>
-          ) : null}
-        </nav>
-      ) : null}
+              {menuOpen ? (
+                <div className="profile-menu" role="menu">
+                  <div className="profile-menu__who">
+                    <strong>{user.name}</strong>
+                    <small>{user.email}</small>
+                  </div>
+                  <Link role="menuitem" href="/espace">
+                    Mon espace
+                  </Link>
+                  <Link role="menuitem" href="/messages">
+                    Messages
+                  </Link>
+                  {isProvider ? (
+                    <>
+                      <Link role="menuitem" href="/espace/profil">
+                        Mon profil prestataire
+                      </Link>
+                      <Link role="menuitem" href="/espace/offres">
+                        Mes offres
+                      </Link>
+                    </>
+                  ) : null}
+                  <hr />
+                  <button type="button" role="menuitem" onClick={() => void signOut()}>
+                    <Icon name="logout" size={16} /> Déconnexion
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          </>
+        ) : (
+          <Link className="site-header__icon site-header__login" href="/connexion" aria-label="Se connecter">
+            <Icon name="user" size={22} />
+            <span>Connexion</span>
+          </Link>
+        )}
+      </div>
     </header>
   );
 }

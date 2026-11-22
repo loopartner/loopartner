@@ -305,18 +305,23 @@ const SESSION_KEY = 'loopartner:demo-session';
 const PROJECTS_KEY = 'loopartner:demo-projects';
 const REGISTRATIONS_KEY = 'loopartner:demo-registrations';
 
+/** Photos envoyées pendant la démonstration (uuid → adresse locale, perdues au rechargement). */
+const mediaUrls = new Map<string, string>();
+const profileKey = (email: string) => `loopartner:demo-me:${email}`;
+
 function currentUser(): Me | null {
   const email = load<string | null>(SESSION_KEY, null);
   const account = email ? DEMO_ACCOUNTS[email] : undefined;
   if (!email || !account) return null;
+  const edits = load<{ name?: string; country?: string; avatar_url?: string | null }>(profileKey(email), {});
   return {
-    name: account.name,
+    name: edits.name ?? account.name,
     email,
     roles: [account.role],
     locale: 'fr',
     timezone: 'Europe/Paris',
-    country: 'FR',
-    avatar_url: null,
+    country: edits.country ?? 'FR',
+    avatar_url: edits.avatar_url ?? null,
     email_verified: true,
     two_factor_enabled: false,
     two_factor_required: false,
@@ -570,12 +575,49 @@ export function demoApi(path: string, method: string, query: Record<string, unkn
   }
 
   // Compte
+  if (route === 'me' && method === 'PATCH') {
+    const user = requireUser();
+    const edits = load<Record<string, unknown>>(profileKey(user.email), {});
+    if (typeof input.name === 'string') edits.name = input.name;
+    if (typeof input.country === 'string') edits.country = input.country;
+    if ('avatar' in input) edits.avatar_url = input.avatar ? (mediaUrls.get(String(input.avatar)) ?? null) : null;
+    save(profileKey(user.email), edits);
+    return { data: currentUser() };
+  }
   if (route === 'me') return { data: requireUser() };
+  if (route === 'me/agenda') {
+    const user = requireUser();
+    const registered = load<string[]>(REGISTRATIONS_KEY, []);
+    const items = [
+      ...EVENTS.filter((event) => registered.includes(event.slug)).map((event) => ({
+        source: 'events', kind: 'registration', ref: event.slug, title: event.title, all_day: false, date: null,
+        starts_at: event.starts_at, ends_at: event.ends_at, timezone: event.timezone, local: null, status: 'confirmed', role: 'participant',
+      })),
+      {
+        source: 'appointments', kind: 'appointment', ref: 'demo-rdv', title: user.roles.includes('prestataire') ? 'Rendez-vous : premier échange (Lucas Bernard)' : 'Rendez-vous : premier échange (Compta Claire)',
+        all_day: false, date: null, starts_at: ahead(3, 10), ends_at: ahead(3, 10, 30), timezone: 'Europe/Paris', local: null, status: 'confirmed', role: null,
+      },
+      ...(user.roles.includes('particulier')
+        ? []
+        : [{
+            source: 'compliance', kind: 'deadline', ref: 'demo-echeance', title: '[Démo] Déclaration de chiffre d’affaires', all_day: true,
+            date: ahead(9, 12).slice(0, 10), starts_at: ahead(9, 12), ends_at: ahead(9, 12), timezone: null, local: null, status: 'pending', role: null,
+          }]),
+      { ...EVENTS[0], source: 'events', kind: 'suggestion', ref: EVENTS[0].slug, all_day: false, date: null, local: null, status: 'published', role: null },
+    ]
+      .filter((item, index, all) => all.findIndex((other) => other.ref === item.ref) === index)
+      .map(({ source, kind, ref, title, all_day, date, starts_at, ends_at, status, role }) => ({ source, kind, ref, title, all_day, date, starts_at, ends_at, status, role }))
+      .sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+    return { data: items, meta: {}, disclaimers: {} };
+  }
   if (route === 'me/legal') return { data: { consent_required: false, documents: [] } };
   if (route === 'media') {
     requireUser();
     const file = body instanceof FormData ? body.get('file') : null;
-    return { data: { uuid: crypto.randomUUID(), url: file instanceof Blob ? URL.createObjectURL(file) : '' } };
+    const uuid = crypto.randomUUID();
+    const url = file instanceof Blob ? URL.createObjectURL(file) : '';
+    mediaUrls.set(uuid, url);
+    return { data: { uuid, url } };
   }
 
   throw new DemoError(404, { message: 'Introuvable (démonstration).' });

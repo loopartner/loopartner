@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: 'Mon espace' };
 
 export default function SpacePage() {
   return (
-    <PageShell title="Mon espace" subtitle="Vos projets, vos articles et vos événements.">
+    <PageShell title="Mon espace" subtitle="Votre profil, votre agenda et vos messages.">
       <Suspense>
         <Dashboard />
       </Suspense>

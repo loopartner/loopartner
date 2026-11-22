@@ -1649,16 +1649,24 @@ Dossier `frontend/`, décisions 2 (modifiée), 71 à 74. Maquettes : fichier Fig
   l'onglet le temps de se connecter, boutons de navigation toujours visibles, avertissement sur
   la description publique) et `/publier/confirmation`, `/connexion` (2FA comprise),
   `/inscription` (choix du profil puis compte), `/mot-de-passe-oublie`, `/nouveau-mot-de-passe`,
-  `/legal/[type]`, `/espace` (projets du porteur, raccourcis, renvoi du lien de vérification),
+  `/legal/[type]`, `/espace` (profil comme le voient les autres : photo, nom, rôle, pays,
+  modification par `PATCH /me` ; agenda des 30 prochains jours `GET /me/agenda` ; projets du
+  porteur ; messages et raccourcis ; renvoi du lien de vérification),
   `/prestataires`, `/articles`, `/articles/[slug]`, `/articles/rediger`, `/evenements`,
   `/evenements/[slug]` (inscription), `/evenements/proposer`, `/mes-evenements`.
-  Messagerie (étape 1 du deuxième passage) : `/demandes` (reçues et envoyées : accepter, refuser,
-  retirer, bloquer, signaler), `/messages?c=<uuid>` (conversations, nouveaux messages toutes les
-  10 s avec `after`, marqueur de lecture, blocage, signalement d'un message) et
-  `/prestataires/[slug]/contacter`. Compteur de non-lus dans l'en-tête (`useUnreadCount`, chaque
-  minute). Signalement public (DSA) : `ReportButton` sur les projets, articles, événements, offres et
-  profils prestataires
-  (`POST /moderation/notices`, jeton de suivi montré une fois sans compte). Menu mobile sous 1200 px.
+  Messagerie (étape 1 du deuxième passage, présentation inspirée de codeur.com) : `/messages`
+  réunit les conversations (`?c=<uuid>`) et les demandes en attente (`?d=<uuid>`, reçues en
+  tête : accepter et répondre, refuser, bloquer, signaler ; envoyées : retirer) ; la proposition
+  d'origine est la première bulle de la conversation ; nouveaux messages toutes les 10 s avec
+  `after`, marqueur de lecture, blocage, signalement d'un message. `/demandes` redirige vers
+  `/messages`. `/prestataires/[slug]/contacter`. Signalement public (DSA) : `ReportButton` sur
+  les projets, articles, événements, offres et profils prestataires
+  (`POST /moderation/notices`, jeton de suivi montré une fois sans compte).
+  **En-tête** (`SiteHeader`) : logo, « Publier un projet » (« Voir les projets » pour un
+  prestataire), icône des messages avec pastille (`useUnreadCount` : messages non lus et demandes
+  reçues en attente, chaque minute), avatar ouvrant le menu du compte (dont la déconnexion).
+  Aucune barre de navigation : projets, prestataires, offres, articles et événements sont dans
+  le pied de page.
   Prestataires et offres (étape 2) : `/prestataires/[slug]` (profil public, offres, articles),
   `/offres` et `/offres/[slug]` (prix indicatif TTC, qualité déclarée du vendeur, jamais ses
   coordonnées), `/espace/profil` (PUT `/me/provider-profile`, logo, 1 à 5 catégories, publication),
