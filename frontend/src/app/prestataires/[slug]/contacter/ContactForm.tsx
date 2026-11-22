@@ -35,8 +35,11 @@ export function ContactForm({ provider }: { provider: ProviderProfile }) {
     setSaving(true);
     setError(null);
     try {
-      await api(`providers/${encodeURIComponent(provider.slug)}/contact`, { method: 'POST', body: { message: message.trim(), project: project || null } });
-      router.push('/demandes?box=sent');
+      const response = await api<{ data: { uuid: string } }>(`providers/${encodeURIComponent(provider.slug)}/contact`, {
+        method: 'POST',
+        body: { message: message.trim(), project: project || null },
+      });
+      router.push(`/messages?d=${response.data.uuid}`);
     } catch (exception) {
       setError(exception instanceof ApiError ? exception : new ApiError(0, {}));
       setSaving(false);

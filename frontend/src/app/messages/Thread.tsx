@@ -8,7 +8,7 @@ import { PrivateReportDialog } from '@/components/PrivateReportDialog';
 import { api, ApiError } from '@/lib/api';
 import { counterpartDetail, counterpartName } from '@/lib/counterpart';
 import { formatDate, formatTime } from '@/lib/format';
-import type { ChatMessage, Conversation, Paginated } from '@/lib/types';
+import type { ChatMessage, Conversation, MatchRequest, Paginated } from '@/lib/types';
 
 const POLL_MS = 10_000;
 const MAX_LENGTH = 5000;
@@ -27,6 +27,7 @@ export function Thread({ conversation, onChanged }: { conversation: Conversation
   const [sendError, setSendError] = useState<string | null>(null);
   const [reporting, setReporting] = useState<ChatMessage | null>(null);
   const [blockDialog, setBlockDialog] = useState(false);
+  const [origin, setOrigin] = useState<MatchRequest | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const lastUuid = useRef<string | null>(null);
   const stickToBottom = useRef(true);
@@ -60,6 +61,19 @@ export function Thread({ conversation, onChanged }: { conversation: Conversation
       active = false;
     };
   }, [conversation.uuid, markRead]);
+
+  // Proposition ou demande de départ, affichée en tête du fil.
+  const requestUuid = conversation.match_request?.uuid;
+  useEffect(() => {
+    if (!requestUuid) return;
+    let active = true;
+    api<{ data: MatchRequest }>(`me/match-requests/${requestUuid}`)
+      .then((response) => active && setOrigin(response.data))
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [requestUuid]);
 
   // Nouveaux messages.
   useEffect(() => {
@@ -168,6 +182,14 @@ export function Thread({ conversation, onChanged }: { conversation: Conversation
           <button type="button" className="btn btn--outline" style={{ alignSelf: 'center' }} onClick={() => void loadOlder()}>
             Messages précédents
           </button>
+        ) : null}
+        {origin && !olderPage ? (
+          <div className={`bubble${origin.role === 'author' ? ' bubble--mine' : ''}`}>
+            <span className="bubble__label">{origin.type === 'proposal' ? (origin.role === 'author' ? 'Votre proposition' : 'Proposition') : origin.role === 'author' ? 'Votre demande de contact' : 'Demande de contact'}</span>
+            <span className={`bubble__text${origin.message === null ? ' bubble__text--hidden' : ''}`}>{origin.message ?? 'Message masqué par la modération'}</span>
+            {origin.price ? <span className="bubble__price">Prix proposé : {origin.price.amount.toLocaleString('fr-FR')} {origin.price.currency === 'EUR' ? '€' : origin.price.currency}</span> : null}
+            <span className="bubble__meta">{formatDate(origin.created_at, { day: 'numeric', month: 'long' })}</span>
+          </div>
         ) : null}
         {messages?.length === 0 ? (
           <p style={{ color: 'var(--muted)', textAlign: 'center', margin: 'auto' }}>La demande a été acceptée : écrivez votre premier message.</p>

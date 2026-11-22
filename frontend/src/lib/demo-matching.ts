@@ -374,6 +374,12 @@ export function demoMatching(
       .sort((a, b) => b.created_at.localeCompare(a.created_at));
     return done(paginate(list, query));
   }
+  const single = /^me\/match-requests\/([^/]+)$/.exec(route);
+  if (single) {
+    const item = state.requests.find((entry) => entry.uuid === single[1]);
+    if (!item) fail(404, { message: 'Demande introuvable.' });
+    return done({ data: item });
+  }
   const action = /^me\/match-requests\/([^/]+)\/(accept|decline|withdraw|block|report)$/.exec(route);
   if (action) {
     const item = state.requests.find((entry) => entry.uuid === action[1]);

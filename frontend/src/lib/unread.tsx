@@ -8,7 +8,7 @@ const INTERVAL_MS = 60_000;
 
 /**
  * Nombre de messages non lus (GET /me/conversations/unread, endpoint léger prévu pour
- * l'interrogation régulière). Interrogé chaque minute quand l'onglet est visible ; 0 sans session
+ * l'interrogation régulière) plus les propositions reçues en attente de réponse. Interrogé chaque minute quand l'onglet est visible ; 0 sans session
  * ou sans email vérifié (route protégée par « verified »).
  */
 export function useUnreadCount(): number {
@@ -21,8 +21,11 @@ export function useUnreadCount(): number {
     let active = true;
     const load = () => {
       if (document.visibilityState !== 'visible') return;
-      api<{ data: { messages: number } }>('me/conversations/unread')
-        .then((response) => active && setCount(response.data.messages))
+      Promise.all([
+        api<{ data: { messages: number } }>('me/conversations/unread'),
+        api<{ meta: { total: number } }>('me/match-requests', { query: { box: 'received', status: 'pending', per_page: 1 } }),
+      ])
+        .then(([unread, pending]) => active && setCount(unread.data.messages + pending.meta.total))
         .catch(() => undefined);
     };
     load();

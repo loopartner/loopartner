@@ -138,7 +138,7 @@ function ProposalForm({ uuid, onClose }: { uuid: string; onClose: () => void }) 
   if (sent) {
     return (
       <p className="alert alert--success" style={{ marginBottom: 32 }}>
-        Votre proposition est envoyée. Le porteur de projet est prévenu ; vous recevrez un email dès qu&apos;il répond.
+        Votre proposition est envoyée. Elle apparaît dans vos messages ; le porteur de projet est prévenu et vous recevrez un email dès qu&apos;il répond.
       </p>
     );
   }

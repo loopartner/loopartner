@@ -1,26 +1,6 @@
-import type { Metadata } from 'next';
-import { Suspense } from 'react';
-import { MemberGate } from '@/components/MemberGate';
-import { Highlight, PageShell } from '@/components/PageShell';
-import { RequestsBoard } from './RequestsBoard';
+import { redirect } from 'next/navigation';
 
-export const metadata: Metadata = { title: 'Mes demandes' };
-
+/** Les demandes sont désormais dans la messagerie (propositions à accepter sur place). */
 export default function RequestsPage() {
-  return (
-    <PageShell
-      title={
-        <>
-          Mes <Highlight>demandes</Highlight>
-        </>
-      }
-      subtitle="Propositions et demandes de contact : acceptez-les pour ouvrir une conversation."
-    >
-      <MemberGate verified>
-        <Suspense>
-          <RequestsBoard />
-        </Suspense>
-      </MemberGate>
-    </PageShell>
-  );
+  redirect('/messages');
 }
