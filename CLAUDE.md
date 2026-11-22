@@ -1637,7 +1637,8 @@ Dossier `frontend/`, décisions 2 (modifiée), 71 à 74. Maquettes : fichier Fig
   `apiOrNull` pour les pages publiques rendues côté serveur (API injoignable : état vide).
 - **Mode démonstration** (`src/lib/demo.ts`, `NEXT_PUBLIC_DEMO_MODE=true`, **aperçus Vercel
   seulement, jamais en production**) : le client de l'API répond avec des données fictives
-  (projets, articles, événements, prestataires, demandes, conversations ; `demo-matching.ts`) sans appel réseau, bandeau permanent, comptes de
+  (projets, articles, événements, prestataires, demandes, conversations, offres, profil et identité ;
+  `demo-matching.ts`, `demo-offers.ts`) sans appel réseau, bandeau permanent, comptes de
   test `client@`, `entrepreneur@`, `prestataire@`, `comptable@` et `marques@demo.loopartner.fr` (mot de passe
   `DEMO_PASSWORD`, sans existence côté API) ; session et créations dans le `localStorage`.
 - **Session** (`src/lib/session.tsx`) : `GET /me` au chargement, `useSession()` (`user`,
@@ -1653,8 +1654,15 @@ Dossier `frontend/`, décisions 2 (modifiée), 71 à 74. Maquettes : fichier Fig
   retirer, bloquer, signaler), `/messages?c=<uuid>` (conversations, nouveaux messages toutes les
   10 s avec `after`, marqueur de lecture, blocage, signalement d'un message) et
   `/prestataires/[slug]/contacter`. Compteur de non-lus dans l'en-tête (`useUnreadCount`, chaque
-  minute). Signalement public (DSA) : `ReportButton` sur les projets, articles et événements
+  minute). Signalement public (DSA) : `ReportButton` sur les projets, articles, événements, offres et
+  profils prestataires
   (`POST /moderation/notices`, jeton de suivi montré une fois sans compte). Menu mobile sous 1200 px.
+  Prestataires et offres (étape 2) : `/prestataires/[slug]` (profil public, offres, articles),
+  `/offres` et `/offres/[slug]` (prix indicatif TTC, qualité déclarée du vendeur, jamais ses
+  coordonnées), `/espace/profil` (PUT `/me/provider-profile`, logo, 1 à 5 catégories, publication),
+  `/espace/identite` (PUT `/me/seller-profile` ; texte et version de la déclaration sur l'honneur
+  recopiés de `config/marketplace.php` : à changer ensemble), `/espace/offres` (créer, modifier,
+  publier, retirer, supprimer ; 409 `seller_profile_incomplete` renvoie vers l'identité).
   `/login`, `/forgot-password` et `/reset-password` (liens des emails de l'API) redirigent vers
   les pages françaises.
 - **Règles d'affichage** : dates de l'API en UTC, affichées dans `Europe/Paris` (ou le fuseau de

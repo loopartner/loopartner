@@ -9,6 +9,7 @@
  */
 
 import { demoMatching } from './demo-matching';
+import { demoOffers } from './demo-offers';
 import type { ArticleDetail, ArticleSummary, BrowsableProject, Category, Me, OwnEvent, OwnProject, PublicEvent, Role } from './types';
 
 export const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
@@ -369,6 +370,19 @@ export function demoApi(path: string, method: string, query: Record<string, unkn
     },
   );
   if (matching) return matching.value;
+
+  // Offres, profil prestataire et identité professionnelle (demo-offers.ts)
+  const offers = demoOffers(
+    route,
+    method,
+    query,
+    input,
+    { providers: PROVIDERS, categories: CATEGORIES, user: session ? { email: session.email, isProvider: session.roles.includes('prestataire'), name: session.name } : null },
+    (status, payload) => {
+      throw new DemoError(status, payload);
+    },
+  );
+  if (offers) return offers.value;
 
   // Authentification
   if (route === 'auth/login') {
