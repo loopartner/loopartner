@@ -16,8 +16,9 @@ type State =
   | { kind: 'ready'; project: BrowsableProject };
 
 /**
- * Partie du détail réservée aux prestataires connectés avec un profil publié : description
- * complète (GET /projects/{uuid}) et proposition (POST /projects/{uuid}/proposals).
+ * Partie du détail réservée aux prestataires connectés avec un profil publié : proposition
+ * (POST /projects/{uuid}/proposals). La description est publique (décision 80) ; GET
+ * /projects/{uuid} sert à vérifier que le prestataire peut répondre (profil publié, accès anticipé).
  */
 export function ProviderPanel({ uuid }: { uuid: string }) {
   const { user, loading, hasRole } = useSession();
@@ -56,7 +57,7 @@ export function ProviderPanel({ uuid }: { uuid: string }) {
             <Icon name="lock" size={16} />
           </span>
           <span>
-            La description complète est réservée aux prestataires connectés.{' '}
+            Seuls les prestataires inscrits peuvent répondre à ce projet.{' '}
             {state.kind === 'visitor' ? (
               <>
                 <Link href={`/connexion?next=/projets/${uuid}`} style={{ color: 'var(--blue-ink)', fontWeight: 700 }}>
@@ -98,9 +99,6 @@ export function ProviderPanel({ uuid }: { uuid: string }) {
         </button>
       </div>
       {open ? <ProposalForm uuid={uuid} onClose={() => setOpen(false)} /> : null}
-      <div className="prose" style={{ borderTop: '1px solid var(--border)', paddingTop: 32 }}>
-        <p>{state.project.description}</p>
-      </div>
     </>
   );
 }

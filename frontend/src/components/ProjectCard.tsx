@@ -21,6 +21,7 @@ export function ProjectCard({ project, compact = false, showOfferHint = false }:
       <h2 className="project-card__title" style={compact ? { fontSize: 20, lineHeight: '28px' } : undefined}>
         <Link href={`/projets/${project.uuid}`}>{project.title}</Link>
       </h2>
+      {project.description && !compact ? <p className="project-card__excerpt">{project.description}</p> : null}
       <div className="project-card__meta">
         {project.remote_ok ? <span>Réalisable à distance</span> : null}
         <span>{project.country}</span>

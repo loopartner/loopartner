@@ -22,6 +22,15 @@ import type { Category, OwnProject } from '@/lib/types';
 
 const DRAFT_KEY = 'loopartner:project-draft';
 
+/** Repère un téléphone, un email ou un lien dans un texte public (avertissement, sans blocage). */
+function looksLikeContact(text: string): boolean {
+  return (
+    /[\w.+-]+@[\w-]+\.[\w.]+/.test(text) ||
+    /(?:\+?\d[\s.\-()]*){9,}/.test(text) ||
+    /\b(?:https?:\/\/|www\.)\S+/i.test(text)
+  );
+}
+
 const BUDGETS = [
   { value: 'lt300', label: 'Moins de 300 €', min: null, max: 300 },
   { value: '300-800', label: '300 à 800 €', min: 300, max: 800 },
@@ -244,8 +253,8 @@ export function PublishWizard() {
                 <span className="note__icon">
                   <Icon name="info" size={16} />
                 </span>
-                Indiquez en quelques mots ce dont vous avez besoin. Vous pourrez détailler à l&apos;étape suivante. Le titre, la
-                catégorie et le budget sont visibles de tous ; la description, seulement des prestataires inscrits.
+                Indiquez en quelques mots ce dont vous avez besoin. Vous pourrez détailler à l&apos;étape suivante. Votre projet
+                (titre, catégorie, description et budget) sera visible de tous ; votre nom et vos coordonnées, jamais.
               </p>
             </div>
           </>
@@ -255,6 +264,11 @@ export function PublishWizard() {
           <>
             <h1 className="wizard__title">Expliquez-nous votre situation</h1>
             <div className="form-stack" style={{ gap: 32 }}>
+              <div className="alert alert--warning" role="note">
+                <strong>Votre description sera visible de tous.</strong> N&apos;y écrivez ni votre numéro de téléphone, ni votre
+                email, ni votre adresse, ni votre nom complet. Les prestataires vous répondent par la messagerie de Loopartner, et vos
+                coordonnées restent privées.
+              </div>
               <TextAreaField
                 label="Description de votre projet"
                 value={draft.description}
@@ -266,6 +280,11 @@ export function PublishWizard() {
                 error={fieldErrors.description}
                 hint="N'indiquez ni vos coordonnées ni d'information sensible (santé, numéro de compte…)."
               />
+              {looksLikeContact(draft.description) ? (
+                <p className="alert alert--error" role="alert">
+                  Votre description semble contenir un numéro de téléphone, un email ou un lien. Retirez-le : il serait visible de tous.
+                </p>
+              ) : null}
               <p className="note">
                 <span className="note__icon">
                   <Icon name="info" size={16} />
@@ -353,9 +372,6 @@ export function PublishWizard() {
           </>
         ) : null}
 
-        <p className="disclaimer" style={{ marginTop: 32 }}>
-          Loopartner met en relation avec des professionnels et ne fournit pas de conseil juridique.
-        </p>
       </main>
 
       <footer className="wizard__footer">

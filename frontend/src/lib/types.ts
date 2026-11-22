@@ -36,6 +36,8 @@ export interface Me {
 export interface PublicProject {
   uuid: string;
   title: string;
+  /** Publique depuis la décision 80 ; absente des réponses d'une API plus ancienne. */
+  description?: string;
   category: Category | null;
   budget_min: number | null;
   budget_max: number | null;

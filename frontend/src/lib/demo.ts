@@ -50,6 +50,7 @@ const CATEGORIES: Category[] = [
   { slug: 'fiscalite', name: 'Fiscalité' },
   { slug: 'propriete-intellectuelle', name: 'Propriété intellectuelle' },
   { slug: 'domiciliation', name: 'Domiciliation' },
+  { slug: 'autres', name: 'Autres' },
 ];
 const cat = (slug: string) => CATEGORIES.find((category) => category.slug === slug) as Category;
 
@@ -336,6 +337,7 @@ function paginate<T>(items: T[], query: Record<string, unknown>) {
 const toPublic = (project: BrowsableProject) => ({
   uuid: project.uuid,
   title: project.title,
+  description: project.description,
   category: project.category,
   budget_min: project.budget_min,
   budget_max: project.budget_max,

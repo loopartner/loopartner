@@ -47,6 +47,12 @@ export default async function ProjectPage({ params }: { params: Promise<{ uuid: 
             </div>
           </div>
 
+          {project.description ? (
+            <div style={{ borderTop: '1px solid var(--border)', marginTop: 24, paddingTop: 24 }}>
+              <p className="preline">{project.description}</p>
+            </div>
+          ) : null}
+
           <ProviderPanel uuid={project.uuid} />
 
           <div className="facts">
