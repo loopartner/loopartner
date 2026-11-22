@@ -432,3 +432,17 @@ nouveau job « Frontend (Next.js) » dans la CI (ESLint, TypeScript, `npm audit`
 Paquets npm installés : `next`, `react`, `react-dom`, `@fontsource-variable/outfit`,
 `@fontsource-variable/inter` et, en développement, `typescript`, `eslint`, `eslint-config-next`,
 `@types/*`.
+
+## Décisions du lot 6 : avis, ressources et coffre-fort (validées le 2026-11-22)
+
+Plan présenté puis validé par l'utilisateur le 2026-11-22 (décision 20). Les textes destinés aux
+utilisateurs (information sur les avis, libellé et explication du badge, partage de documents) et
+la durée de conservation des avis restent **à faire valider par le juriste**.
+
+| # | Sujet | Décision |
+|---|---|---|
+| 75 | Avis : preuve de l'interaction | Un client (particulier ou entrepreneur) ne note un prestataire qu'après une **interaction professionnelle vérifiable** (décision 6) : un **devis accepté** (Marketplace) **ou un rendez-vous confirmé et terminé** (Appointments) dans leur mise en relation. Un seul avis par mise en relation. La méthode de vérification et sa date sont affichées près de l'avis (« après un devis accepté le… »). |
+| 76 | Avis : contenu et publication | Note de 1 à 5, texte de 50 à 2 000 caractères (texte brut), date de la prestation. **Publié tout de suite**, signalable et modéré ensuite (adaptateurs `review` et `review_response`, module Moderation). Le prestataire peut publier **une réponse publique**. Affichage du plus récent au plus ancien, moyenne et nombre d'avis, **aucun classement payant ni masquage** des avis négatifs (décision 18). Informations du Code de la consommation (article L111-7-2 et articles réglementaires D111-16 et suivants, numérotation à vérifier sur Légifrance) près des avis et dans une rubrique dédiée. Suppression du compte du client : ses avis sont supprimés. Durée de conservation en configuration, à faire fixer par le juriste. |
+| 77 | Ressources | Guides et modèles (PDF, Word, Excel) **déposés seulement par l'équipe** (admin ou rédacteur avec 2FA de session), publics ou réservés au Premium (décision 33) ; téléchargement par un lien signé de 5 minutes, depuis un disque privé. |
+| 78 | Coffre-fort documentaire | Disque **privé**, fichier **chiffré avant le stockage**, rattaché à une entreprise du suivi administratif (et facultativement à une échéance) ; PDF, JPEG et PNG vérifiés sur leur contenu, **10 Mo** par fichier ; place **100 Mo en gratuit, 1 Go en Premium** (`config/entitlements.php`) ; date d'expiration facultative avec rappel par email (Premium) ; document d'autrui : 404, admins compris ; supprimé avec le compte et inclus dans l'export. Hébergement : envois de 12 Mo au moins (`upload_max_filesize`, `post_max_size`). |
+| 79 | Dossier partageable et badge | **Dossier entreprise partageable** (Premium) : documents choisis, lien temporaire (30 jours au plus) et révocable, seule l'empreinte du jeton est stockée (comme `FeedToken`) ; lien expiré ou révoqué : 404. **Badge « Entreprise immatriculée vérifiée »** : SIREN de l'identité professionnelle contrôlé par l'**API publique de recherche d'entreprises de l'État** (`recherche-entreprises.api.gouv.fr`, sans clé), en file d'attente, jamais pendant la requête de l'utilisateur ; revérification tous les 90 jours ; une panne de l'API ne retire jamais un badge ; l'explication affichée dit qu'il atteste **seulement l'immatriculation, jamais la qualité du travail**. Colonnes `registration_*` créées au lot 3. |
