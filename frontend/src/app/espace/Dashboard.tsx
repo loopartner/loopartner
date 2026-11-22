@@ -43,6 +43,9 @@ export function Dashboard() {
           <Shortcut href="/publier" title="Publier un projet" text="Décrivez votre besoin et recevez des propositions." />
         ) : null}
         {hasRole('prestataire') ? <Shortcut href="/projets" title="Voir les projets" text="Répondez aux projets qui vous correspondent." /> : null}
+        {hasRole('prestataire') ? <Shortcut href="/espace/profil" title="Mon profil" text="Votre page publique : présentation, catégories, logo." /> : null}
+        {hasRole('prestataire') ? <Shortcut href="/espace/offres" title="Mes offres" text="Vos prestations et leur prix indicatif." /> : null}
+        {hasRole('prestataire') ? <Shortcut href="/espace/identite" title="Identité professionnelle" text="Obligatoire pour publier des offres et envoyer des devis." /> : null}
         {hasRole('prestataire', 'entrepreneur', 'redacteur', 'admin') ? (
           <Shortcut href="/articles/rediger" title="Rédiger un article" text="Partagez votre expertise avec la communauté." />
         ) : null}

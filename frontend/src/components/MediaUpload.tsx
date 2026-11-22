@@ -12,12 +12,14 @@ export function MediaUpload({
   purpose,
   label,
   onUploaded,
+  initialUrl = null,
 }: {
-  purpose: 'article_cover' | 'event_cover';
+  purpose: 'article_cover' | 'event_cover' | 'provider_logo' | 'avatar';
   label: string;
   onUploaded: (uuid: string | null) => void;
+  initialUrl?: string | null;
 }) {
-  const [preview, setPreview] = useState<string | null>(null);
+  const [preview, setPreview] = useState<string | null>(initialUrl);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const inputId = `upload-${purpose}`;

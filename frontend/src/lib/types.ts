@@ -238,3 +238,96 @@ export interface ModerationInfo {
   appeal_window_months: number;
   explanation: { min: number; max: number };
 }
+
+/* ---------------------------------------------------------------- Prestataires et offres */
+
+export interface OwnProviderProfile extends ProviderProfile {
+  status: 'draft' | 'published';
+  moderation: { restricted: boolean; decision: string | null } | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type PricingMode = 'fixed' | 'from' | 'hourly' | 'daily' | 'on_quote';
+export type DeliveryMode = 'on_site' | 'remote' | 'both';
+
+export interface SellerCard {
+  declared_status: 'professional';
+  legal_name: string;
+  trade_name: string | null;
+  registration_number: string;
+  country: string;
+}
+
+export interface PublicOffer {
+  slug: string;
+  title: string;
+  summary: string;
+  description: string;
+  category: Category | null;
+  pricing: { mode: PricingMode; price_cents: number | null; currency: string; tax_basis: 'ttc'; indicative: true };
+  delivery_mode: DeliveryMode;
+  country: string;
+  city: string | null;
+  provider: { display_name: string; slug: string | null; headline: string | null; city: string | null; country: string | null; logo_url: string | null } | null;
+  seller: SellerCard | null;
+  published_at: string | null;
+  updated_at: string;
+}
+
+export interface OwnOffer {
+  uuid: string;
+  slug: string | null;
+  title: string;
+  summary: string;
+  description: string;
+  category: Category | null;
+  pricing_mode: PricingMode;
+  price_cents: number | null;
+  currency: string;
+  delivery_mode: DeliveryMode;
+  country: string;
+  city: string | null;
+  status: 'draft' | 'published' | 'unpublished';
+  version: number;
+  moderation: { restricted: boolean; decision: string | null } | null;
+  published_at: string | null;
+  unpublished_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SellerProfile {
+  legal_name: string;
+  trade_name: string | null;
+  legal_form: string;
+  registration_number: string;
+  registry: 'rcs' | 'rne';
+  registry_city: string | null;
+  share_capital_cents: number | null;
+  vat_number: string | null;
+  address_line1: string;
+  address_line2: string | null;
+  postal_code: string;
+  city: string;
+  country: string;
+  phone: string;
+  email: string;
+  insurer_name: string | null;
+  insurer_contact: string | null;
+  insurance_coverage: string | null;
+  insurance_ten_year: boolean;
+  mediator_name: string | null;
+  mediator_url: string | null;
+  regulated_profession_title: string | null;
+  regulated_profession_state: string | null;
+  regulated_profession_body: string | null;
+  terms_url: string | null;
+  quote_footer: string | null;
+  self_certification: { accepted_at: string | null; version: string | null; current_version: string };
+  registration_verification: { status: string | null; verified_at: string | null };
+  missing_for_offers: string[];
+  missing_for_quotes: string[];
+  missing_for_consumer_quotes: string[];
+  updated_at: string;
+}

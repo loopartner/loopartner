@@ -2126,3 +2126,15 @@ textarea {
 }
 @media (min-width:901px){.thread__back{display:none}}
 .thread--empty{display:grid;place-items:center;color:var(--muted);height:auto;min-height:360px}
+.chip:disabled{opacity:.45;cursor:not-allowed}
+.offer-card{display:flex;flex-direction:column;gap:12px}
+.offer-card__price{font-weight:700;font-size:18px}
+.offer-card__title{margin:0;font-size:19px;line-height:1.3}
+.offer-card__summary{margin:0;font-family:var(--font-text);font-size:14px;color:var(--muted);line-height:1.55}
+.profile-head{display:flex;gap:24px;align-items:center;flex-wrap:wrap}
+.profile-head .avatar--xl{width:96px;height:96px;font-size:30px}
+.preline{white-space:pre-wrap;font-family:var(--font-text);line-height:1.7;margin:0}
+.badge-verified{display:inline-flex;align-items:center;gap:6px;background:#ecfdf3;color:#027a48;border-radius:999px;padding:4px 12px;font-size:13px;font-weight:600}
+.missing-list{margin:8px 0 0;padding-left:20px}
+.btn--sm{padding:8px 14px;font-size:14px;min-height:0}
+.hero-band .pill--soft{background:rgba(255,255,255,.9);color:var(--ink)}

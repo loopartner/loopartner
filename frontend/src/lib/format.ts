@@ -68,7 +68,11 @@ export function eventFormatName(format: string): string {
   return FORMATS[format] ?? format;
 }
 
-const COUNTRIES: Record<string, string> = { FR: 'France', BE: 'Belgique', CH: 'Suisse', LU: 'Luxembourg', DE: 'Allemagne', ES: 'Espagne', IT: 'Italie' };
+const COUNTRIES: Record<string, string> = {
+  FR: 'France', BE: 'Belgique', CH: 'Suisse', LU: 'Luxembourg', MC: 'Monaco', DE: 'Allemagne', AT: 'Autriche', ES: 'Espagne', IT: 'Italie',
+  PT: 'Portugal', NL: 'Pays-Bas', IE: 'Irlande', PL: 'Pologne', SE: 'Suède', DK: 'Danemark', FI: 'Finlande', GR: 'Grèce', CZ: 'Tchéquie',
+  RO: 'Roumanie', GB: 'Royaume-Uni', CA: 'Canada',
+};
 
 export function countryName(code: string | null): string {
   if (!code) return '';
