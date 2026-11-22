@@ -63,6 +63,8 @@ class ServiceCategorySeeder extends Seeder
         ]],
         'assurances' => ['Assurances', 'Insurance', []],
         'traduction-localisation' => ['Traduction et localisation', 'Translation & localization', []],
+        // Toujours en dernier : besoin qui n'entre dans aucune autre catégorie (décision 80).
+        'autres' => ['Autres', 'Other', []],
     ];
 
     public function run(): void

@@ -24,16 +24,17 @@ it('liste les projets consultables à un visiteur anonyme, du plus récent au pl
     expect(array_column($response->json('data'), 'uuid'))->toBe([$newer->uuid, $older->uuid]);
 });
 
-it('ne montre qu\'un contenu limité, sans description ni donnée du porteur', function (): void {
-    $project = Project::factory()->published()->create(['description' => 'Description confidentielle du projet.']);
+it('montre la description mais aucune donnée du porteur', function (): void {
+    $project = Project::factory()->published()->create(['description' => 'Description publique du projet.', 'city' => 'Ville privée']);
 
     $data = $this->getJson("/api/v1/public/projects/{$project->uuid}")->assertOk()->json('data');
 
     expect(array_keys($data))->toEqualCanonicalizing([
-        'uuid', 'title', 'category', 'budget_min', 'budget_max', 'currency', 'country', 'remote_ok', 'published_at',
-    ]);
+        'uuid', 'title', 'description', 'category', 'budget_min', 'budget_max', 'currency', 'country', 'remote_ok', 'published_at',
+    ])
+        ->and($data['description'])->toBe('Description publique du projet.');
     expectNoPrivateFields($data);
-    expect(json_encode($data))->not->toContain('Description confidentielle');
+    expect(json_encode($data))->not->toContain('Ville privée');
 });
 
 it('respecte la fenêtre d\'accès anticipé des prestataires Premium', function (): void {

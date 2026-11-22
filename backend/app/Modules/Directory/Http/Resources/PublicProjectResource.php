@@ -9,12 +9,12 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
  * Projet publié, tel que tout visiteur le voit dans la vitrine publique (GET /public/projects,
- * décision 71).
+ * décisions 71 et 80).
  *
- * Vitrine limitée : titre, catégorie, budget, pays, travail à distance et date de publication.
- * Jamais la description, la ville, la date de début, ni rien du porteur de projet (ni nom, ni
- * type de compte, ni pays du compte). La description complète et la proposition restent
- * réservées aux prestataires connectés (GET /projects).
+ * Titre, description, catégorie, budget, pays, travail à distance et date de publication.
+ * Description publique depuis la décision 80 (le porteur est prévenu de ne pas y écrire ses
+ * coordonnées). Jamais la ville, la date de début, ni rien du porteur de projet (ni nom, ni
+ * type de compte, ni pays du compte). La proposition reste réservée aux prestataires connectés.
  *
  * @mixin Project
  */
@@ -28,6 +28,7 @@ class PublicProjectResource extends JsonResource
         return [
             'uuid' => $this->uuid,
             'title' => $this->title,
+            'description' => $this->description,
             'category' => new ServiceCategoryResource($this->whenLoaded('category')),
             'budget_min' => $this->budget_min,
             'budget_max' => $this->budget_max,

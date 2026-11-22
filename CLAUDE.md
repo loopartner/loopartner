@@ -437,11 +437,12 @@ ceux qu'il ne garde plus.
   `country`, `remote_ok` (`true`/`false`/`1`/`0`), `budget_min`, `budget_max` (fourchettes qui se
   recouvrent ; projets sans budget exclus) et `currency` (EUR par défaut dès qu'un filtre de budget est
   présent). Tri par `published_at` décroissant. Brouillon, clos, expiré ou inconnu : 404.
-- **Vitrine publique** (décision 71) : `GET /public/projects` (filtres `category` avec
+- **Vitrine publique** (décisions 71 et 80) : `GET /public/projects` (filtres `category` avec
   sous-catégories, `country` ; tri par `published_at`) et `GET /public/projects/{uuid}`, sans
   compte, limiteur par IP `public-projects` (30/min, 1 000/j). `PublicProjectResource` :
-  `uuid`, `title`, `category`, `budget_min`, `budget_max`, `currency`, `country`, `remote_ok`,
-  `published_at` seulement (jamais la description, la ville, la date de début ni rien du
+  `uuid`, `title`, `description` (publique depuis la décision 80 ; le porteur est averti de ne
+  pas y écrire ses coordonnées), `category`, `budget_min`, `budget_max`, `currency`, `country`,
+  `remote_ok`, `published_at` seulement (jamais la ville, la date de début ni rien du
   porteur). Projets `browsable()` sortis de la fenêtre d'accès anticipé. Testé par
   `tests/Feature/Directory/PublicProjectShowcaseTest.php`.
 - **Confidentialité** : `PublishedProjectResource` n'expose ni l'email, ni le nom, ni l'identifiant du
@@ -1645,7 +1646,8 @@ Dossier `frontend/`, décisions 2 (modifiée), 71 à 74. Maquettes : fichier Fig
   `hasRole`, `refresh`, `logout`).
 - **Pages** : `/` (accueil), `/projets` et `/projets/[uuid]` (vitrine publique ; description et
   proposition pour les prestataires connectés), `/publier` (4 étapes, brouillon gardé dans
-  l'onglet le temps de se connecter) et `/publier/confirmation`, `/connexion` (2FA comprise),
+  l'onglet le temps de se connecter, boutons de navigation toujours visibles, avertissement sur
+  la description publique) et `/publier/confirmation`, `/connexion` (2FA comprise),
   `/inscription` (choix du profil puis compte), `/mot-de-passe-oublie`, `/nouveau-mot-de-passe`,
   `/legal/[type]`, `/espace` (projets du porteur, raccourcis, renvoi du lien de vérification),
   `/prestataires`, `/articles`, `/articles/[slug]`, `/articles/rediger`, `/evenements`,
