@@ -8,6 +8,7 @@
  * La session et les créations (projets, inscriptions) restent dans le navigateur (localStorage).
  */
 
+import { LEGAL_TEXTS } from '@/content/legal';
 import { demoMatching } from './demo-matching';
 import { demoOffers } from './demo-offers';
 import type { ArticleDetail, ArticleSummary, BrowsableProject, Category, Me, OwnEvent, OwnProject, PublicEvent, Role } from './types';
@@ -449,22 +450,16 @@ export function demoApi(path: string, method: string, query: Record<string, unkn
     return {
       data: (['terms', 'privacy'] as const).map((type) => ({
         type,
-        current: { type, version: 'demo', title: type === 'terms' ? "Conditions générales d'utilisation" : 'Politique de confidentialité', effective_at: ago(60 * 24 * 30) },
+        current: { type, version: LEGAL_TEXTS[type].version, title: LEGAL_TEXTS[type].title, effective_at: ago(60 * 24 * 30) },
         upcoming: null,
       })),
     };
   }
   if (route.startsWith('legal/documents/')) {
     const type = route.split('/')[2];
-    return {
-      data: {
-        type,
-        version: 'demo',
-        title: type === 'terms' ? "Conditions générales d'utilisation" : 'Politique de confidentialité',
-        effective_at: ago(60 * 24 * 30),
-        body: '[Démonstration] Ce texte est un exemple sans valeur juridique. Les documents réels seront rédigés et validés par le juriste avant l’ouverture.',
-      },
-    };
+    if (type !== 'terms' && type !== 'privacy') throw new DemoError(404, { message: 'Document introuvable.' });
+    const text = LEGAL_TEXTS[type];
+    return { data: { type, version: text.version, title: text.title, effective_at: ago(60 * 24 * 30), body: text.body } };
   }
 
   // Projets
@@ -735,8 +730,8 @@ export function demoApi(path: string, method: string, query: Record<string, unkn
       data: {
         consent_required: false,
         documents: [
-          { type: 'terms', version: 'demo-1', title: '[Démo] Conditions générales d’utilisation', accepted: true, accepted_at: '2026-11-01T09:00:00Z' },
-          { type: 'privacy', version: 'demo-1', title: '[Démo] Politique de confidentialité', accepted: true, accepted_at: '2026-11-01T09:00:00Z' },
+          { type: 'terms', version: LEGAL_TEXTS.terms.version, title: LEGAL_TEXTS.terms.title, accepted: true, accepted_at: '2026-11-01T09:00:00Z' },
+          { type: 'privacy', version: LEGAL_TEXTS.privacy.version, title: LEGAL_TEXTS.privacy.title, accepted: true, accepted_at: '2026-11-01T09:00:00Z' },
         ],
       },
     };

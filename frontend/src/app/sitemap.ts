@@ -11,7 +11,7 @@ type Page<T> = { data: T[] } | null;
  * prestataires, offres, événements et projets publics. Aucune page privée.
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const fixed = ['', '/projets', '/prestataires', '/offres', '/articles', '/evenements', '/premium', '/devenir-prestataire', '/publier', '/legal/terms', '/legal/privacy'];
+  const fixed = ['', '/projets', '/prestataires', '/offres', '/articles', '/evenements', '/premium', '/devenir-prestataire', '/publier', '/legal/terms', '/legal/privacy', '/legal/sales', '/legal/cookies', '/legal/notice'];
   const [articles, providers, offers, events, projects] = await Promise.all([
     apiOrNull<Page<{ slug: string; updated_at: string | null }>>('articles/sitemap'),
     apiOrNull<Page<{ slug: string }>>('providers', { query: { per_page: 50 } }),

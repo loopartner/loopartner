@@ -29,6 +29,10 @@ entrepreneurs.
   (`moderation-rules.md`), de la facturation (`billing-rules.md`), de la Marketplace
   (`marketplace-rules.md`), des rendez-vous (`appointments-rules.md`) et des workspaces et de
   l'IA (`workspaces-rules.md`), à faire valider.
+- `docs/legal/` : projets de CGU, politique de confidentialité, CGV Premium, cookies, mentions légales
+  et registre des traitements (**à faire valider par le juriste**, points L1 à L16 du README ;
+  `node scripts/build-legal.mjs` depuis `frontend/` régénère `src/content/legal.ts`, pages
+  `/legal/{terms,privacy,sales,cookies,notice}`, bandeau « projet » tant que non validés).
 - `.github/workflows/ci.yml` : intégration continue (voir « Qualité »).
 - `SECURITY.md` : signalement des vulnérabilités, principes de sécurité, journal de sécurité et
   vérifications avant chaque mise en production. La liste de contrôle de chaque tâche est la section

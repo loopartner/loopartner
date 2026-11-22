@@ -61,7 +61,16 @@ export function SiteFooter() {
                 <Link href="/legal/terms">Conditions générales d&apos;utilisation</Link>
               </li>
               <li>
+                <Link href="/legal/sales">Conditions de vente Premium</Link>
+              </li>
+              <li>
                 <Link href="/legal/privacy">Confidentialité</Link>
+              </li>
+              <li>
+                <Link href="/legal/cookies">Cookies</Link>
+              </li>
+              <li>
+                <Link href="/legal/notice">Mentions légales</Link>
               </li>
             </ul>
           </div>
