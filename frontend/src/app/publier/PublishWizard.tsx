@@ -9,6 +9,7 @@ import { Icon } from '@/components/Icon';
 import { api, ApiError } from '@/lib/api';
 import { length } from '@/lib/format';
 import { useSession } from '@/lib/session';
+import { clearDraft, EMPTY_DRAFT as EMPTY, readDraft, saveDraft, type BudgetValue, type Draft } from '@/lib/projectDraft';
 import type { Category, OwnProject } from '@/lib/types';
 
 /**
@@ -17,10 +18,9 @@ import type { Category, OwnProject } from '@/lib/types';
  * Adaptations au backend : résumé de 5 à 150 caractères, catégorie obligatoire, description de
  * 20 à 5 000 caractères, budget en fourchette, pays obligatoire. Pas de pièce jointe (non prévue
  * par l'API) ; contact par la messagerie seulement (décision 72, l'email n'est jamais montré).
- * Le brouillon est gardé dans l'onglet (sessionStorage) le temps de se connecter.
+ * Le brouillon est gardé dans le navigateur (src/lib/projectDraft.ts) le temps de s'inscrire ou de
+ * se connecter ; il est repris à la dernière étape, prêt à publier.
  */
-
-const DRAFT_KEY = 'loopartner:project-draft';
 
 /** Repère un téléphone, un email ou un lien dans un texte public (avertissement, sans blocage). */
 function looksLikeContact(text: string): boolean {
@@ -37,9 +37,7 @@ const BUDGETS = [
   { value: '800-2000', label: '800 à 2 000 €', min: 800, max: 2000 },
   { value: 'gt2000', label: '2 000 € et plus', min: 2000, max: null },
   { value: 'unknown', label: 'Je ne sais pas encore', min: null, max: null },
-] as const;
-
-type BudgetValue = (typeof BUDGETS)[number]['value'];
+] as const satisfies readonly { value: BudgetValue; label: string; min: number | null; max: number | null }[];
 
 const COUNTRIES = [
   ['FR', 'France'],
@@ -51,48 +49,12 @@ const COUNTRIES = [
   ['IT', 'Italie'],
 ] as const;
 
-interface Draft {
-  title: string;
-  category: string | null;
-  description: string;
-  budget: BudgetValue | null;
-  country: string;
-  remote: boolean;
-}
-
-const EMPTY: Draft = { title: '', category: null, description: '', budget: null, country: 'FR', remote: true };
-
-function readDraft(): Draft | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = window.sessionStorage.getItem(DRAFT_KEY);
-    return raw ? ({ ...EMPTY, ...(JSON.parse(raw) as Partial<Draft>) } as Draft) : null;
-  } catch {
-    return null;
-  }
-}
-
-function saveDraft(draft: Draft) {
-  try {
-    window.sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-  } catch {
-    // Stockage indisponible (navigation privée stricte) : le brouillon reste en mémoire.
-  }
-}
-
-function clearDraft() {
-  try {
-    window.sessionStorage.removeItem(DRAFT_KEY);
-  } catch {
-    // Rien à faire.
-  }
-}
-
 export function PublishWizard() {
   const params = useSearchParams();
   const router = useRouter();
   const { user, loading, hasRole } = useSession();
-  const [rawStep, setStep] = useState(1);
+  // Projet rempli avant l'inscription ou la connexion : on le reprend à la dernière étape.
+  const [rawStep, setStep] = useState(() => (readDraft()?.ready ? 4 : 1));
   const [draft, setDraft] = useState<Draft>(() => {
     const title = params.get('titre');
     const category = params.get('categorie');
@@ -127,7 +89,7 @@ export function PublishWizard() {
 
   async function publish() {
     if (!user) {
-      saveDraft(draft);
+      saveDraft({ ...draft, ready: true });
       setStep(5);
       return;
     }
@@ -325,6 +287,14 @@ export function PublishWizard() {
           <>
             <h1 className="wizard__title">Dernières précisions</h1>
             <div className="form-stack" style={{ gap: 24 }}>
+              {user && draft.ready ? (
+                <p className="note">
+                  <span className="note__icon">
+                    <Icon name="check" size={16} />
+                  </span>
+                  Votre projet a été gardé. Vérifiez ces derniers points puis cliquez sur « Publier mon projet ».
+                </p>
+              ) : null}
               <div className="card card--flat" style={{ borderColor: 'var(--blue)', borderWidth: 2, padding: 28 }}>
                 <strong style={{ fontSize: 20 }}>Messagerie privée Loopartner</strong>
                 <p style={{ fontFamily: 'var(--font-text)', color: 'var(--muted)', margin: '6px 0 0' }}>
@@ -364,7 +334,7 @@ export function PublishWizard() {
             <h1 className="wizard__title">Dernière étape : inscrivez-vous</h1>
             <div className="form-stack" style={{ gap: 24 }}>
               <p style={{ fontFamily: 'var(--font-text)', color: 'var(--muted)', margin: 0 }}>
-                Votre projet est prêt et gardé dans cet onglet. Créez votre compte gratuit pour le publier et recevoir les
+                Votre projet est prêt. Créez votre compte gratuit pour le publier et recevoir les
                 propositions des prestataires.
               </p>
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -382,7 +352,7 @@ export function PublishWizard() {
                 <span className="note__icon">
                   <Icon name="lock" size={16} />
                 </span>
-                Une fois connecté, revenez sur cette page dans le même onglet : votre projet vous attend.
+                Votre projet est gardé sur cet appareil. Après la confirmation de votre email et votre connexion, vous serez ramené ici pour le publier en un clic.
               </p>
             </div>
           </>
@@ -396,16 +366,19 @@ export function PublishWizard() {
         </span>
         <div className="wizard__nav">
           {step > 1 ? (
-            <button type="button" className="btn btn--ghost" onClick={() => setStep((value) => value - 1)}>
+            <button type="button" className="btn btn--ghost" onClick={() => setStep(step - 1)}>
               Retour
             </button>
           ) : null}
           {step < 4 ? (
-            <button type="button" className="btn btn--blue btn--lg" disabled={!canContinue} onClick={() => setStep((value) => value + 1)}>
+            <button type="button" className="btn btn--blue btn--lg" disabled={!canContinue} onClick={() => setStep(step + 1)}>
               Continuer <Icon name="arrowRight" size={16} />
             </button>
           ) : step === 4 && !user && !loading ? (
-            <button type="button" className="btn btn--blue btn--lg" onClick={() => { saveDraft(draft); setStep(5); }}>
+            <button type="button" className="btn btn--blue btn--lg" onClick={() => {
+                saveDraft({ ...draft, ready: true });
+                setStep(5);
+              }}>
               Suivant <Icon name="arrowRight" size={16} />
             </button>
           ) : step === 4 ? (

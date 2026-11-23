@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { hasPendingDraft } from '@/lib/projectDraft';
 import { useState, type FormEvent } from 'react';
 import { FormError, PasswordField, TextField } from '@/components/Field';
 import { ApiError, auth } from '@/lib/api';
@@ -38,7 +39,8 @@ export function LoginForm() {
 
   async function finish() {
     await refresh();
-    router.push(next);
+    // Projet rempli avant l'inscription : retour au parcours de publication.
+    router.push(params.get('next') === null && hasPendingDraft() ? '/publier' : next);
     router.refresh();
   }
 
