@@ -408,17 +408,9 @@ class DatabaseSeeder extends Seeder
                 continue;
             }
 
-            $image = imagecreatetruecolor($width, $height);
-            if ($image === false) {
-                continue;
-            }
-            imagefilledrectangle($image, 0, 0, $width, $height, (int) imagecolorallocate($image, 106, 166, 218));
-            imagefilledellipse($image, intdiv($width, 2), intdiv($height, 2), intdiv(min($width, $height), 2), intdiv(min($width, $height), 2), (int) imagecolorallocate($image, 225, 228, 171));
-            $path = (string) tempnam(sys_get_temp_dir(), 'demo-media');
-            imagepng($image, $path);
-
-            $media[$field] = app(MediaLibrary::class)->store($user, new UploadedFile($path, "{$field}.png", 'image/png', null, true), $purpose)->uuid;
-            @unlink($path);
+            // Image unie de la bonne taille, générée par GD (fabrique d'images du framework).
+            $file = UploadedFile::fake()->image("{$field}.png", $width, $height);
+            $media[$field] = app(MediaLibrary::class)->store($user, $file, $purpose)->uuid;
         }
 
         return $media;
