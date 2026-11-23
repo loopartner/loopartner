@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { AuthLink } from '@/components/AuthLink';
 import { notFound } from 'next/navigation';
 import { Icon } from '@/components/Icon';
 import { PageShell } from '@/components/PageShell';
@@ -73,9 +74,9 @@ export default async function OfferPage({ params }: { params: Promise<{ slug: st
               ) : null}
             </dl>
             {provider?.slug ? (
-              <Link href={`/prestataires/${provider.slug}/contacter`} className="btn btn--lime btn--block">
+              <AuthLink href={`/prestataires/${provider.slug}/contacter`} reason="Créez un compte gratuit ou connectez-vous pour demander un devis à ce prestataire. Vos échanges restent dans la messagerie Loopartner." className="btn btn--lime btn--block">
                 <Icon name="message" size={18} /> Demander un devis
-              </Link>
+              </AuthLink>
             ) : null}
           </div>
 

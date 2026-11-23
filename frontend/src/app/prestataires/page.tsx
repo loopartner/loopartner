@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { AuthLink } from '@/components/AuthLink';
 import { Icon } from '@/components/Icon';
 import { Highlight, PageShell } from '@/components/PageShell';
 import { Pagination } from '@/components/Pagination';
@@ -96,9 +97,9 @@ export default async function ProvidersPage({ searchParams }: { searchParams: Pr
                 <Link href={`/prestataires/${provider.slug}`} className="link-arrow">
                   Voir le profil <Icon name="arrowRight" size={16} />
                 </Link>
-                <Link href={`/prestataires/${provider.slug}/contacter`} className="link-arrow">
+                <AuthLink href={`/prestataires/${provider.slug}/contacter`} reason="Créez un compte gratuit ou connectez-vous pour contacter ce prestataire. Vos échanges restent dans la messagerie Loopartner." className="link-arrow">
                   Contacter
-                </Link>
+                </AuthLink>
               </div>
             </article>
           ))}

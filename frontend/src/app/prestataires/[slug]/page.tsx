@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { AuthLink } from '@/components/AuthLink';
 import { notFound } from 'next/navigation';
 import { ArticleCard } from '@/components/ArticleCard';
 import { Icon } from '@/components/Icon';
@@ -42,9 +43,9 @@ export default async function ProviderPage({ params }: { params: Promise<{ slug:
       subtitle={provider.headline ?? undefined}
       bandExtra={
         <div style={{ display: 'flex', gap: 12, marginTop: 24, flexWrap: 'wrap' }}>
-          <Link href={`/prestataires/${provider.slug}/contacter`} className="btn btn--lime">
+          <AuthLink href={`/prestataires/${provider.slug}/contacter`} reason="Créez un compte gratuit ou connectez-vous pour contacter ce prestataire. Vos échanges restent dans la messagerie Loopartner." className="btn btn--lime">
             <Icon name="message" size={18} /> Contacter
-          </Link>
+          </AuthLink>
         </div>
       }
     >
@@ -97,9 +98,9 @@ export default async function ProviderPage({ params }: { params: Promise<{ slug:
           <div className="card aside-card">
             <h3>Travailler avec {provider.display_name}</h3>
             <p>Décrivez votre besoin : la réponse arrive dans votre messagerie Loopartner. Vos coordonnées ne sont jamais transmises.</p>
-            <Link href={`/prestataires/${provider.slug}/contacter`} className="btn btn--dark btn--block">
+            <AuthLink href={`/prestataires/${provider.slug}/contacter`} reason="Créez un compte gratuit ou connectez-vous pour contacter ce prestataire. Vos échanges restent dans la messagerie Loopartner." className="btn btn--dark btn--block">
               Envoyer une demande
-            </Link>
+            </AuthLink>
           </div>
           <div className="card aside-card">
             <dl className="info-list">

@@ -2532,3 +2532,4 @@ textarea {
 .project-card:has(.project-card__link:focus-visible){outline:3px solid var(--blue);outline-offset:-3px}
 .project-card:hover .project-card__title a,.project-card:hover .link-arrow{color:var(--blue-ink)}
 .project-card__hint{position:relative;z-index:2}
+button.link-arrow{background:none;border:0;padding:0;cursor:pointer;font:inherit;color:var(--blue)}
