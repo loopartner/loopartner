@@ -173,3 +173,43 @@ export async function apiOrNull<T>(path: string, options: RequestOptions = {}): 
 export function auth<T>(path: string, body?: unknown): Promise<T> {
   return api<T>(`auth/${path.replace(/^\/+/, '')}`, { method: 'POST', body });
 }
+
+/**
+ * Téléchargement d'un fichier de l'API (PDF d'un devis…) avec la session : renvoie le contenu
+ * à enregistrer. En démonstration, la réponse fictive de `demoApi` (une erreur, en général) est
+ * renvoyée telle quelle sous forme d'ApiError.
+ */
+export async function apiDownload(path: string): Promise<Blob> {
+  if (DEMO_MODE) {
+    await api(path);
+    throw new ApiError(409, { message: 'Fichier indisponible en démonstration.' });
+  }
+  let response: Response;
+  try {
+    response = await fetch(buildUrl(path), { credentials: 'include', headers: { Accept: 'application/pdf, application/json', 'X-Requested-With': 'XMLHttpRequest' }, cache: 'no-store' });
+  } catch {
+    throw new ApiError(0, {});
+  }
+  if (!response.ok) {
+    let body: Record<string, unknown> = {};
+    try {
+      body = (await response.json()) as Record<string, unknown>;
+    } catch {
+      body = {};
+    }
+    throw new ApiError(response.status, body);
+  }
+  return response.blob();
+}
+
+/** Enregistre un contenu sous un nom de fichier, depuis le navigateur. */
+export function saveBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}

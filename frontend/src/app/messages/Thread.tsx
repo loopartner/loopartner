@@ -131,6 +131,8 @@ export function Thread({ conversation, onChanged }: { conversation: Conversation
   }
 
   const name = counterpartName(conversation.counterpart);
+  // L'interlocuteur est un porteur de projet : je suis le prestataire de cette mise en relation.
+  const iAmProvider = !conversation.counterpart.deleted && conversation.counterpart.provider === null;
   const detail = counterpartDetail(conversation.counterpart);
   const slug = conversation.counterpart.provider?.slug;
   const logo = conversation.counterpart.provider?.logo_url;
@@ -153,6 +155,16 @@ export function Thread({ conversation, onChanged }: { conversation: Conversation
             ) : null}
           </div>
         </div>
+        <div className="thread__actions">
+        {/* Le prestataire rédige un devis dans la mise en relation acceptée (décision 36). */}
+        {iAmProvider && conversation.match_request && conversation.can_send ? (
+          <Link
+            href={`/devis/nouveau?demande=${conversation.match_request.uuid}${conversation.counterpart.name ? `&nom=${encodeURIComponent(conversation.counterpart.name)}` : ''}`}
+            className="btn btn--lime btn--sm"
+          >
+            <Icon name="file" size={16} /> Faire un devis
+          </Link>
+        ) : null}
         {!conversation.counterpart.deleted ? (
           conversation.blocked_by_me ? (
             <button
@@ -171,6 +183,7 @@ export function Thread({ conversation, onChanged }: { conversation: Conversation
             </button>
           )
         ) : null}
+        </div>
       </div>
 
       <div

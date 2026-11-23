@@ -133,6 +133,9 @@ export function SiteHeader() {
                   <Link role="menuitem" href="/messages">
                     Messages
                   </Link>
+                  <Link role="menuitem" href="/devis">
+                    Mes devis
+                  </Link>
                   {isProvider ? (
                     <>
                       <Link role="menuitem" href="/espace/profil">

@@ -12,6 +12,7 @@ import { LEGAL_TEXTS } from '@/content/legal';
 import { demoMediaUrl, storeDemoMedia } from './demo-media';
 import { demoMatching } from './demo-matching';
 import { demoOffers } from './demo-offers';
+import { demoQuotes } from './demo-quotes';
 import type { ArticleDetail, ArticleSummary, BrowsableProject, Category, Me, OwnEvent, OwnProject, PublicEvent, Role } from './types';
 
 export const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
@@ -405,6 +406,12 @@ export function demoApi(path: string, method: string, query: Record<string, unkn
     },
   );
   if (offers) return offers.value;
+
+  // Devis (demo-quotes.ts)
+  const quotes = demoQuotes(route, method, query, input, session ? { email: session.email, isProvider: session.roles.includes('prestataire'), name: session.name } : null, (status, payload) => {
+    throw new DemoError(status, payload);
+  });
+  if (quotes) return quotes.value;
 
   // Authentification
   if (route === 'auth/login') {
