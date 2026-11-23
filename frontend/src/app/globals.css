@@ -2490,3 +2490,9 @@ textarea {
 /* La règle mobile de .container (padding) ne doit pas effacer l'espace sous le bandeau d'accueil. */
 .container.home-hero{padding-top:72px;padding-bottom:160px}
 @media (max-width:720px){.container.home-hero{padding-top:32px;padding-bottom:130px}}
+/* Le mot mesuré ne compte pas la marge intérieure du surlignage : sans cela, le point final était coupé. */
+.rotating-word{box-sizing:content-box}
+/* Photos d'experts : légère élévation au survol (le flottement passe par « translate », le survol par « transform »). */
+@keyframes hero-float{0%,100%{translate:0 0}50%{translate:0 -8px}}
+.hero-deco__photo{pointer-events:auto;cursor:default;transition:transform .3s cubic-bezier(.2,.8,.2,1),box-shadow .3s}
+.hero-deco__photo:hover{transform:translateY(-10px) scale(1.06);box-shadow:0 22px 40px rgba(20,60,110,.28)}
