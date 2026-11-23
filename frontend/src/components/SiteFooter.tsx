@@ -1,96 +1,40 @@
-import Image from 'next/image';
-import Link from 'next/link';
+import StickerSlapFooter, { type FooterColumn } from './StickerFooter';
+
+const COLUMNS: FooterColumn[] = [
+  {
+    label: 'Plateforme',
+    links: [
+      { label: 'Voir les projets', href: '/projets' },
+      { label: 'Trouver un prestataire', href: '/prestataires' },
+      { label: 'Les offres', href: '/offres' },
+      { label: 'Événements', href: '/evenements' },
+    ],
+  },
+  {
+    label: 'Ressources',
+    links: [
+      { label: 'Publier un projet', href: '/publier' },
+      { label: 'Devenir prestataire', href: '/devenir-prestataire' },
+      { label: 'Articles', href: '/articles' },
+      { label: 'Premium', href: '/premium' },
+    ],
+  },
+  {
+    label: 'Compte et légal',
+    small: true,
+    links: [
+      { label: 'Connexion', href: '/connexion' },
+      { label: 'Inscription gratuite', href: '/inscription' },
+      { label: 'Comment ça marche', href: '/#comment-ca-marche' },
+      { label: "Conditions générales d'utilisation", href: '/legal/terms' },
+      { label: 'Conditions de vente Premium', href: '/legal/sales' },
+      { label: 'Confidentialité', href: '/legal/privacy' },
+      { label: 'Cookies', href: '/legal/cookies' },
+      { label: 'Mentions légales', href: '/legal/notice' },
+    ],
+  },
+];
 
 export function SiteFooter() {
-  const year = new Date().getFullYear();
-
-  return (
-    <footer className="site-footer">
-      <div className="container">
-        <div className="site-footer__grid">
-          <div>
-            <Link href="/" className="site-footer__logo" aria-label="Loopartner, accueil">
-              <Image src="/images/logo-white.png" alt="" width={640} height={214} />
-            </Link>
-            <p className="site-footer__pitch">
-              La plateforme pour lancer votre entreprise avec les bons experts. Publiez votre projet et échangez avec des
-              prestataires indépendants.
-            </p>
-          </div>
-          <div>
-            <h2>Plateforme</h2>
-            <ul>
-              <li>
-                <Link href="/projets">Voir les projets</Link>
-              </li>
-              <li>
-                <Link href="/prestataires">Trouver un prestataire</Link>
-              </li>
-              <li>
-                <Link href="/offres">Les offres</Link>
-              </li>
-              <li>
-                <Link href="/#comment-ca-marche">Comment ça marche</Link>
-              </li>
-              <li>
-                <Link href="/evenements">Événements</Link>
-              </li>
-            </ul>
-          </div>
-          <div>
-            <h2>Ressources</h2>
-            <ul>
-              <li>
-                <Link href="/articles">Articles</Link>
-              </li>
-              <li>
-                <Link href="/publier">Publier un projet</Link>
-              </li>
-              <li>
-                <Link href="/devenir-prestataire">Devenir prestataire</Link>
-              </li>
-              <li>
-                <Link href="/premium">Premium</Link>
-              </li>
-            </ul>
-          </div>
-          <div>
-            <h2>Légal</h2>
-            <ul>
-              <li>
-                <Link href="/legal/terms">Conditions générales d&apos;utilisation</Link>
-              </li>
-              <li>
-                <Link href="/legal/sales">Conditions de vente Premium</Link>
-              </li>
-              <li>
-                <Link href="/legal/privacy">Confidentialité</Link>
-              </li>
-              <li>
-                <Link href="/legal/cookies">Cookies</Link>
-              </li>
-              <li>
-                <Link href="/legal/notice">Mentions légales</Link>
-              </li>
-            </ul>
-          </div>
-          <div>
-            <h2>Compte</h2>
-            <ul>
-              <li>
-                <Link href="/connexion">Connexion</Link>
-              </li>
-              <li>
-                <Link href="/inscription">Inscription gratuite</Link>
-              </li>
-            </ul>
-          </div>
-        </div>
-        <div className="site-footer__bottom">
-          <span>© {year} Loopartner. Tous droits réservés.</span>
-          <span>Français (FR)</span>
-        </div>
-      </div>
-    </footer>
-  );
+  return <StickerSlapFooter columns={COLUMNS} badge={`© ${new Date().getFullYear()} Loopartner`} />;
 }
