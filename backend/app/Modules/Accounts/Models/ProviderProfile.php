@@ -24,7 +24,8 @@ use Illuminate\Support\Carbon;
  * Ce modèle est interne au module Accounts : les autres modules ne l'importent jamais et
  * passent par une Action publique du module. Le slug et user_id ne sont pas assignables
  * en masse : ils sont fixés une seule fois, à la création, par UpsertProviderProfile.
- * logo_media_id ne l'est pas non plus : il est fixé par MediaLibrary::replace().
+ * logo_media_id et banner_media_id ne le sont pas non plus : ils sont fixés par
+ * MediaLibrary::replace().
  *
  * @property int $id
  * @property int $user_id
@@ -36,6 +37,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $country
  * @property string|null $website
  * @property int|null $logo_media_id
+ * @property int|null $banner_media_id
  * @property ProviderProfileStatus $status
  * @property Carbon|CarbonImmutable|null $published_at
  * @property Carbon|CarbonImmutable|null $moderation_restricted_at
@@ -85,6 +87,14 @@ class ProviderProfile extends Model
     public function logo(): BelongsTo
     {
         return $this->belongsTo(Media::class, 'logo_media_id');
+    }
+
+    /**
+     * @return BelongsTo<Media, $this>
+     */
+    public function banner(): BelongsTo
+    {
+        return $this->belongsTo(Media::class, 'banner_media_id');
     }
 
     /**

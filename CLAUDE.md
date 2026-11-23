@@ -231,6 +231,12 @@ utilitaires du module), `Console/Commands/` (commandes Artisan du module), `Noti
   champ `logo`) : uuid d'un média envoyé par `POST /media`, ou `null` pour le retirer. Dans le PUT,
   un `logo` absent laisse le logo inchangé (même exception que `status`). Les réponses exposent
   `avatar_url` et `logo_url` (null si absent).
+- Bannière du profil prestataire (`PUT /me/provider-profile`, champ `banner`, média
+  `provider_banner`, même règle que `logo`, exposée en `banner_url` ; décision 82). **Profil
+  complet à la publication** (`accounts.provider_profile.require_complete_profile`,
+  `PROVIDER_PROFILE_REQUIRE_COMPLETE`, true ; false dans `phpunit.xml`, réactivé par
+  `ProviderProfileCompletenessTest`) : logo, bannière, `bio` d'au moins 80 caractères
+  (`min_bio_length`) et une catégorie, sinon 422 sur le champ ; un brouillon reste libre.
 - Catégories du profil prestataire (`PUT /me/provider-profile`, champ `categories`) : liste de 1 à 5
   slugs de catégories actives, qui remplace la précédente. Absent : inchangé (comme `logo`). Un
   brouillon peut n'avoir aucune catégorie, mais **la publication exige au moins une catégorie** (422
@@ -348,6 +354,8 @@ Usages (`App\Support\Media\MediaPurpose`, limites définies dans l'enum) :
 | `event_cover` | 5 Mo | 960×540 | 1920×1080 | prestataire, entrepreneur, rédacteur, admin |
 | `article_cover` | 5 Mo | 1200×630 | 2400×1260 | prestataire, entrepreneur, rédacteur, admin |
 | `article_image` | 5 Mo | 320×200 | 1600×1600 | prestataire, entrepreneur, rédacteur, admin |
+| `provider_banner` | 5 Mo | 1200×300 | 2400×800 | prestataire |
+| `offer_image` | 5 Mo | 800×450 | 1600×1200 | prestataire |
 
 Plusieurs médias d'un même usage (images du corps d'un article) se rattachent avec
 `MediaLibrary::attachMany()` (revérifiés sous verrou) ; le module supprime ensuite avec `delete()`
@@ -955,6 +963,8 @@ durées dans `config/security.php`. Textes destinés aux utilisateurs, sources c
   prix ; décision 40). Lecture publique : `GET /offers` (filtres `category` avec sous-catégories,
   `country`, `city`, `pricing_mode`, `q` ; tri par `published_at`, le même pour tous),
   `GET /offers/{slug}`, `GET /providers/{slug}/offers` (404 si le profil n'est pas publié).
+  Image de couverture facultative (champ `image`, média `offer_image`, `image_url` ; décision 83),
+  supprimée avec l'offre par `DeleteOffer` (`MediaLibrary`).
   Visible si l'offre est publiée et non masquée **et** si le profil est publié et non masqué
   (scope `visible()`, Action publique `Accounts\Actions\PublishedProviderConstraint`). Auteur
   présenté par son profil public et sa **qualité déclarée** (`seller` : `declared_status`

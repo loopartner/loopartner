@@ -2,6 +2,7 @@
 
 namespace App\Modules\Marketplace\Http\Requests;
 
+use App\Models\User;
 use App\Modules\Marketplace\Models\Offer;
 use App\Modules\Marketplace\Support\OfferRules;
 use Illuminate\Foundation\Http\FormRequest;
@@ -26,6 +27,9 @@ class StoreOfferRequest extends FormRequest
      */
     public function rules(): array
     {
-        return OfferRules::rules(false, $this->all());
+        /** @var User $user */
+        $user = $this->user();
+
+        return OfferRules::rules(false, $this->all(), $user);
     }
 }

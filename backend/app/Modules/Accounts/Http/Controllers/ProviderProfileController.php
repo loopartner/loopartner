@@ -27,7 +27,7 @@ class ProviderProfileController extends Controller
         $profile = ProviderProfile::query()->where('user_id', $user->id)->first();
         abort_if($profile === null, 404, 'Aucun profil prestataire.');
 
-        return new ProviderProfileResource($profile->load(['logo', 'categories']));
+        return new ProviderProfileResource($profile->load(['logo', 'banner', 'categories']));
     }
 
     public function upsert(UpsertProviderProfileRequest $request, UpsertProviderProfile $upsertProfile): JsonResponse

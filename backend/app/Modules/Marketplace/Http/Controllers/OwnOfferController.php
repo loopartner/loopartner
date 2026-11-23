@@ -30,7 +30,7 @@ class OwnOfferController extends Controller
         $offers = Offer::query()
             ->where('user_id', $this->user($request)->id)
             ->when($request->filled('status'), fn ($query) => $query->where('status', $request->string('status')->toString()))
-            ->with('category')
+            ->with(['category', 'image'])
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->paginate(Pagination::perPage($request))
@@ -43,7 +43,7 @@ class OwnOfferController extends Controller
     {
         $offer = $saveOffer->create($this->user($request), $request->validated());
 
-        return (new OwnOfferResource($offer->load('category')))->response()->setStatusCode(201);
+        return (new OwnOfferResource($offer->load(['category', 'image'])))->response()->setStatusCode(201);
     }
 
     public function show(string $uuid): OwnOfferResource
@@ -51,12 +51,12 @@ class OwnOfferController extends Controller
         $offer = $this->findOffer($uuid);
         Gate::authorize('view', $offer);
 
-        return new OwnOfferResource($offer->load('category'));
+        return new OwnOfferResource($offer->load(['category', 'image']));
     }
 
     public function update(UpdateOfferRequest $request, SaveOffer $saveOffer): OwnOfferResource
     {
-        return new OwnOfferResource($saveOffer->update($request->offer(), $request->validated())->load('category'));
+        return new OwnOfferResource($saveOffer->update($request->offer(), $request->validated())->load(['category', 'image']));
     }
 
     public function destroy(string $uuid, DeleteOffer $deleteOffer): Response
@@ -74,7 +74,7 @@ class OwnOfferController extends Controller
         $offer = $this->findOffer($uuid);
         Gate::authorize('publish', $offer);
 
-        return new OwnOfferResource($publishOffer->handle($this->user($request), $offer)->load('category'));
+        return new OwnOfferResource($publishOffer->handle($this->user($request), $offer)->load(['category', 'image']));
     }
 
     public function unpublish(string $uuid, UnpublishOffer $unpublishOffer): OwnOfferResource
@@ -82,7 +82,7 @@ class OwnOfferController extends Controller
         $offer = $this->findOffer($uuid);
         Gate::authorize('unpublish', $offer);
 
-        return new OwnOfferResource($unpublishOffer->handle($offer)->load('category'));
+        return new OwnOfferResource($unpublishOffer->handle($offer)->load(['category', 'image']));
     }
 
     /**

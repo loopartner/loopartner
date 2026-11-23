@@ -2,6 +2,7 @@
 
 namespace App\Modules\Marketplace\Models;
 
+use App\Models\Media;
 use App\Models\ServiceCategory;
 use App\Models\User;
 use App\Modules\Accounts\Actions\PublishedProviderConstraint;
@@ -33,6 +34,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $slug
  * @property int $user_id
  * @property int $service_category_id
+ * @property int|null $image_media_id
  * @property string $title
  * @property string $summary
  * @property string $description
@@ -101,6 +103,16 @@ class Offer extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(ServiceCategory::class, 'service_category_id');
+    }
+
+    /**
+     * Image de couverture (décision 83), fixée par MediaLibrary::replace(), jamais assignable.
+     *
+     * @return BelongsTo<Media, $this>
+     */
+    public function image(): BelongsTo
+    {
+        return $this->belongsTo(Media::class, 'image_media_id');
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace App\Modules\Marketplace\Http\Requests;
 
+use App\Models\User;
 use App\Modules\Marketplace\Models\Offer;
 use App\Modules\Marketplace\Support\OfferRules;
 use Illuminate\Auth\Access\Response;
@@ -32,7 +33,10 @@ class UpdateOfferRequest extends FormRequest
      */
     public function rules(): array
     {
-        return OfferRules::rules(true, $this->all(), $this->offer()->pricing_mode);
+        /** @var User $user */
+        $user = $this->user();
+
+        return OfferRules::rules(true, $this->all(), $user, $this->offer()->pricing_mode, $this->offer()->image_media_id);
     }
 
     public function offer(): Offer

@@ -48,7 +48,9 @@ class UpsertProviderProfileRequest extends FormRequest
         /** @var User $user */
         $user = $this->user();
 
-        $currentLogoId = ProviderProfile::query()->where('user_id', $user->id)->value('logo_media_id');
+        $current = ProviderProfile::query()->where('user_id', $user->id)->first(['logo_media_id', 'banner_media_id']);
+        $currentLogoId = $current?->logo_media_id;
+        $currentBannerId = $current?->banner_media_id;
 
         return [
             'display_name' => ['required', 'string', 'min:2', 'max:100', new NoHtml, new NoInvisibleCharacters],
@@ -65,6 +67,12 @@ class UpsertProviderProfileRequest extends FormRequest
                 'nullable',
                 'string',
                 new AttachableMedia($user, MediaPurpose::ProviderLogo, $currentLogoId),
+            ],
+            'banner' => [
+                'sometimes',
+                'nullable',
+                'string',
+                new AttachableMedia($user, MediaPurpose::ProviderBanner, $currentBannerId),
             ],
         ];
     }
