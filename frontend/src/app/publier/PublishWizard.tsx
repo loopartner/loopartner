@@ -92,17 +92,18 @@ export function PublishWizard() {
   const params = useSearchParams();
   const router = useRouter();
   const { user, loading, hasRole } = useSession();
-  const [step, setStep] = useState(1);
+  const [rawStep, setStep] = useState(1);
   const [draft, setDraft] = useState<Draft>(() => {
     const title = params.get('titre');
     const category = params.get('categorie');
     return { ...(readDraft() ?? EMPTY), ...(title ? { title } : {}), ...(category ? { category } : {}) };
   });
+  // Connecté entre-temps : l'étape d'inscription n'a plus lieu d'être.
+  const step = user && rawStep === 5 ? 4 : rawStep;
   const [categories, setCategories] = useState<Category[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
-  const [needsAccount, setNeedsAccount] = useState(false);
 
   useEffect(() => {
     api<{ data: Category[] }>('categories')
@@ -127,7 +128,7 @@ export function PublishWizard() {
   async function publish() {
     if (!user) {
       saveDraft(draft);
-      setNeedsAccount(true);
+      setStep(5);
       return;
     }
     if (!hasRole('particulier', 'entrepreneur')) {
@@ -182,7 +183,9 @@ export function PublishWizard() {
     }
   }
 
-  const progress = step * 25;
+  // Sans compte, une 5e étape invite à s'inscrire (plutôt qu'un encart à chercher en bas de page).
+  const totalSteps = user || loading ? 4 : 5;
+  const progress = Math.round((Math.min(step, totalSteps) / totalSteps) * 100);
 
   return (
     <div className="wizard">
@@ -197,7 +200,7 @@ export function PublishWizard() {
 
       <div className="wizard__progress">
         <div className="wizard__progress-row">
-          <span>Étape {step} sur 4</span>
+          <span>Étape {Math.min(step, totalSteps)} sur {totalSteps}</span>
           <span>{progress}%</span>
         </div>
         <div className="wizard__bar" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} aria-label="Avancement">
@@ -351,23 +354,36 @@ export function PublishWizard() {
                 </span>
                 Vos coordonnées ne sont jamais affichées publiquement.
               </p>
-              {needsAccount ? (
-                <div className="card card--flat" style={{ padding: 28 }}>
-                  <strong>Dernière étape : votre compte</strong>
-                  <p style={{ fontFamily: 'var(--font-text)', color: 'var(--muted)', margin: '6px 0 16px' }}>
-                    Votre projet est gardé dans cet onglet. Créez un compte gratuit ou connectez-vous, puis revenez ici pour le publier.
-                  </p>
-                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                    <Link href="/inscription?profil=client" className="btn btn--lime">
-                      Créer mon compte
-                    </Link>
-                    <Link href="/connexion?next=/publier" className="btn btn--outline">
-                      Me connecter
-                    </Link>
-                  </div>
-                </div>
-              ) : null}
               <FormError message={error} />
+            </div>
+          </>
+        ) : null}
+
+        {step === 5 && !user ? (
+          <>
+            <h1 className="wizard__title">Dernière étape : inscrivez-vous</h1>
+            <div className="form-stack" style={{ gap: 24 }}>
+              <p style={{ fontFamily: 'var(--font-text)', color: 'var(--muted)', margin: 0 }}>
+                Votre projet est prêt et gardé dans cet onglet. Créez votre compte gratuit pour le publier et recevoir les
+                propositions des prestataires.
+              </p>
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                <Link href="/inscription?profil=client" className="btn btn--blue btn--lg">
+                  Créer mon compte gratuit <Icon name="arrowRight" size={16} />
+                </Link>
+              </div>
+              <p style={{ fontFamily: 'var(--font-text)', margin: 0 }}>
+                Déjà inscrit ?{' '}
+                <Link href="/connexion?next=/publier" className="link-arrow">
+                  Me connecter pour publier
+                </Link>
+              </p>
+              <p className="note">
+                <span className="note__icon">
+                  <Icon name="lock" size={16} />
+                </span>
+                Une fois connecté, revenez sur cette page dans le même onglet : votre projet vous attend.
+              </p>
             </div>
           </>
         ) : null}
@@ -388,11 +404,15 @@ export function PublishWizard() {
             <button type="button" className="btn btn--blue btn--lg" disabled={!canContinue} onClick={() => setStep((value) => value + 1)}>
               Continuer <Icon name="arrowRight" size={16} />
             </button>
-          ) : (
+          ) : step === 4 && !user && !loading ? (
+            <button type="button" className="btn btn--blue btn--lg" onClick={() => { saveDraft(draft); setStep(5); }}>
+              Suivant <Icon name="arrowRight" size={16} />
+            </button>
+          ) : step === 4 ? (
             <button type="button" className="btn btn--blue btn--lg" disabled={busy || loading} onClick={publish}>
               {busy ? 'Publication…' : 'Publier mon projet'} <Icon name="arrowRight" size={16} />
             </button>
-          )}
+          ) : null}
         </div>
       </footer>
     </div>
