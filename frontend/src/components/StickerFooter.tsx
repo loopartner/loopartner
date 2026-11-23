@@ -215,6 +215,8 @@ export interface StickerSlapFooterProps {
   /** The starburst link in the top-left corner. `""` hides it. */
   navLabel?: string
   navHref?: string
+  /** Barre du haut (étoile, petit logo, bulle). Masquée quand l'en-tête du site suffit. */
+  topBar?: boolean
   /** Lien de la bulle en haut à droite. `""` la masque. */
   chatHref?: string
   chatLabel?: string
@@ -305,6 +307,7 @@ const CSS =
   ".ssf-map svg{position:absolute;left:-2%;bottom:0;width:104%;height:.5em}" +
   ".ssf-map path{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-dasharray:var(--l,120px) var(--l,120px);stroke-dashoffset:0}" +
   ".ssf-map:hover path,.ssf-map:focus-visible path{animation:ssf-rewrite .7s cubic-bezier(.6,0,.3,1)}" +
+  ".ssf--no-top{padding-top:clamp(6px,.9cqw,12px)}" +
   ".ssf-small{display:flex;flex-direction:column;gap:.5em;font-size:clamp(13px,1.1cqw,15px);font-weight:600;line-height:1.3}" +
   ".ssf-small a{opacity:.9;transition:opacity .2s}.ssf-small a:hover{opacity:1;text-decoration:underline;text-underline-offset:3px}" +
   ".ssf-note{margin-top:clamp(12px,1.3cqw,18px);max-width:34ch;font-size:clamp(11px,.92cqw,13px);line-height:1.45;opacity:.82}" +
@@ -566,6 +569,7 @@ type Placed = { x: number; y: number }
 export default function StickerSlapFooter({
   wordmark = "loopartner",
   homeHref = "/",
+  topBar = true,
   navLabel = "projets",
   navHref = "/projets",
   chatHref = "/messages",
@@ -811,13 +815,14 @@ export default function StickerSlapFooter({
   return (
     <footer
       ref={rootRef}
-      className={"ssf" + (seen ? " is-in" : "") + (className ? " " + className : "")}
+      className={"ssf" + (seen ? " is-in" : "") + (topBar ? "" : " ssf--no-top") + (className ? " " + className : "")}
       style={style}
       onPointerMove={onPointer}
       onPointerLeave={onLeave}
     >
       <style>{CSS}</style>
 
+      {topBar ? (
       <div className="ssf-top">
         {navLabel ? (
           <FooterAnchor className="ssf-nav" href={navHref}>
@@ -845,6 +850,8 @@ export default function StickerSlapFooter({
           <span />
         )}
       </div>
+
+      ) : null}
 
       <div className="ssf-panel">
         {cols.length > 0 && (

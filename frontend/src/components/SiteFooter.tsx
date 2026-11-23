@@ -3,6 +3,7 @@ import StickerSlapFooter, { type FooterColumn } from './StickerFooter';
 const COLUMNS: FooterColumn[] = [
   {
     label: 'Plateforme',
+    small: true,
     links: [
       { label: 'Voir les projets', href: '/projets' },
       { label: 'Trouver un prestataire', href: '/prestataires' },
@@ -12,6 +13,7 @@ const COLUMNS: FooterColumn[] = [
   },
   {
     label: 'Ressources',
+    small: true,
     links: [
       { label: 'Publier un projet', href: '/publier' },
       { label: 'Devenir prestataire', href: '/devenir-prestataire' },
@@ -36,5 +38,5 @@ const COLUMNS: FooterColumn[] = [
 ];
 
 export function SiteFooter() {
-  return <StickerSlapFooter columns={COLUMNS} badge={`© ${new Date().getFullYear()} Loopartner`} />;
+  return <StickerSlapFooter topBar={false} columns={COLUMNS} badge={`© ${new Date().getFullYear()} Loopartner`} />;
 }
