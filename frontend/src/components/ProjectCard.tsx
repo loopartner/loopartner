@@ -8,7 +8,7 @@ export function ProjectCard({ project, compact = false, showOfferHint = false }:
   const budget = formatBudget(project.budget_min, project.budget_max, project.currency);
 
   return (
-    <article className="card ticket project-card" style={compact ? { padding: 32 } : undefined}>
+    <article className="card ticket project-card" style={compact ? { padding: '32px 56px 32px 32px' } : undefined}>
       <div className="project-card__top">
         <div className="project-card__pills">
           <span className="pill pill--status">Ouvert</span>

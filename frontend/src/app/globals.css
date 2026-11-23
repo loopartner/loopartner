@@ -2496,3 +2496,31 @@ textarea {
 @keyframes hero-float{0%,100%{translate:0 0}50%{translate:0 -8px}}
 .hero-deco__photo{pointer-events:auto;cursor:default;transition:transform .3s cubic-bezier(.2,.8,.2,1),box-shadow .3s}
 .hero-deco__photo:hover{transform:translateY(-10px) scale(1.06);box-shadow:0 22px 40px rgba(20,60,110,.28)}
+
+/* Cartes « bloc-notes » : trous perforés dans le papier, ombrés à l'intérieur, au lieu de
+   demi-cercles qui dépassaient du bord (et ressemblaient à des bosses avec l'ombre de la carte). */
+.ticket::after{
+  top:28px;bottom:28px;right:14px;width:20px;
+  background:
+    radial-gradient(circle at 10px 11px, var(--bg) 0 6px, transparent 6.5px),
+    radial-gradient(circle at 10px 10px, rgba(26,26,26,.22) 0 7px, rgba(26,26,26,.06) 8px, transparent 8.5px);
+  background-size:20px 30px;background-repeat:repeat-y;
+}
+.ticket.project-card,.ticket.event-row{padding-right:56px}
+@media (max-width:720px){.ticket.project-card,.ticket.event-row{padding-right:48px}.ticket::after{right:10px}}
+
+/* Pivot au survol (CardTilt) */
+.ticket,.offer-card,.provider-card{
+  transform:perspective(1000px) rotateX(var(--tilt-x,0deg)) rotateY(var(--tilt-y,0deg));
+  transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s;
+  will-change:transform;
+}
+.ticket.is-tilting,.offer-card.is-tilting,.provider-card.is-tilting{transition:transform .08s linear,box-shadow .35s;box-shadow:0 24px 48px rgba(26,26,26,.10)}
+@media (prefers-reduced-motion:reduce){.ticket,.offer-card,.provider-card{transform:none;transition:none}}
+.ticket::after{
+  width:22px;
+  background:
+    radial-gradient(circle at 11px 13px, var(--bg) 0 7px, transparent 7.6px),
+    radial-gradient(circle at 11px 11px, rgba(26,26,26,.32) 0 8px, rgba(26,26,26,.08) 9px, transparent 9.6px);
+  background-size:22px 32px;background-repeat:repeat-y;
+}

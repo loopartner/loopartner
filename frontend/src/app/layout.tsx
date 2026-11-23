@@ -4,6 +4,7 @@ import './globals.css';
 
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
+import { CardTilt } from '@/components/CardTilt';
 import { ConsentGate } from '@/components/ConsentGate';
 import { DemoBanner } from '@/components/DemoBanner';
 import { SessionProvider } from '@/lib/session';
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <SessionProvider>
           {children}
           <ConsentGate />
+          <CardTilt />
         </SessionProvider>
       </body>
     </html>
