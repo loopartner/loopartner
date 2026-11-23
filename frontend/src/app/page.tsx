@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { Icon, type IconName } from '@/components/Icon';
 import { ProjectCard } from '@/components/ProjectCard';
@@ -7,6 +8,10 @@ import { apiOrNull } from '@/lib/api';
 import { dateBadge } from '@/lib/format';
 import type { Category, Paginated, PublicEvent, PublicProject } from '@/lib/types';
 import { HomeSearch } from './HomeSearch';
+import { RotatingWord } from './RotatingWord';
+
+/** Métiers qui défilent dans le titre (« avec les bons … »). */
+const HERO_WORDS = ['experts', 'juristes', 'avocats', 'comptables', 'fiscalistes', 'conseillers'];
 
 export const dynamic = 'force-dynamic';
 
@@ -49,13 +54,19 @@ export default async function HomePage() {
       </a>
       <div className="hero-band">
         <SiteHeader />
+        <HeroDecorations />
         <section className="container home-hero" aria-labelledby="hero-title">
           <span className="home-hero__badge">
-            <Icon name="check" size={16} /> Gratuit et sans engagement
+            <span className="home-hero__avatars" aria-hidden="true">
+              {[1, 2, 3, 4].map((index) => (
+                <Image key={index} src={`/images/hero/avatar-${index}.webp`} alt="" width={32} height={32} />
+              ))}
+            </span>
+            Gratuit et sans engagement
           </span>
           <h1 id="hero-title" className="home-hero__title">
             Lancez votre entreprise <br />
-            avec les bons <span className="highlight">experts.</span>
+            avec les bons <RotatingWord words={HERO_WORDS} />
           </h1>
           <HomeSearch />
           {chips.length > 0 ? (
@@ -191,3 +202,33 @@ export default async function HomePage() {
     </>
   );
 }
+
+/** Photos d'experts et pointillés autour du titre (maquette Figma, page d'accueil), décoratifs. */
+function HeroDecorations() {
+  const experts: { index: number; left: number; top: number; tag?: string; tagLeft?: number; tagTop?: number; tagStyle?: 'lime' | 'white' }[] = [
+    { index: 5, left: 70, top: 0, tag: 'Avocate', tagLeft: 138, tagTop: 24, tagStyle: 'lime' },
+    { index: 2, left: 178, top: 196 },
+    { index: 3, left: 45, top: 461, tag: 'Comptable', tagLeft: 118, tagTop: 509, tagStyle: 'white' },
+    { index: 1, left: 1184, top: 8 },
+    { index: 4, left: 1267, top: 352, tag: 'Juriste', tagLeft: 1227, tagTop: 396, tagStyle: 'lime' },
+  ];
+  return (
+    <div className="hero-deco" aria-hidden="true">
+      <div className="hero-deco__frame">
+        <Image className="hero-deco__dash" src="/images/hero/dash-left.svg" alt="" width={113} height={433} style={{ left: 112, top: 83, width: 113, height: 433 }} />
+        <Image className="hero-deco__dash" src="/images/hero/dash-right.svg" alt="" width={97} height={335} style={{ left: 1232, top: 74, width: 97, height: 335 }} />
+        {experts.map((expert) => (
+          <span key={expert.index}>
+            <Image className="hero-deco__photo" src={`/images/hero/expert-${expert.index}.webp`} alt="" width={95} height={95} style={{ left: expert.left, top: expert.top }} />
+            {expert.tag ? (
+              <span className={`hero-deco__tag hero-deco__tag--${expert.tagStyle}`} style={{ left: expert.tagLeft, top: expert.tagTop }}>
+                {expert.tag}
+              </span>
+            ) : null}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
