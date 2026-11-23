@@ -36,7 +36,12 @@ export default async function OfferPage({ params }: { params: Promise<{ slug: st
       eyebrow={offer.category ? <span className="pill pill--soft">{offer.category.name}</span> : undefined}
     >
       <div className="with-aside with-aside--right">
-        <article className="card" style={{ padding: 40 }}>
+        <article className="card offer-detail" style={{ padding: offer.image_url ? 0 : 40 }}>
+          {offer.image_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={offer.image_url} alt="" className="offer-detail__image" />
+          ) : null}
+          <div style={offer.image_url ? { padding: 40 } : undefined}>
           <p style={{ fontFamily: 'var(--font-text)', fontSize: 18, fontWeight: 500, margin: '0 0 24px' }}>{offer.summary}</p>
           <p className="preline">{offer.description}</p>
           <p className="disclaimer" style={{ textAlign: 'left', borderTop: '1px solid var(--border)', paddingTop: 24, marginTop: 32 }}>
@@ -44,6 +49,7 @@ export default async function OfferPage({ params }: { params: Promise<{ slug: st
             Loopartner. Loopartner n&apos;est pas partie au contrat.
           </p>
           <ReportButton type="offer" reference={offer.slug} label="Signaler cette offre" />
+          </div>
         </article>
 
         <aside className="aside-stack">

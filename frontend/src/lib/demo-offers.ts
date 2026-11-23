@@ -4,9 +4,10 @@
  */
 
 import type { Category, OwnOffer, OwnProviderProfile, Paginated, PublicOffer, SellerProfile } from './types';
+import { demoMediaUrl } from './demo-media';
 import type { DemoFail } from './demo-matching';
 
-type Card = { display_name: string; slug: string; headline: string; city: string; country: string; logo_url: null; categories: Category[] };
+type Card = { display_name: string; slug: string; headline: string; city: string; country: string; logo_url: string | null; banner_url: string | null; categories: Category[] };
 
 const iso = (date: Date) => date.toISOString().replace(/\.\d{3}Z$/, 'Z');
 const daysAgo = (days: number) => iso(new Date(Date.now() - days * 86_400_000));
@@ -48,7 +49,8 @@ function offersFor(providers: Card[]): PublicOffer[] {
       delivery_mode: delivery,
       country: 'FR',
       city: provider.city,
-      provider: { display_name: provider.display_name, slug: provider.slug, headline: provider.headline, city: provider.city, country: provider.country, logo_url: null },
+      image_url: index % 3 === 2 ? null : `/images/demo/offer-${(index % 4) + 1}.webp`,
+      provider: { display_name: provider.display_name, slug: provider.slug, headline: provider.headline, city: provider.city, country: provider.country, logo_url: provider.logo_url },
       seller: { declared_status: 'professional', legal_name: SELLERS[slug].legal_name, trade_name: provider.display_name, registration_number: SELLERS[slug].registration_number, country: 'FR' },
       published_at: daysAgo(index * 3 + 1),
       updated_at: daysAgo(index * 3 + 1),
@@ -91,7 +93,8 @@ function seedProfile(card: Card): OwnProviderProfile {
     city: card.city,
     country: card.country,
     website: null,
-    logo_url: null,
+    logo_url: card.logo_url,
+    banner_url: card.banner_url,
     categories: card.categories,
     published_at: daysAgo(90),
     status: 'published',
@@ -152,6 +155,7 @@ function toOwn(offer: PublicOffer, index: number): OwnOffer {
     delivery_mode: offer.delivery_mode,
     country: offer.country,
     city: offer.city,
+    image_url: offer.image_url,
     status: 'published',
     version: 1,
     moderation: null,
@@ -213,7 +217,17 @@ export function demoOffers(
     if (method === 'PUT') {
       const current = read<OwnProviderProfile>(profileKey, seedProfile(card));
       const slugs = Array.isArray(input.categories) ? (input.categories as string[]) : current.categories.map((item) => item.slug);
-      if (input.status === 'published' && slugs.length === 0) fail(422, { message: 'Catégorie manquante.', errors: { categories: ['Choisissez au moins une catégorie pour publier.'] } });
+      const logoUrl = 'logo' in input ? (input.logo ? demoMediaUrl(input.logo) : null) : current.logo_url;
+      const bannerUrl = 'banner' in input ? (input.banner ? demoMediaUrl(input.banner) : null) : current.banner_url;
+      // Décision 82 : profil complet pour être publié (même règle que l'API).
+      if (input.status === 'published') {
+        const errors: Record<string, string[]> = {};
+        if (slugs.length === 0) errors.categories = ['Choisissez au moins une catégorie de services avant de publier votre profil.'];
+        if (!logoUrl) errors.logo = ['Ajoutez une photo de profil avant de publier votre profil.'];
+        if (!bannerUrl) errors.banner = ['Ajoutez une bannière avant de publier votre profil.'];
+        if (String(input.bio ?? '').trim().length < 80) errors.bio = ['Décrivez votre activité en 80 caractères au moins avant de publier votre profil.'];
+        if (Object.keys(errors).length > 0) fail(422, { message: Object.values(errors)[0][0], errors });
+      }
       const flat = context.categories.flatMap((parent) => [parent, ...(parent.children ?? [])]);
       const updated: OwnProviderProfile = {
         ...current,
@@ -224,6 +238,8 @@ export function demoOffers(
         country: (input.country as string | null) ?? null,
         website: (input.website as string | null) ?? null,
         categories: slugs.map((slug) => flat.find((item) => item.slug === slug) ?? { slug, name: slug }),
+        logo_url: logoUrl,
+        banner_url: bannerUrl,
         status: input.status === 'draft' ? 'draft' : 'published',
         updated_at: iso(new Date()),
       };
@@ -263,6 +279,7 @@ export function demoOffers(
       delivery_mode: (input.delivery_mode as OwnOffer['delivery_mode']) ?? 'remote',
       country: String(input.country ?? 'FR'),
       city: (input.city as string | null) ?? null,
+      image_url: input.image ? demoMediaUrl(input.image) : null,
       status: 'draft',
       version: 1,
       moderation: null,
@@ -291,7 +308,9 @@ export function demoOffers(
       persist(own.filter((item) => item.uuid !== target.uuid));
       return done(undefined);
     } else if (method === 'PATCH') {
-      Object.assign(target, input, { updated_at: iso(new Date()), version: target.version + 1 });
+      const { image, ...rest } = input;
+      Object.assign(target, rest, { updated_at: iso(new Date()), version: target.version + 1 });
+      if ('image' in input) target.image_url = image ? demoMediaUrl(image) : null;
       if (typeof input.category === 'string') {
         target.category = context.categories.flatMap((parent) => [parent, ...(parent.children ?? [])]).find((item) => item.slug === input.category) ?? target.category;
       }

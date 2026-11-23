@@ -63,8 +63,14 @@ export default async function ProvidersPage({ searchParams }: { searchParams: Pr
       ) : (
         <div className="card-grid card-grid--3">
           {providers.data.map((provider) => (
-            <article key={provider.slug} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div className="author">
+            <article key={provider.slug} className="card provider-card">
+              <div className="provider-card__banner" aria-hidden="true">
+                {provider.banner_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={provider.banner_url} alt="" loading="lazy" />
+                ) : null}
+              </div>
+              <div className="author provider-card__author">
                 {provider.logo_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={provider.logo_url} alt="" className="avatar avatar--lg" />

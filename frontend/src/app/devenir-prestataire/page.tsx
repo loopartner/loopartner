@@ -16,7 +16,7 @@ const STEPS = [
   },
   {
     title: 'Publiez votre profil',
-    text: 'Présentation, logo et 1 à 5 catégories : votre profil apparaît dans l’annuaire des prestataires.',
+    text: 'Photo, bannière, description et 1 à 5 domaines, en quatre étapes guidées : votre profil apparaît alors dans l’annuaire des prestataires.',
   },
   {
     title: 'Ajoutez vos offres',

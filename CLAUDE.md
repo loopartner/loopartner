@@ -1693,10 +1693,15 @@ Dossier `frontend/`, décisions 2 (modifiée), 71 à 74. Maquettes : fichier Fig
   Articles et événements : pied de page seulement.
   Prestataires et offres (étape 2) : `/prestataires/[slug]` (profil public, offres, articles),
   `/offres` et `/offres/[slug]` (prix indicatif TTC, qualité déclarée du vendeur, jamais ses
-  coordonnées), `/espace/profil` (PUT `/me/provider-profile`, logo, 1 à 5 catégories, publication),
+  coordonnées), `/espace/profil` (PUT `/me/provider-profile` ; parcours en quatre étapes : photo et bannière,
+  présentation de 80 caractères, domaines, publication, avec aperçu `ProviderCover` ; décision 82),
   `/espace/identite` (PUT `/me/seller-profile` ; texte et version de la déclaration sur l'honneur
   recopiés de `config/marketplace.php` : à changer ensemble), `/espace/offres` (créer, modifier,
-  publier, retirer, supprimer ; 409 `seller_profile_incomplete` renvoie vers l'identité).
+  publier, retirer, supprimer ; 409 `seller_profile_incomplete` renvoie vers l'identité ; image
+  de couverture facultative, décision 83). `MediaUpload` (formes `round`, `banner`, `cover`) ;
+  en démonstration, les images envoyées sont gardées en data URL (`demo-media.ts`).
+  Accueil : photos d'experts et pointillés de la maquette Figma (`public/images/hero`, masqués
+  sous 1280 px) et mot du titre qui défile (`RotatingWord`, sans dépendance).
   Premium (décision 81) : `/premium` (offre et avantages par rôle, `src/lib/premium.ts` recopié
   des décisions 32, 35 et 81 ; souscription désactivée jusqu'au lot 10), `/devenir-prestataire`
   (étapes, gratuit ou Premium) ; un prestataire sans Premium voit sur `/projets/[uuid]`

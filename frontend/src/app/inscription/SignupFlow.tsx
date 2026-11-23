@@ -155,6 +155,17 @@ function SignupForm({ accountType, onBack }: { accountType: AccountType; onBack:
         <p className="auth-card__subtitle" style={{ marginBottom: 24 }}>
           {done} Le lien est valable 60 minutes. Pensez à regarder dans vos courriers indésirables.
         </p>
+        {accountType === 'prestataire' ? (
+          <div className="signup-next">
+            <p className="signup-next__title">Ensuite, en quatre étapes guidées :</p>
+            <ol>
+              <li>Ajoutez votre photo et une bannière.</li>
+              <li>Décrivez votre activité.</li>
+              <li>Choisissez vos domaines.</li>
+              <li>Publiez votre profil pour apparaître dans l’annuaire.</li>
+            </ol>
+          </div>
+        ) : null}
         <Link href="/connexion" className="btn btn--lime btn--block btn--lg">
           Aller à la connexion
         </Link>

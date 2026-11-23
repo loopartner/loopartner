@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { CountrySelect } from '@/components/CountrySelect';
 import { FormError, TextAreaField, TextField } from '@/components/Field';
+import { MediaUpload } from '@/components/MediaUpload';
 import { api, ApiError } from '@/lib/api';
 import { centsToInput, DELIVERY_LABELS, parseEuros, PRICING_LABELS } from '@/lib/offers';
 import type { Category, DeliveryMode, OwnOffer, PricingMode } from '@/lib/types';
@@ -29,6 +30,9 @@ export function OfferForm({ uuid }: { uuid?: string }) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [error, setError] = useState<ApiError | null>(null);
   const [saving, setSaving] = useState(false);
+  // Image de couverture (décision 83) : undefined = inchangée, null = retirée.
+  const [image, setImage] = useState<string | null | undefined>(undefined);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -40,6 +44,7 @@ export function OfferForm({ uuid }: { uuid?: string }) {
         .then((response) => {
           if (!active) return;
           const offer = response.data;
+          setImageUrl(offer.image_url);
           setDraft({
             title: offer.title,
             summary: offer.summary,
@@ -85,6 +90,7 @@ export function OfferForm({ uuid }: { uuid?: string }) {
       city: draft.city.trim() || null,
     };
     if (!onQuote) body.price_cents = cents;
+    if (image !== undefined) body.image = image;
     try {
       if (uuid) await api(`me/offers/${uuid}`, { method: 'PATCH', body });
       else await api('me/offers', { method: 'POST', body });
@@ -95,7 +101,7 @@ export function OfferForm({ uuid }: { uuid?: string }) {
     }
   }
 
-  const known = ['title', 'summary', 'description', 'category', 'pricing_mode', 'price_cents', 'delivery_mode', 'country', 'city'];
+  const known = ['title', 'summary', 'description', 'category', 'pricing_mode', 'price_cents', 'delivery_mode', 'country', 'city', 'image'];
 
   return (
     <form
@@ -117,6 +123,15 @@ export function OfferForm({ uuid }: { uuid?: string }) {
         counter
         error={error?.field('description')}
         hint="Ce qui est inclus, les délais, ce que vous demandez au client. Texte simple ; les liens éventuels ne seront pas cliquables."
+      />
+      <MediaUpload
+        purpose="offer_image"
+        label="Image de l'offre (facultatif)"
+        initialUrl={imageUrl}
+        removable
+        hint="Elle illustre l'offre dans le catalogue et sur votre page. 1200 × 800 px conseillés, sans coordonnées ni texte trompeur."
+        error={error?.field('image')}
+        onUploaded={(uuid) => setImage(uuid)}
       />
       <div className="field">
         <label className="field__label" htmlFor="offer-category-select">

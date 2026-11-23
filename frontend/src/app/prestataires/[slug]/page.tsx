@@ -5,9 +5,10 @@ import { ArticleCard } from '@/components/ArticleCard';
 import { Icon } from '@/components/Icon';
 import { OfferCard } from '@/components/OfferCard';
 import { PageShell } from '@/components/PageShell';
+import { ProviderCover } from '@/components/ProviderCover';
 import { ReportButton } from '@/components/ReportButton';
 import { apiOrNull } from '@/lib/api';
-import { countryName, formatDate, initials } from '@/lib/format';
+import { countryName, formatDate } from '@/lib/format';
 import type { ArticleSummary, Paginated, ProviderProfile, PublicOffer } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -49,27 +50,22 @@ export default async function ProviderPage({ params }: { params: Promise<{ slug:
     >
       <div className="with-aside with-aside--right">
         <div className="form-stack" style={{ gap: 32 }}>
-          <section className="card">
-            <div className="profile-head" style={{ marginBottom: 24 }}>
-              {provider.logo_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={provider.logo_url} alt="" className="avatar avatar--lg avatar--xl" />
-              ) : (
-                <span className="avatar avatar--lg avatar--xl">{initials(provider.display_name)}</span>
-              )}
-              <div>
-                <h2 style={{ margin: '0 0 6px' }}>{provider.display_name}</h2>
-                {place ? <p style={{ margin: 0, color: 'var(--muted)' }}>{place}</p> : null}
-                <div className="project-card__pills" style={{ marginTop: 10 }}>
-                  {provider.categories.map((category) => (
-                    <Link key={category.slug} href={`/prestataires?categorie=${category.slug}`} className="pill pill--tag">
-                      {category.name}
-                    </Link>
-                  ))}
-                </div>
+          <section className="provider-profile">
+            <ProviderCover name={provider.display_name} bannerUrl={provider.banner_url} logoUrl={provider.logo_url} subtitle={[provider.headline, place].filter(Boolean).join(' · ') || undefined}>
+              <div className="project-card__pills" style={{ marginTop: 10 }}>
+                {provider.categories.map((category) => (
+                  <Link key={category.slug} href={`/prestataires?categorie=${category.slug}`} className="pill pill--tag">
+                    {category.name}
+                  </Link>
+                ))}
               </div>
+            </ProviderCover>
+            <div className="card provider-profile__about">
+              <h2 className="section-title" style={{ fontSize: 20, marginBottom: 12 }}>
+                À propos
+              </h2>
+              {provider.bio ? <p className="preline" style={{ margin: 0 }}>{provider.bio}</p> : <p style={{ color: 'var(--muted)', margin: 0 }}>Ce prestataire n&apos;a pas encore rédigé de présentation.</p>}
             </div>
-            {provider.bio ? <p className="preline">{provider.bio}</p> : <p style={{ color: 'var(--muted)' }}>Ce prestataire n&apos;a pas encore rédigé de présentation.</p>}
           </section>
 
           <section>

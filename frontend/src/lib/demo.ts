@@ -9,6 +9,7 @@
  */
 
 import { LEGAL_TEXTS } from '@/content/legal';
+import { demoMediaUrl, storeDemoMedia } from './demo-media';
 import { demoMatching } from './demo-matching';
 import { demoOffers } from './demo-offers';
 import type { ArticleDetail, ArticleSummary, BrowsableProject, Category, Me, OwnEvent, OwnProject, PublicEvent, Role } from './types';
@@ -265,18 +266,18 @@ const ARTICLE_BODY = {
 };
 
 const PROVIDERS = [
-  { slug: 'cabinet-morel-conseil', display_name: 'Cabinet Morel Conseil', headline: 'Juristes en droit des sociétés', city: 'Lyon', country: 'FR', logo_url: null, categories: [cat('juridique'), cat('creation-societe')] },
-  { slug: 'compta-claire', display_name: 'Compta Claire', headline: 'Expertise comptable pour indépendants', city: 'Nantes', country: 'FR', logo_url: null, categories: [cat('comptabilite'), cat('fiscalite')] },
-  { slug: 'marques-et-co', display_name: 'Marques & Co', headline: 'Conseil en propriété industrielle', city: 'Paris', country: 'FR', logo_url: null, categories: [cat('propriete-intellectuelle')] },
-  { slug: 'domicile-pro', display_name: 'Domicile Pro', headline: "Domiciliation d'entreprises", city: 'Bordeaux', country: 'FR', logo_url: null, categories: [cat('domiciliation')] },
-  { slug: 'avocats-delaunay', display_name: 'Delaunay Avocats', headline: 'Avocats en droit des affaires et des start-up', city: 'Paris', country: 'FR', logo_url: null, categories: [cat('juridique'), cat('creation-societe')] },
-  { slug: 'fisca-conseil', display_name: 'Fisca Conseil', headline: 'Optimisation et conformité fiscale', city: 'Toulouse', country: 'FR', logo_url: null, categories: [cat('fiscalite')] },
-  { slug: 'atelier-compta', display_name: 'Atelier Compta', headline: 'Comptabilité en ligne pour TPE', city: 'Lille', country: 'FR', logo_url: null, categories: [cat('comptabilite')] },
-  { slug: 'statuts-express', display_name: 'Statuts Express', headline: 'Création de société clés en main', city: 'Marseille', country: 'FR', logo_url: null, categories: [cat('creation-societe'), cat('domiciliation')] },
-  { slug: 'innov-ip', display_name: 'Innov IP', headline: 'Brevets, marques et logiciels', city: 'Grenoble', country: 'FR', logo_url: null, categories: [cat('propriete-intellectuelle')] },
-  { slug: 'rgpd-solutions', display_name: 'RGPD Solutions', headline: 'Mise en conformité RGPD des sites et boutiques', city: 'Rennes', country: 'FR', logo_url: null, categories: [cat('juridique')] },
-  { slug: 'gestion-independants', display_name: 'Gestion Indépendants', headline: 'Accompagnement des micro-entrepreneurs', city: 'Strasbourg', country: 'FR', logo_url: null, categories: [cat('comptabilite'), cat('fiscalite')] },
-  { slug: 'siege-lyon', display_name: 'Siège Lyon Centre', headline: 'Domiciliation et bureaux à la carte', city: 'Lyon', country: 'FR', logo_url: null, categories: [cat('domiciliation')] },
+  { slug: 'cabinet-morel-conseil', display_name: 'Cabinet Morel Conseil', headline: 'Juristes en droit des sociétés', city: 'Lyon', country: 'FR', logo_url: '/images/hero/expert-1.webp', banner_url: '/images/demo/banner-1.webp', categories: [cat('juridique'), cat('creation-societe')] },
+  { slug: 'compta-claire', display_name: 'Compta Claire', headline: 'Expertise comptable pour indépendants', city: 'Nantes', country: 'FR', logo_url: '/images/hero/expert-2.webp', banner_url: '/images/demo/banner-2.webp', categories: [cat('comptabilite'), cat('fiscalite')] },
+  { slug: 'marques-et-co', display_name: 'Marques & Co', headline: 'Conseil en propriété industrielle', city: 'Paris', country: 'FR', logo_url: '/images/hero/expert-3.webp', banner_url: '/images/demo/banner-3.webp', categories: [cat('propriete-intellectuelle')] },
+  { slug: 'domicile-pro', display_name: 'Domicile Pro', headline: "Domiciliation d'entreprises", city: 'Bordeaux', country: 'FR', logo_url: '/images/hero/expert-4.webp', banner_url: '/images/demo/banner-4.webp', categories: [cat('domiciliation')] },
+  { slug: 'avocats-delaunay', display_name: 'Delaunay Avocats', headline: 'Avocats en droit des affaires et des start-up', city: 'Paris', country: 'FR', logo_url: '/images/hero/expert-5.webp', banner_url: '/images/demo/banner-1.webp', categories: [cat('juridique'), cat('creation-societe')] },
+  { slug: 'fisca-conseil', display_name: 'Fisca Conseil', headline: 'Optimisation et conformité fiscale', city: 'Toulouse', country: 'FR', logo_url: null, banner_url: '/images/demo/banner-2.webp', categories: [cat('fiscalite')] },
+  { slug: 'atelier-compta', display_name: 'Atelier Compta', headline: 'Comptabilité en ligne pour TPE', city: 'Lille', country: 'FR', logo_url: null, banner_url: '/images/demo/banner-3.webp', categories: [cat('comptabilite')] },
+  { slug: 'statuts-express', display_name: 'Statuts Express', headline: 'Création de société clés en main', city: 'Marseille', country: 'FR', logo_url: null, banner_url: '/images/demo/banner-4.webp', categories: [cat('creation-societe'), cat('domiciliation')] },
+  { slug: 'innov-ip', display_name: 'Innov IP', headline: 'Brevets, marques et logiciels', city: 'Grenoble', country: 'FR', logo_url: null, banner_url: '/images/demo/banner-1.webp', categories: [cat('propriete-intellectuelle')] },
+  { slug: 'rgpd-solutions', display_name: 'RGPD Solutions', headline: 'Mise en conformité RGPD des sites et boutiques', city: 'Rennes', country: 'FR', logo_url: null, banner_url: '/images/demo/banner-2.webp', categories: [cat('juridique')] },
+  { slug: 'gestion-independants', display_name: 'Gestion Indépendants', headline: 'Accompagnement des micro-entrepreneurs', city: 'Strasbourg', country: 'FR', logo_url: null, banner_url: '/images/demo/banner-3.webp', categories: [cat('comptabilite'), cat('fiscalite')] },
+  { slug: 'siege-lyon', display_name: 'Siège Lyon Centre', headline: 'Domiciliation et bureaux à la carte', city: 'Lyon', country: 'FR', logo_url: null, banner_url: '/images/demo/banner-4.webp', categories: [cat('domiciliation')] },
 ];
 
 /* ---------------------------------------------------------------- Stockage local */
@@ -612,7 +613,7 @@ export function demoApi(path: string, method: string, query: Record<string, unkn
     if (typeof input.country === 'string' || input.country === null) edits.country = input.country ?? undefined;
     if (typeof input.locale === 'string') edits.locale = input.locale;
     if (typeof input.timezone === 'string') edits.timezone = input.timezone;
-    if ('avatar' in input) edits.avatar_url = input.avatar ? (mediaUrls.get(String(input.avatar)) ?? null) : null;
+    if ('avatar' in input) edits.avatar_url = input.avatar ? (mediaUrls.get(String(input.avatar)) ?? demoMediaUrl(input.avatar)) : null;
     save(profileKey(user.email), edits);
     return { data: currentUser() };
   }
@@ -739,10 +740,11 @@ export function demoApi(path: string, method: string, query: Record<string, unkn
   if (route === 'media') {
     requireUser();
     const file = body instanceof FormData ? body.get('file') : null;
-    const uuid = crypto.randomUUID();
-    const url = file instanceof Blob ? URL.createObjectURL(file) : '';
-    mediaUrls.set(uuid, url);
-    return { data: { uuid, url } };
+    if (!(file instanceof Blob)) throw new DemoError(422, { message: 'Image manquante.', errors: { file: ['Choisissez une image.'] } });
+    return storeDemoMedia(file).then((media) => {
+      mediaUrls.set(media.uuid, media.url);
+      return { data: media };
+    });
   }
 
   throw new DemoError(404, { message: 'Introuvable (démonstration).' });

@@ -67,6 +67,8 @@ export interface ProviderSummary {
   city: string | null;
   country: string | null;
   logo_url: string | null;
+  /** Présente dans l'annuaire (GET /providers), décision 82. */
+  banner_url?: string | null;
   categories?: Category[];
 }
 
@@ -227,6 +229,8 @@ export interface ProviderProfile {
   country: string | null;
   website: string | null;
   logo_url: string | null;
+  /** Bannière du profil public (décision 82). */
+  banner_url: string | null;
   categories: Category[];
   published_at: string | null;
 }
@@ -271,6 +275,8 @@ export interface PublicOffer {
   delivery_mode: DeliveryMode;
   country: string;
   city: string | null;
+  /** Image de couverture facultative (décision 83). */
+  image_url: string | null;
   provider: { display_name: string; slug: string | null; headline: string | null; city: string | null; country: string | null; logo_url: string | null } | null;
   seller: SellerCard | null;
   published_at: string | null;
@@ -290,6 +296,7 @@ export interface OwnOffer {
   delivery_mode: DeliveryMode;
   country: string;
   city: string | null;
+  image_url: string | null;
   status: 'draft' | 'published' | 'unpublished';
   version: number;
   moderation: { restricted: boolean; decision: string | null } | null;

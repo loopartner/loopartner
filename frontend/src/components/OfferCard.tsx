@@ -6,7 +6,15 @@ import { Icon } from './Icon';
 /** Carte d'une offre publiée : prix indicatif TTC saisi par le prestataire, jamais recalculé. */
 export function OfferCard({ offer, showProvider = true }: { offer: PublicOffer; showProvider?: boolean }) {
   return (
-    <article className="card offer-card">
+    <article className="card offer-card offer-card--image">
+      <Link href={`/offres/${offer.slug}`} className={`offer-card__media${offer.image_url ? '' : ' offer-card__media--empty'}`} tabIndex={-1} aria-hidden="true">
+        {offer.image_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={offer.image_url} alt="" loading="lazy" />
+        ) : (
+          <Icon name="briefcase" size={36} />
+        )}
+      </Link>
       <div className="project-card__pills">
         {offer.category ? <span className="pill pill--tag">{offer.category.name}</span> : null}
         <span className="pill pill--soft">{DELIVERY_LABELS[offer.delivery_mode]}</span>

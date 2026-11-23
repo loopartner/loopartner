@@ -8,6 +8,7 @@ import { Dialog } from '@/components/Dialog';
 import { FormError, TextField } from '@/components/Field';
 import { Icon, type IconName } from '@/components/Icon';
 import { MediaUpload } from '@/components/MediaUpload';
+import { ProviderCover } from '@/components/ProviderCover';
 import { type AgendaResponse, type AgendaItem, itemHref, kindLabel, SOURCE_ICONS, utcDay } from '@/lib/agenda';
 import { api, ApiError } from '@/lib/api';
 import { countryName, dateBadge, formatBudget, formatDate, formatTime, initials } from '@/lib/format';
@@ -164,16 +165,32 @@ function ProfileCard({ user, isProvider }: { user: Me; isProvider: boolean }) {
           ) : provider === null ? (
             <p>
               Vous n&apos;avez pas encore de profil prestataire : les clients ne peuvent pas vous trouver.{' '}
-              <Link href="/espace/profil">Créer mon profil</Link>
+              <Link href="/espace/profil">Créer mon profil en quatre étapes</Link>
             </p>
           ) : (
             <>
-              <p style={{ margin: '0 0 6px' }}>
-                <strong>{provider.display_name}</strong>
-                {provider.headline ? ` · ${provider.headline}` : ''}
-                {provider.city ? ` · ${provider.city}` : ''}
-              </p>
-              {provider.bio ? <p className="project-card__excerpt">{provider.bio}</p> : null}
+              <ProviderCover
+                name={provider.display_name}
+                bannerUrl={provider.banner_url}
+                logoUrl={provider.logo_url}
+                subtitle={[provider.headline, provider.city].filter(Boolean).join(' · ') || undefined}
+                compact
+              />
+              {provider.status !== 'published' ? (
+                <p className="alert alert--warning" style={{ margin: '12px 0 0' }}>
+                  Pour publier votre profil, il manque :{' '}
+                  {[
+                    !provider.logo_url ? 'une photo' : null,
+                    !provider.banner_url ? 'une bannière' : null,
+                    (provider.bio ?? '').trim().length < 80 ? 'une description de 80 caractères' : null,
+                    provider.categories.length === 0 ? 'un domaine' : null,
+                  ]
+                    .filter(Boolean)
+                    .join(', ') || 'seulement la publication'}
+                  .
+                </p>
+              ) : null}
+              {provider.bio ? <p className="project-card__excerpt" style={{ marginTop: 12 }}>{provider.bio}</p> : null}
               <div className="project-card__pills" style={{ margin: '8px 0 14px' }}>
                 {provider.categories.map((category) => (
                   <span key={category.slug} className="pill pill--tag">
