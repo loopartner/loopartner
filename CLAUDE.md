@@ -990,6 +990,9 @@ durées dans `config/security.php`. Textes destinés aux utilisateurs, sources c
   422 sur la ligne ; un taux `exclusive` (franchise, autoliquidation) s'applique seul (422).
   **Sans aucun taux vérifié : 409 `{"code": "vat_rates_unavailable"}`** : aucun devis possible
   en production avant la vérification des taux par l'expert-comptable (décision 49).
+  `GET /me/quotes/vat-rates` (prestataire) : taux vérifiés en vigueur du pays de son identité
+  (`code`, `basis_points`, `label`, `scope`, `exclusive`, `requires_certification` ;
+  `meta.available` false sans taux), lus par le formulaire de devis du frontend.
   `tests/Arch/MarketplaceNoFiscalValuesTest.php` refuse tout décimal ou grand nombre hors
   plafonds techniques dans le module.
 - **Envoi** (`POST …/send`, `SendQuote`) : conditions revérifiées ; taux du jour copiés dans
@@ -1702,12 +1705,18 @@ Dossier `frontend/`, décisions 2 (modifiée), 71 à 74. Maquettes : fichier Fig
   en démonstration, les images envoyées sont gardées en data URL (`demo-media.ts`).
   Accueil : photos d'experts et pointillés de la maquette Figma (`public/images/hero`, masqués
   sous 1280 px) et mot du titre qui défile (`RotatingWord`, sans dépendance).
-  Premium (décision 81) : `/premium` (offre et avantages par rôle, `src/lib/premium.ts` recopié
+  Premium (décision 81) : `/premium` (offre des prestataires seulement, bascule mensuel / annuel, `src/lib/premium.ts` recopié
   des décisions 32, 35 et 81 ; souscription désactivée jusqu'au lot 10), `/devenir-prestataire`
   (étapes, gratuit ou Premium) ; un prestataire sans Premium voit sur `/projets/[uuid]`
   l'invitation à passer Premium au lieu du formulaire (403 `premium_required`) ; « Passer
   Premium » dans le menu du compte ; démonstration : `comptable@` est Premium, `prestataire@` et
   `marques@` ne le sont pas.
+  Devis (`/devis`, `src/lib/quotes.ts`) : liste (envoyés pour un prestataire, reçus pour un
+  porteur de projet), `/devis/nouveau?demande=<uuid>` ouvert par « Faire un devis » dans une
+  conversation (prestataire), `/devis/[uuid]` (brouillon modifiable, puis envoi ; lecture, PDF,
+  retrait, nouvelle version ; acceptation avec `content_hash`, refus motivé, rétractation).
+  Les totaux affichés pendant la saisie reprennent la méthode de `QuoteCalculator` ; ceux de
+  l'API font foi. Démonstration : `demo-quotes.ts` (taux fictif « [Démo] »).
   Mon compte (`/compte`) : informations et préférences (`PATCH /me` : nom, pays, langue, fuseau),
   mot de passe (`PUT /auth/user/password`), double authentification Fortify (mot de passe
   confirmé sur 423, QR code affiché comme image `data:`, clé, code, codes de secours montrés une

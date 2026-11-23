@@ -234,6 +234,7 @@ const API_ROUTES = [
     'POST api/v1/me/offers/{uuid}/publish' => 'auth',
     'POST api/v1/me/offers/{uuid}/unpublish' => 'auth',
     'GET api/v1/me/quotes' => 'auth',
+    'GET api/v1/me/quotes/vat-rates' => 'auth',
     'POST api/v1/me/quotes' => 'auth',
     'GET api/v1/me/quotes/{uuid}' => 'auth',
     'PUT api/v1/me/quotes/{uuid}' => 'auth',
