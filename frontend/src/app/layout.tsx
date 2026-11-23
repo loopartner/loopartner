@@ -19,7 +19,6 @@ export const metadata: Metadata = {
   },
   description:
     "Publiez votre projet gratuitement et échangez avec des prestataires indépendants : création de société, juridique, comptabilité, fiscalité, propriété intellectuelle.",
-  icons: { icon: '/images/logo-blue.png' },
 };
 
 export const viewport: Viewport = {
