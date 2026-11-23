@@ -8,6 +8,7 @@ use App\Modules\Accounts\Actions\FindPublishedProvider;
 use App\Modules\Accounts\Actions\GrantPremium;
 use App\Modules\Accounts\Actions\IsPremium;
 use App\Modules\Accounts\Actions\UpsertProviderProfile;
+use App\Modules\Accounts\Models\ProviderProfile;
 use App\Modules\Blog\Actions\ApproveArticle;
 use App\Modules\Blog\Actions\CreateArticle;
 use App\Modules\Blog\Actions\RejectArticle;
@@ -38,8 +39,11 @@ use App\Modules\Events\Models\Event;
 use App\Modules\Events\Models\EventRegistration;
 use App\Modules\Events\Support\EventPublisher;
 use App\Support\Legal\LegalDocuments;
+use App\Support\Media\MediaLibrary;
+use App\Support\Media\MediaPurpose;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
@@ -370,20 +374,54 @@ class DatabaseSeeder extends Seeder
             $user->syncRoles([$role]);
 
             if ($role === 'prestataire') {
-                // Un profil publié doit avoir au moins une catégorie.
+                // Un profil publié doit être complet (décision 82) : au moins une catégorie, une
+                // photo, une bannière et une description de 80 caractères.
                 app(UpsertProviderProfile::class)->handle($user, [
                     'display_name' => 'Prestataire Test',
                     'headline' => 'Profil de démonstration',
-                    'bio' => 'Profil prestataire créé par le seeder pour le développement local.',
+                    'bio' => 'Profil prestataire créé par le seeder pour le développement local : création de statuts, sites web et identité visuelle.',
                     'city' => 'Lyon',
                     'country' => 'FR',
                     'categories' => ['creation-statuts', 'developpement-web', 'identite-visuelle'],
                     'status' => 'published',
+                    ...$this->demoProviderMedia($user),
                 ]);
             }
 
             $this->seedDemoProjects($user, self::DEMO_PROJECTS[$role] ?? []);
         }
+    }
+
+    /**
+     * Photo et bannière de démonstration du prestataire (images unies générées par GD), créées
+     * seulement si le profil n'en a pas encore : relancer le seeder ne les remplace pas.
+     *
+     * @return array{logo?: string, banner?: string}
+     */
+    private function demoProviderMedia(User $user): array
+    {
+        $profile = ProviderProfile::query()->where('user_id', $user->id)->first();
+        $media = [];
+
+        foreach (['logo' => [MediaPurpose::ProviderLogo, 400, 400, 'logo_media_id'], 'banner' => [MediaPurpose::ProviderBanner, 1600, 400, 'banner_media_id']] as $field => [$purpose, $width, $height, $column]) {
+            if ($profile?->{$column} !== null) {
+                continue;
+            }
+
+            $image = imagecreatetruecolor($width, $height);
+            if ($image === false) {
+                continue;
+            }
+            imagefilledrectangle($image, 0, 0, $width, $height, (int) imagecolorallocate($image, 106, 166, 218));
+            imagefilledellipse($image, intdiv($width, 2), intdiv($height, 2), intdiv(min($width, $height), 2), intdiv(min($width, $height), 2), (int) imagecolorallocate($image, 225, 228, 171));
+            $path = (string) tempnam(sys_get_temp_dir(), 'demo-media');
+            imagepng($image, $path);
+
+            $media[$field] = app(MediaLibrary::class)->store($user, new UploadedFile($path, "{$field}.png", 'image/png', null, true), $purpose)->uuid;
+            @unlink($path);
+        }
+
+        return $media;
     }
 
     /**
