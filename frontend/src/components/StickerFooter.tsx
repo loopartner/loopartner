@@ -230,8 +230,10 @@ export interface StickerSlapFooterProps {
   wordmarkMaxHeight?: string
   /** The frame. */
   paper?: string
-  /** The panel. */
+  /** The panel (couleur ou dégradé CSS). */
   panel?: string
+  /** Texte du panneau. Par défaut, `cream`. */
+  panelInk?: string
   /** Text on the frame and the tags. */
   ink?: string
   /** The wordmark and the panel text. Defaults to `paper`. */
@@ -285,7 +287,7 @@ const CSS =
   ".ssf-chat svg{width:24px;height:24px}" +
   ".ssf-chat:hover{transform:rotate(-14deg) scale(1.12)}" +
   // panel
-  ".ssf-panel{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;overflow:hidden;overflow:clip;border-radius:clamp(14px,1.8cqw,24px);background:var(--ssf-panel);color:var(--ssf-cream);transform-origin:50% 100%}" +
+  ".ssf-panel{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;overflow:hidden;overflow:clip;border-radius:clamp(14px,1.8cqw,24px);background:var(--ssf-panel);color:var(--ssf-panel-ink,var(--ssf-cream));transform-origin:50% 100%}" +
   ".ssf-cols{position:relative;z-index:2;display:grid;grid-template-columns:repeat(var(--ssf-n,3),minmax(0,1fr));gap:clamp(22px,3cqw,44px) clamp(16px,2.4cqw,36px);padding:clamp(26px,5.4cqw,72px) clamp(18px,1.8cqw,26px) clamp(20px,3cqw,40px)}" +
   ".ssf-col{display:flex;flex-direction:column;align-items:flex-start;min-width:0}" +
   ".ssf-tag{display:inline-block;margin-bottom:clamp(14px,1.6cqw,22px);padding:.28em .72em .32em;border-radius:999px;background:var(--ssf-cream);color:var(--ssf-ink);font-size:clamp(12px,1.05cqw,14px);font-weight:600;line-height:1.2;letter-spacing:-.005em}" +
@@ -312,7 +314,7 @@ const CSS =
   ".ssf-small a{opacity:.9;transition:opacity .2s}.ssf-small a:hover{opacity:1;text-decoration:underline;text-underline-offset:3px}" +
   ".ssf-note{margin-top:clamp(12px,1.3cqw,18px);max-width:34ch;font-size:clamp(11px,.92cqw,13px);line-height:1.45;opacity:.82}" +
   ".ssf-socials{display:flex;gap:clamp(8px,.9cqw,12px);margin-top:clamp(16px,2cqw,26px)}" +
-  ".ssf-soc{display:grid;place-items:center;width:clamp(34px,2.9cqw,40px);height:clamp(34px,2.9cqw,40px);border-radius:12px;color:var(--ssf-cream);box-shadow:inset 0 0 0 1.5px color-mix(in oklab,var(--ssf-cream) 45%,transparent);transition:background .25s,color .25s,box-shadow .25s,transform .45s cubic-bezier(.2,1.6,.3,1)}" +
+  ".ssf-soc{display:grid;place-items:center;width:clamp(34px,2.9cqw,40px);height:clamp(34px,2.9cqw,40px);border-radius:12px;color:var(--ssf-panel-ink,var(--ssf-cream));box-shadow:inset 0 0 0 1.5px color-mix(in oklab,var(--ssf-panel-ink,var(--ssf-cream)) 45%,transparent);transition:background .25s,color .25s,box-shadow .25s,transform .45s cubic-bezier(.2,1.6,.3,1)}" +
   ".ssf-soc svg{width:58%;height:58%}" +
   ".ssf-soc svg *{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}" +
   ".ssf-soc .ssf-dot{stroke-width:2.8}" +
@@ -434,11 +436,11 @@ const stickerArt = (kind: StickerKind, text?: string): { shape: React.ReactNode;
         shape: <circle cx="60" cy="60" r="50" />,
         art: (
           <>
-            <circle cx="60" cy="60" r="50" fill="#99cefb" />
-            <circle cx="60" cy="60" r="40" fill="none" stroke="#1a4f82" strokeWidth="3" opacity=".9" />
-            <ellipse cx="47" cy="50" rx="4" ry="7.5" fill="#1a4f82" />
-            <ellipse cx="73" cy="50" rx="4" ry="7.5" fill="#1a4f82" />
-            <path d="M36 66Q60 92 84 66M32 63L39 69M88 63L81 69" fill="none" stroke="#1a4f82" strokeWidth="5" strokeLinecap="round" />
+            <circle cx="60" cy="60" r="50" fill="#2f6ea8" />
+            <circle cx="60" cy="60" r="40" fill="none" stroke="#fff" strokeWidth="3" opacity=".9" />
+            <ellipse cx="47" cy="50" rx="4" ry="7.5" fill="#fff" />
+            <ellipse cx="73" cy="50" rx="4" ry="7.5" fill="#fff" />
+            <path d="M36 66Q60 92 84 66M32 63L39 69M88 63L81 69" fill="none" stroke="#fff" strokeWidth="5" strokeLinecap="round" />
           </>
         ),
       }
@@ -580,8 +582,9 @@ export default function StickerSlapFooter({
   height = "auto",
   wordmarkMaxHeight = "40vh",
   paper = "#f3f3ed",
-  // Bleu de la marque, assombri pour que le texte crème reste lisible (contraste AA).
-  panel = "#2f6ea8",
+  // Même dégradé que le bandeau d'en-tête ; texte foncé, le blanc serait illisible sur ce bleu.
+  panel = "linear-gradient(180deg, var(--blue) 0%, var(--blue-light) 100%)",
+  panelInk = "#1a1a1a",
   ink = "#1a1a1a",
   cream,
   accent = "#e1e4ab",
@@ -777,6 +780,7 @@ export default function StickerSlapFooter({
     "--ssf-panel": panel,
     "--ssf-ink": ink,
     "--ssf-cream": cream ?? paper,
+    "--ssf-panel-ink": panelInk,
     "--ssf-accent": accent,
     "--ssf-sans": fontSans,
     "--ssf-wmh": wordmarkMaxHeight,
