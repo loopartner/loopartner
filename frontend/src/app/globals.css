@@ -2532,3 +2532,12 @@ textarea {
 .project-card:hover .link-arrow{color:var(--blue-ink)}
 .project-card__hint{position:relative;z-index:2}
 button.link-arrow{background:none;border:0;padding:0;cursor:pointer;font:inherit;color:var(--blue)}
+
+.pricing__grid--two{grid-template-columns:repeat(2,minmax(0,1fr));max-width:880px;margin:0 auto;width:100%}
+@media (max-width:1000px){.pricing__grid--two{grid-template-columns:1fr}}
+
+.btn--danger{background:#c62828;color:#fff;box-shadow:none}
+.btn--danger:hover{background:#a81f1f}
+.icon-btn{display:inline-grid;place-items:center;width:44px;height:44px;border-radius:50%;border:0;background:var(--ink);color:#fff;cursor:pointer;transition:transform .2s,background .2s;position:relative;z-index:2}
+.icon-btn:hover{background:var(--blue-ink);transform:translateY(-2px)}
+.icon-btn:focus-visible{outline:3px solid var(--blue);outline-offset:3px}

@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Icon } from '@/components/Icon';
 import {
   AGENDA_SOURCES,
@@ -47,7 +46,8 @@ function shift({ year, month }: Month, delta: number): Month {
 
 /**
  * Agenda complet (`GET /me/agenda`) : vue du mois, détail de la journée choisie, filtres par
- * source et abonnement depuis un logiciel de calendrier (`/me/agenda/feed`).
+ * source. L'abonnement depuis un logiciel de calendrier (`/me/agenda/feed`) n'est pas encore
+ * proposé : la fonctionnalité n'est pas sortie.
  */
 export function AgendaView() {
   const { user, loading } = useSession();
@@ -223,7 +223,6 @@ export function AgendaView() {
         </p>
       ))}
 
-      <FeedCard />
     </div>
   );
 }
@@ -250,105 +249,5 @@ function AgendaEntries({ items, withDate = false }: { items: AgendaItem[]; withD
         return <li key={`${item.source}:${item.ref}`}>{href ? <Link href={href}>{content}</Link> : <div>{content}</div>}</li>;
       })}
     </ul>
-  );
-}
-
-interface FeedState {
-  active: boolean;
-  created_at: string | null;
-  last_accessed_at: string | null;
-  url?: string;
-  notice?: string;
-}
-
-/** Abonnement à l'agenda depuis Google Agenda, Outlook ou Calendrier (titres et dates seulement). */
-function FeedCard() {
-  const [state, setState] = useState<FeedState | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [confirmRevoke, setConfirmRevoke] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    api<{ data: FeedState }>('me/agenda/feed')
-      .then((response) => setState(response.data))
-      .catch(() => setState({ active: false, created_at: null, last_accessed_at: null }));
-  }, []);
-
-  async function create() {
-    setBusy(true);
-    setError(null);
-    try {
-      const response = await api<{ data: FeedState }>('me/agenda/feed', { method: 'POST' });
-      setState(response.data);
-      setCopied(false);
-    } catch (exception) {
-      setError(exception instanceof ApiError ? exception.message : 'L’adresse ne peut pas être créée pour le moment.');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <section className="card">
-      <h2 className="section-title" style={{ fontSize: 22, marginTop: 0 }}>
-        S&apos;abonner depuis mon calendrier
-      </h2>
-      <p style={{ fontFamily: 'var(--font-text)', color: 'var(--muted)', lineHeight: 1.6, marginTop: 0 }}>
-        Ajoutez votre agenda Loopartner dans Google Agenda, Outlook ou Calendrier : il se met à jour tout seul. Seuls les titres et les dates sont
-        partagés, jamais les lieux, les liens de connexion ni les notes.
-      </p>
-      {error ? <p className="alert alert--error">{error}</p> : null}
-      {state === null ? (
-        <div className="skeleton" style={{ height: 48 }} />
-      ) : state.url ? (
-        <div className="form-stack">
-          <p className="alert alert--warning">{state.notice ?? 'Gardez cette adresse privée. Elle ne sera plus affichée.'}</p>
-          <div className="feed-url">
-            <code>{state.url}</code>
-            <button
-              type="button"
-              className="btn btn--dark btn--sm"
-              onClick={() => {
-                void navigator.clipboard?.writeText(state.url ?? '').then(() => setCopied(true));
-              }}
-            >
-              {copied ? 'Copiée' : 'Copier'}
-            </button>
-          </div>
-        </div>
-      ) : state.active ? (
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-          <span className="pill pill--tag">
-            <Icon name="check" size={14} /> Abonnement actif
-            {state.created_at ? ` depuis le ${formatDate(state.created_at)}` : ''}
-          </span>
-          <button type="button" className="btn btn--outline btn--sm" disabled={busy} onClick={() => void create()}>
-            Nouvelle adresse
-          </button>
-          <button type="button" className="btn btn--ghost btn--sm" disabled={busy} onClick={() => setConfirmRevoke(true)}>
-            Arrêter l&apos;abonnement
-          </button>
-        </div>
-      ) : (
-        <button type="button" className="btn btn--lime" disabled={busy} onClick={() => void create()}>
-          <Icon name="calendar" size={16} /> Créer mon adresse d&apos;abonnement
-        </button>
-      )}
-      {confirmRevoke ? (
-        <ConfirmDialog
-          title="Arrêter l'abonnement ?"
-          confirmLabel="Arrêter"
-          onClose={() => setConfirmRevoke(false)}
-          onConfirm={async () => {
-            await api('me/agenda/feed', { method: 'DELETE' });
-            setState({ active: false, created_at: null, last_accessed_at: null });
-            setConfirmRevoke(false);
-          }}
-        >
-          L&apos;adresse actuelle ne fonctionnera plus : votre logiciel de calendrier cessera de se mettre à jour.
-        </ConfirmDialog>
-      ) : null}
-    </section>
   );
 }

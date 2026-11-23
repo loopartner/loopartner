@@ -93,12 +93,12 @@ export default async function ProvidersPage({ searchParams }: { searchParams: Pr
                   </span>
                 ))}
               </div>
-              <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+              <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                 <Link href={`/prestataires/${provider.slug}`} className="link-arrow">
                   Voir le profil <Icon name="arrowRight" size={16} />
                 </Link>
-                <AuthLink href={`/prestataires/${provider.slug}/contacter`} reason="Créez un compte gratuit ou connectez-vous pour contacter ce prestataire. Vos échanges restent dans la messagerie Loopartner." className="link-arrow">
-                  Contacter
+                <AuthLink href={`/prestataires/${provider.slug}/contacter`} reason="Créez un compte gratuit ou connectez-vous pour contacter ce prestataire. Vos échanges restent dans la messagerie Loopartner." className="icon-btn" ariaLabel={`Contacter ${provider.display_name}`}>
+                  <Icon name="message" size={20} />
                 </AuthLink>
               </div>
             </article>

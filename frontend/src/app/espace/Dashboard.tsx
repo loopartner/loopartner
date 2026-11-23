@@ -582,7 +582,7 @@ function OwnProjects() {
                       <Link href={`/projets/${project.uuid}`} className="btn btn--ghost btn--sm">
                         Voir
                       </Link>
-                      <button type="button" className="btn btn--outline btn--sm" onClick={() => action(project.uuid, 'close')}>
+                      <button type="button" className="btn btn--danger btn--sm" onClick={() => action(project.uuid, 'close')}>
                         Clore
                       </button>
                     </>

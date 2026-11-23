@@ -16,12 +16,15 @@ export function AuthLink({
   children,
   reason = 'Connectez-vous pour continuer.',
   signupProfile = 'client',
+  ariaLabel,
 }: {
   href: string;
   className?: string;
   children: ReactNode;
   reason?: string;
   signupProfile?: 'client' | 'entrepreneur' | 'prestataire';
+  /** Nom accessible quand le lien n'affiche qu'une icône. */
+  ariaLabel?: string;
 }) {
   const { user, loading } = useSession();
   const [open, setOpen] = useState(false);
@@ -29,7 +32,7 @@ export function AuthLink({
 
   if (user || loading) {
     return (
-      <Link href={href} className={className}>
+      <Link href={href} className={className} aria-label={ariaLabel} title={ariaLabel}>
         {children}
       </Link>
     );
@@ -37,7 +40,7 @@ export function AuthLink({
 
   return (
     <>
-      <button type="button" className={className} onClick={() => setOpen(true)} aria-haspopup="dialog">
+      <button type="button" className={className} onClick={() => setOpen(true)} aria-haspopup="dialog" aria-label={ariaLabel} title={ariaLabel}>
         {children}
       </button>
       {open ? (

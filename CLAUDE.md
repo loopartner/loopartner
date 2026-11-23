@@ -1674,8 +1674,8 @@ Dossier `frontend/`, décisions 2 (modifiée), 71 à 74. Maquettes : fichier Fig
   porteur ; mes événements : inscriptions à venir `GET /me/event-registrations` et, pour un
   organisateur, ses webinars `GET /me/events` ; messages et raccourcis ; renvoi du lien de
   vérification), `/agenda` (vue du mois et de la journée de `GET /me/agenda`, filtres par source,
-  avertissements `disclaimers`, abonnement `GET|POST|DELETE /me/agenda/feed` : URL montrée une
-  seule fois ; `src/lib/agenda.ts`),
+  avertissements `disclaimers` ; l'abonnement `/me/agenda/feed` n'est pas encore proposé dans
+  l'interface ; `src/lib/agenda.ts`),
   `/prestataires`, `/articles`, `/articles/[slug]`, `/articles/rediger`, `/evenements`,
   `/evenements/[slug]` (inscription), `/evenements/proposer`, `/mes-evenements`.
   Messagerie (étape 1 du deuxième passage, présentation inspirée de codeur.com) : `/messages`

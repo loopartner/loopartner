@@ -4,37 +4,31 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Icon } from '@/components/Icon';
 import { formatDate } from '@/lib/format';
-import { PREMIUM_FEATURES, PREMIUM_PRICES, ROLE_TITLES, type PremiumRole } from '@/lib/premium';
+import { PREMIUM_FEATURES, PREMIUM_PRICES, type PremiumRole } from '@/lib/premium';
 import { useSession } from '@/lib/session';
 
-const ROLES: PremiumRole[] = ['prestataire', 'particulier', 'entrepreneur'];
+type Billing = 'monthly' | 'yearly';
 
 /**
- * Présentation de l'offre (décisions 32, 35 et 81) : trois cartes (Gratuit, Premium mensuel mis
- * en avant, Premium annuel) dont les avantages suivent le profil choisi, puis le tableau détaillé.
- * Pas de souscription en ligne avant le lot 10 (Billing) : les boutons l'annoncent.
+ * Présentation de l'offre aux prestataires (décisions 32, 35 et 81) : Premium ne concerne que
+ * les prestataires (les porteurs de projet utilisent Loopartner gratuitement). Une bascule
+ * mensuel / annuel change le prix de la carte Premium. Pas de souscription en ligne avant le
+ * lot 10 (Billing) : les boutons l'annoncent.
  */
 export function PremiumPlans() {
   const { user } = useSession();
-  const own = ROLES.find((role) => user?.roles.includes(role));
-  const [role, setRole] = useState<PremiumRole>(own ?? 'prestataire');
+  const [billing, setBilling] = useState<Billing>('monthly');
+  const role: PremiumRole = 'prestataire';
   const active = user?.premium?.active ?? false;
   const features = PREMIUM_FEATURES[role];
+  const price = (billing === 'monthly' ? PREMIUM_PRICES.monthly : PREMIUM_PRICES.yearly).split(' ')[0];
 
   return (
     <div className="pricing">
-      <div className="pricing__roles" role="tablist" aria-label="Votre profil">
-        {ROLES.map((item) => (
-          <button
-            key={item}
-            type="button"
-            role="tab"
-            aria-selected={item === role}
-            className={item === role ? 'is-active' : undefined}
-            onClick={() => setRole(item)}
-          >
-            {ROLE_TITLES[item]}
-            {item === own ? <span className="pricing__mine">Vous</span> : null}
+      <div className="pricing__roles" role="radiogroup" aria-label="Facturation">
+        {(['monthly', 'yearly'] as const).map((item) => (
+          <button key={item} type="button" role="radio" aria-checked={item === billing} className={item === billing ? 'is-active' : undefined} onClick={() => setBilling(item)}>
+            {item === 'monthly' ? 'Mensuel' : 'Annuel'}
           </button>
         ))}
       </div>
@@ -46,13 +40,13 @@ export function PremiumPlans() {
         </p>
       ) : null}
 
-      <div className="pricing__grid" role="tabpanel" aria-label={`Offres pour les ${ROLE_TITLES[role].toLowerCase()}`}>
+      <div className="pricing__grid pricing__grid--two">
         <article className="pricing-card">
           <PricingArt variant="free" />
           <h2 className="pricing-card__name">Gratuit</h2>
           <p className="pricing-card__price">0 €</p>
           <p className="pricing-card__period">pour toujours</p>
-          <p className="pricing-card__pitch">Pour découvrir Loopartner et mener vos premiers échanges.</p>
+          <p className="pricing-card__pitch">Pour créer votre profil, publier vos offres et répondre à vos premiers clients.</p>
           <ul className="pricing-card__list">
             {features.map((feature) => (
               <li key={feature.title}>
@@ -67,7 +61,7 @@ export function PremiumPlans() {
                 {active ? 'Inclus dans votre compte' : 'Votre offre actuelle'}
               </span>
             ) : (
-              <Link href="/inscription" className="btn btn--dark">
+              <Link href="/inscription?profil=prestataire" className="btn btn--dark">
                 Commencer gratuitement
               </Link>
             )}
@@ -75,14 +69,16 @@ export function PremiumPlans() {
         </article>
 
         <article className="pricing-card pricing-card--featured">
-          <PricingArt variant="premium" />
+          <PricingArt variant={billing === 'monthly' ? 'premium' : 'yearly'} />
           <span className="pricing-card__badge">
             <Icon name="gift" size={14} /> {PREMIUM_PRICES.trialDays} jours d&apos;essai gratuit
           </span>
           <h2 className="pricing-card__name">Premium</h2>
-          <p className="pricing-card__price">{PREMIUM_PRICES.monthly.split(' ')[0]} €</p>
-          <p className="pricing-card__period">TTC par mois, sans engagement</p>
-          <p className="pricing-card__pitch">Pour avancer plus vite, avec tous les outils de votre profil.</p>
+          <p className="pricing-card__price" aria-live="polite">
+            {price} €
+          </p>
+          <p className="pricing-card__period">{billing === 'monthly' ? 'TTC par mois, sans engagement' : 'TTC par an, en un seul paiement'}</p>
+          <p className="pricing-card__pitch">Pour trouver plus de clients, avec tous les outils du prestataire.</p>
           <ul className="pricing-card__list">
             <li>
               <Icon name="check" size={16} />
@@ -99,31 +95,6 @@ export function PremiumPlans() {
             <SubscribeButton active={active} light />
           </div>
         </article>
-
-        <article className="pricing-card">
-          <PricingArt variant="yearly" />
-          <h2 className="pricing-card__name">Premium annuel</h2>
-          <p className="pricing-card__price">{PREMIUM_PRICES.yearly.split(' ')[0]} €</p>
-          <p className="pricing-card__period">TTC par an</p>
-          <p className="pricing-card__pitch">Les mêmes avantages que Premium, en un seul paiement par an.</p>
-          <ul className="pricing-card__list">
-            <li>
-              <Icon name="check" size={16} />
-              <span>Tous les avantages Premium</span>
-            </li>
-            <li>
-              <Icon name="check" size={16} />
-              <span>Essai gratuit de {PREMIUM_PRICES.trialDays} jours</span>
-            </li>
-            <li>
-              <Icon name="check" size={16} />
-              <span>Résiliable en ligne à tout moment</span>
-            </li>
-          </ul>
-          <div className="pricing-card__cta">
-            <SubscribeButton active={active} />
-          </div>
-        </article>
       </div>
 
       <p className="pricing__note" id="premium-soon">
@@ -133,7 +104,7 @@ export function PremiumPlans() {
 
       <section aria-labelledby="premium-details" className="pricing__details">
         <h2 id="premium-details" className="section-title" style={{ fontSize: 24 }}>
-          Comparer en détail : {ROLE_TITLES[role].toLowerCase()}
+          Comparer en détail
         </h2>
         <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
           <table className="table premium-table">

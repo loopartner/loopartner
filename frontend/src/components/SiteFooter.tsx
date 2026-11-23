@@ -22,11 +22,9 @@ const COLUMNS: FooterColumn[] = [
     ],
   },
   {
-    label: 'Compte et légal',
+    label: 'Informations',
     small: true,
     links: [
-      { label: 'Connexion', href: '/connexion' },
-      { label: 'Inscription gratuite', href: '/inscription' },
       { label: 'Comment ça marche', href: '/#comment-ca-marche' },
       { label: "Conditions générales d'utilisation", href: '/legal/terms' },
       { label: 'Conditions de vente Premium', href: '/legal/sales' },

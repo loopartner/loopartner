@@ -6,7 +6,7 @@ export const metadata: Metadata = { title: 'Premium' };
 
 export default function PremiumPage() {
   return (
-    <PageShell title="Loopartner Premium" subtitle="Un seul abonnement, au même prix pour tous ; ses avantages s'adaptent à votre profil.">
+    <PageShell title="Loopartner Premium" subtitle="L'abonnement des prestataires pour trouver plus de clients.">
       <PremiumPlans />
     </PageShell>
   );
