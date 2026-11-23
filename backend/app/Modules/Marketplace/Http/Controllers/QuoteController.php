@@ -4,6 +4,7 @@ namespace App\Modules\Marketplace\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Modules\Compliance\Actions\GetVatRates;
 use App\Modules\Marketplace\Actions\AcceptQuote;
 use App\Modules\Marketplace\Actions\DeclineQuote;
 use App\Modules\Marketplace\Actions\ExerciseQuoteWithdrawal;
@@ -20,7 +21,6 @@ use App\Modules\Marketplace\Http\Requests\ReportQuoteRequest;
 use App\Modules\Marketplace\Http\Requests\StoreQuoteRequest;
 use App\Modules\Marketplace\Http\Requests\UpdateQuoteRequest;
 use App\Modules\Marketplace\Http\Resources\QuoteResource;
-use App\Modules\Compliance\Actions\GetVatRates;
 use App\Modules\Marketplace\Models\Quote;
 use App\Modules\Marketplace\Models\SellerProfile;
 use App\Modules\Marketplace\Support\QuotePdf;
