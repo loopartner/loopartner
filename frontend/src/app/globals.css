@@ -2524,3 +2524,11 @@ textarea {
 }
 .ticket.project-card,.ticket.event-row{padding-right:44px}
 @media (max-width:720px){.ticket{--notch-r:9px;--notch-gap:28px}.ticket.project-card,.ticket.event-row{padding-right:36px}}
+
+/* Carte projet cliquable partout : le lien du titre couvre toute la carte. */
+.project-card{cursor:pointer}
+.project-card__link::after{content:'';position:absolute;inset:0;border-radius:inherit;z-index:1}
+.project-card__link:focus-visible{outline:none}
+.project-card:has(.project-card__link:focus-visible){outline:3px solid var(--blue);outline-offset:-3px}
+.project-card:hover .project-card__title a,.project-card:hover .link-arrow{color:var(--blue-ink)}
+.project-card__hint{position:relative;z-index:2}

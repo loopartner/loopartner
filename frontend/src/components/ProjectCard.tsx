@@ -19,7 +19,7 @@ export function ProjectCard({ project, compact = false, showOfferHint = false }:
         </time>
       </div>
       <h2 className="project-card__title" style={compact ? { fontSize: 20, lineHeight: '28px' } : undefined}>
-        <Link href={`/projets/${project.uuid}`}>{project.title}</Link>
+        <Link href={`/projets/${project.uuid}`} className="project-card__link">{project.title}</Link>
       </h2>
       {project.description && !compact ? <p className="project-card__excerpt">{project.description}</p> : null}
       <div className="project-card__meta">
@@ -28,9 +28,9 @@ export function ProjectCard({ project, compact = false, showOfferHint = false }:
       </div>
       <div className="project-card__footer">
         <div className="project-card__pills">{project.category ? <span className="pill pill--tag">{project.category.name}</span> : null}</div>
-        <Link href={`/projets/${project.uuid}`} className="link-arrow">
+        <span className="link-arrow" aria-hidden="true">
           Voir le projet <Icon name="arrowRight" size={16} />
-        </Link>
+        </span>
       </div>
       {showOfferHint ? (
         <span className="project-card__hint">
