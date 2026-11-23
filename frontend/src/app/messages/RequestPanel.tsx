@@ -9,6 +9,7 @@ import { api, ApiError } from '@/lib/api';
 import { counterpartDetail, counterpartName } from '@/lib/counterpart';
 import { formatBudget, formatDate, formatTime } from '@/lib/format';
 import type { MatchRequest } from '@/lib/types';
+import { ChatAvatar } from './ChatAvatar';
 
 /**
  * Proposition ou demande de contact en attente, affichée comme le début d'une conversation :
@@ -43,9 +44,15 @@ export function RequestPanel({ request, onChanged }: { request: MatchRequest; on
           <Link href="/messages" className="thread__back btn btn--ghost" aria-label="Retour aux messages" style={{ padding: 6 }}>
             <Icon name="arrowLeft" />
           </Link>
+          <ChatAvatar name={name} logo={request.counterpart.provider?.logo_url} size="lg" />
           <div style={{ minWidth: 0 }}>
-            <strong style={{ display: 'block' }}>{slug ? <Link href={`/prestataires/${slug}`}>{name}</Link> : name}</strong>
-            <small style={{ color: 'var(--muted)' }}>{[detail, request.project ? `Projet « ${request.project.title} »` : null].filter(Boolean).join(' · ')}</small>
+            <strong className="thread__name">{slug ? <Link href={`/prestataires/${slug}`}>{name}</Link> : name}</strong>
+            <small className="thread__detail">{detail}</small>
+            {request.project ? (
+              <span className="thread__project">
+                <Icon name="briefcase" size={13} /> {request.project.title}
+              </span>
+            ) : null}
           </div>
         </div>
         {received && !request.counterpart.deleted ? (
@@ -62,15 +69,17 @@ export function RequestPanel({ request, onChanged }: { request: MatchRequest; on
 
       <div className="thread__messages">
         <span className="day-sep">{formatDate(request.created_at, { weekday: 'long', day: 'numeric', month: 'long' })}</span>
-        <div className={`bubble${received ? '' : ' bubble--mine'}`}>
-          <span className="bubble__label">{request.type === 'proposal' ? (received ? 'Proposition reçue' : 'Votre proposition') : received ? 'Demande de contact' : 'Votre demande de contact'}</span>
+        <div className={`bubble bubble--origin${received ? '' : ' bubble--mine'}`}>
+          <span className="bubble__label">
+            <Icon name={request.type === 'proposal' ? 'briefcase' : 'message'} size={14} />{' '}
+            {request.type === 'proposal' ? (received ? 'Proposition reçue' : 'Votre proposition') : received ? 'Demande de contact' : 'Votre demande de contact'}</span>
           {request.message === null ? (
             <span className="bubble__text bubble__text--hidden">Message masqué par la modération</span>
           ) : (
             <span className="bubble__text">{request.message}</span>
           )}
           {request.price ? (
-            <span className="bubble__price">Prix proposé : {formatBudget(request.price.amount, request.price.amount, request.price.currency)}</span>
+            <span className="bubble__price">Prix proposé · {formatBudget(request.price.amount, request.price.amount, request.price.currency)}</span>
           ) : null}
           <span className="bubble__meta">{formatTime(request.created_at)}</span>
         </div>

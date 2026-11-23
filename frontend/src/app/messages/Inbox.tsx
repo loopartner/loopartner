@@ -6,8 +6,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { Icon } from '@/components/Icon';
 import { api, ApiError } from '@/lib/api';
 import { counterpartName } from '@/lib/counterpart';
-import { formatDate, formatTime, initials } from '@/lib/format';
+import { formatDate, formatTime } from '@/lib/format';
 import type { Conversation, MatchRequest, Paginated } from '@/lib/types';
+import { ChatAvatar } from './ChatAvatar';
 import { RequestPanel } from './RequestPanel';
 import { Thread } from './Thread';
 
@@ -30,6 +31,8 @@ export function Inbox() {
   const [items, setItems] = useState<Item[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [filter, setFilter] = useState<'all' | 'unread' | 'requests'>('all');
+  const [query, setQuery] = useState('');
   const reload = useCallback(() => setReloadKey((key) => key + 1), []);
 
   useEffect(() => {
@@ -84,6 +87,17 @@ export function Inbox() {
     if (nothingSelected && firstHref && window.matchMedia('(min-width: 901px)').matches) router.replace(firstHref);
   }, [nothingSelected, firstHref, router]);
 
+  const unreadCount = (items ?? []).filter((item) => item.kind === 'conversation' && item.conversation.unread_count > 0).length;
+  const requestCount = (items ?? []).filter((item) => item.kind === 'request' && item.request.role === 'recipient').length;
+  const needle = query.trim().toLocaleLowerCase('fr');
+  const visible = (items ?? []).filter((item) => {
+    if (filter === 'unread' && !(item.kind === 'conversation' && item.conversation.unread_count > 0)) return false;
+    if (filter === 'requests' && item.kind !== 'request') return false;
+    if (!needle) return true;
+    const subject = item.kind === 'conversation' ? item.conversation : item.request;
+    return `${counterpartName(subject.counterpart)} ${subject.project?.title ?? ''}`.toLocaleLowerCase('fr').includes(needle);
+  });
+
   if (error) return <div className="card empty">{error}</div>;
   if (!items) return <div className="skeleton" style={{ height: 420 }} />;
 
@@ -101,12 +115,33 @@ export function Inbox() {
 
   return (
     <div className={`inbox${current ? ' inbox--thread' : ''}`}>
-      <div className="card inbox__list-card" style={{ padding: 8 }}>
-        <div style={{ padding: '8px 12px' }}>
-          <strong>Messages</strong>
+      <div className="card inbox__list-card">
+        <div className="inbox__list-head">
+          <h2 className="inbox__title">
+            Discussions <span className="inbox__count">{items.length}</span>
+          </h2>
+          <label className="inbox__search">
+            <Icon name="search" size={16} />
+            <span className="visually-hidden">Rechercher une conversation</span>
+            <input type="search" placeholder="Rechercher un nom ou un projet" value={query} onChange={(event) => setQuery(event.target.value)} />
+          </label>
+          <div className="inbox__filters" role="group" aria-label="Filtrer">
+            {(
+              [
+                ['all', 'Tout'],
+                ['unread', `Non lus${unreadCount ? ` (${unreadCount})` : ''}`],
+                ['requests', `Demandes${requestCount ? ` (${requestCount})` : ''}`],
+              ] as const
+            ).map(([value, label]) => (
+              <button key={value} type="button" aria-pressed={filter === value} onClick={() => setFilter(value)}>
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
         <nav className="inbox__list" aria-label="Conversations">
-          {items.map((item) => (item.kind === 'conversation' ? <ConversationItem key={item.key} conversation={item.conversation} selected={item.conversation.uuid === selectedConversation} onOpen={() => router.push(`/messages?c=${item.conversation.uuid}`)} /> : <RequestItem key={item.key} request={item.request} selected={item.request.uuid === selectedRequest} onOpen={() => router.push(`/messages?d=${item.request.uuid}`)} />))}
+          {visible.length === 0 ? <p className="inbox__none">Aucune discussion ne correspond.</p> : null}
+          {visible.map((item) => (item.kind === 'conversation' ? <ConversationItem key={item.key} conversation={item.conversation} selected={item.conversation.uuid === selectedConversation} onOpen={() => router.push(`/messages?c=${item.conversation.uuid}`)} /> : <RequestItem key={item.key} request={item.request} selected={item.request.uuid === selectedRequest} onOpen={() => router.push(`/messages?d=${item.request.uuid}`)} />))}
         </nav>
       </div>
 
@@ -123,18 +158,12 @@ export function Inbox() {
           }}
         />
       ) : (
-        <div className="card thread thread--empty">{nothingSelected ? 'Choisissez une conversation.' : 'Cette conversation n’existe plus ou a été fermée.'}</div>
+        <div className="card thread thread--empty">
+          <Icon name="message" size={36} />
+          <p>{nothingSelected ? 'Choisissez une discussion pour l’afficher ici.' : 'Cette conversation n’existe plus ou a été fermée.'}</p>
+        </div>
       )}
     </div>
-  );
-}
-
-function Avatar({ name, logo }: { name: string; logo: string | null | undefined }) {
-  return logo ? (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={logo} alt="" className="avatar" />
-  ) : (
-    <span className="avatar">{initials(name)}</span>
   );
 }
 
@@ -143,7 +172,7 @@ function ConversationItem({ conversation, selected, onOpen }: { conversation: Co
   const last = conversation.last_message;
   return (
     <button type="button" className="inbox__item" aria-current={selected} onClick={onOpen}>
-      <Avatar name={name} logo={conversation.counterpart.provider?.logo_url} />
+      <ChatAvatar name={name} logo={conversation.counterpart.provider?.logo_url} />
       <span className="inbox__item-body">
         <span className="inbox__item-top">
           <span className="inbox__item-name">{name}</span>
@@ -165,7 +194,7 @@ function RequestItem({ request, selected, onOpen }: { request: MatchRequest; sel
   const label = received ? (request.type === 'proposal' ? 'Nouvelle proposition' : 'Nouvelle demande') : 'En attente de réponse';
   return (
     <button type="button" className="inbox__item" aria-current={selected} onClick={onOpen}>
-      <Avatar name={name} logo={request.counterpart.provider?.logo_url} />
+      <ChatAvatar name={name} logo={request.counterpart.provider?.logo_url} />
       <span className="inbox__item-body">
         <span className="inbox__item-top">
           <span className="inbox__item-name">{name}</span>

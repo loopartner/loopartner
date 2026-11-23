@@ -9,6 +9,7 @@ import { api, ApiError } from '@/lib/api';
 import { counterpartDetail, counterpartName } from '@/lib/counterpart';
 import { formatDate, formatTime } from '@/lib/format';
 import type { ChatMessage, Conversation, MatchRequest, Paginated } from '@/lib/types';
+import { ChatAvatar } from './ChatAvatar';
 
 const POLL_MS = 10_000;
 const MAX_LENGTH = 5000;
@@ -132,6 +133,7 @@ export function Thread({ conversation, onChanged }: { conversation: Conversation
   const name = counterpartName(conversation.counterpart);
   const detail = counterpartDetail(conversation.counterpart);
   const slug = conversation.counterpart.provider?.slug;
+  const logo = conversation.counterpart.provider?.logo_url;
 
   return (
     <section className="card thread" aria-label={`Conversation avec ${name}`}>
@@ -140,11 +142,15 @@ export function Thread({ conversation, onChanged }: { conversation: Conversation
           <Link href="/messages" className="thread__back btn btn--ghost" aria-label="Retour aux conversations" style={{ padding: 6 }}>
             <Icon name="arrowLeft" />
           </Link>
+          <ChatAvatar name={name} logo={logo} size="lg" />
           <div style={{ minWidth: 0 }}>
-            <strong style={{ display: 'block' }}>{slug ? <Link href={`/prestataires/${slug}`}>{name}</Link> : name}</strong>
-            <small style={{ color: 'var(--muted)' }}>
-              {[detail, conversation.project ? `Projet « ${conversation.project.title} »` : null].filter(Boolean).join(' · ')}
-            </small>
+            <strong className="thread__name">{slug ? <Link href={`/prestataires/${slug}`}>{name}</Link> : name}</strong>
+            <small className="thread__detail">{detail}</small>
+            {conversation.project ? (
+              <span className="thread__project">
+                <Icon name="briefcase" size={13} /> {conversation.project.title}
+              </span>
+            ) : null}
           </div>
         </div>
         {!conversation.counterpart.deleted ? (
@@ -184,10 +190,11 @@ export function Thread({ conversation, onChanged }: { conversation: Conversation
           </button>
         ) : null}
         {origin && !olderPage ? (
-          <div className={`bubble${origin.role === 'author' ? ' bubble--mine' : ''}`}>
-            <span className="bubble__label">{origin.type === 'proposal' ? (origin.role === 'author' ? 'Votre proposition' : 'Proposition') : origin.role === 'author' ? 'Votre demande de contact' : 'Demande de contact'}</span>
+          <div className={`bubble bubble--origin${origin.role === 'author' ? ' bubble--mine' : ''}`}>
+            <span className="bubble__label">
+              <Icon name={origin.type === 'proposal' ? 'briefcase' : 'message'} size={14} />{' '}{origin.type === 'proposal' ? (origin.role === 'author' ? 'Votre proposition' : 'Proposition') : origin.role === 'author' ? 'Votre demande de contact' : 'Demande de contact'}</span>
             <span className={`bubble__text${origin.message === null ? ' bubble__text--hidden' : ''}`}>{origin.message ?? 'Message masqué par la modération'}</span>
-            {origin.price ? <span className="bubble__price">Prix proposé : {origin.price.amount.toLocaleString('fr-FR')} {origin.price.currency === 'EUR' ? '€' : origin.price.currency}</span> : null}
+            {origin.price ? <span className="bubble__price">Prix proposé · {origin.price.amount.toLocaleString('fr-FR')} {origin.price.currency === 'EUR' ? '€' : origin.price.currency}</span> : null}
             <span className="bubble__meta">{formatDate(origin.created_at, { day: 'numeric', month: 'long' })}</span>
           </div>
         ) : null}
@@ -196,10 +203,14 @@ export function Thread({ conversation, onChanged }: { conversation: Conversation
         ) : null}
         {messages?.map((message, index) => {
           const previous = messages[index - 1];
+          const next = messages[index + 1];
           const newDay = !previous || new Date(previous.sent_at).toDateString() !== new Date(message.sent_at).toDateString();
+          const lastOfGroup = !next || next.mine !== message.mine || new Date(next.sent_at).toDateString() !== new Date(message.sent_at).toDateString();
           return (
             <div key={message.uuid} style={{ display: 'contents' }}>
               {newDay ? <span className="day-sep">{formatDate(message.sent_at, { weekday: 'long', day: 'numeric', month: 'long' })}</span> : null}
+              <div className={`bubble-row${message.mine ? ' bubble-row--mine' : ''}`}>
+              {!message.mine ? (lastOfGroup ? <ChatAvatar name={name} logo={logo} size="sm" /> : <span className="chat-avatar chat-avatar--sm chat-avatar--spacer" />) : null}
               <div className={`bubble${message.mine ? ' bubble--mine' : ''}`}>
                 {message.body === null ? (
                   <span className="bubble__text bubble__text--hidden">Message masqué par la modération</span>
@@ -214,6 +225,7 @@ export function Thread({ conversation, onChanged }: { conversation: Conversation
                     </button>
                   ) : null}
                 </span>
+              </div>
               </div>
             </div>
           );
