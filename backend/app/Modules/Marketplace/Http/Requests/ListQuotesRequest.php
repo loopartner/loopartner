@@ -26,6 +26,9 @@ class ListQuotesRequest extends FormRequest
         return [
             'box' => ['required', 'string', Rule::in(['sent', 'received'])],
             'status' => ['nullable', 'string', Rule::enum(QuoteStatus::class)],
+            // Devis d'une mise en relation (page de la conversation) ; ceux d'une demande dont
+            // l'utilisateur n'est pas partie ne sortent jamais (liste vide).
+            'match_request' => ['nullable', 'string', 'uuid'],
             ...Pagination::rules(),
         ];
     }

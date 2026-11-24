@@ -5,6 +5,7 @@ namespace App\Modules\Marketplace\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Compliance\Actions\GetVatRates;
+use App\Modules\Directory\Actions\GetMatchRequestContext;
 use App\Modules\Marketplace\Actions\AcceptQuote;
 use App\Modules\Marketplace\Actions\DeclineQuote;
 use App\Modules\Marketplace\Actions\ExerciseQuoteWithdrawal;
@@ -40,15 +41,22 @@ use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
  */
 class QuoteController extends Controller
 {
-    public function index(ListQuotesRequest $request): AnonymousResourceCollection
+    public function index(ListQuotesRequest $request, GetMatchRequestContext $matchRequests): AnonymousResourceCollection
     {
         $user = $this->user($request);
         $sent = $request->string('box')->toString() === 'sent';
+        // Filtre par mise en relation : résolue pour l'utilisateur seulement (null s'il n'y
+        // participe pas, et la liste reste vide sans rien révéler).
+        $matchRequestId = null;
+        if ($request->filled('match_request')) {
+            $matchRequestId = $matchRequests->handle($request->string('match_request')->toString(), $user)['match_request_id'] ?? 0;
+        }
 
         $quotes = Quote::query()
             ->when($sent, fn ($query) => $query->where('provider_id', $user->id))
             ->when(! $sent, fn ($query) => $query->where('client_id', $user->id)->where('status', '!=', QuoteStatus::Draft->value))
             ->when($request->filled('status'), fn ($query) => $query->where('status', $request->string('status')->toString()))
+            ->when($matchRequestId !== null, fn ($query) => $query->where('match_request_id', $matchRequestId))
             ->with('lines')
             ->orderByDesc('updated_at')
             ->orderByDesc('id')

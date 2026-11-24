@@ -158,7 +158,23 @@ export function demoQuotes(
   }
   if (route === 'me/quotes' && method === 'GET') {
     const sent = query.box === 'sent';
-    return done(paginate(quotes.filter((quote) => (sent ? quote.viewer_role === 'provider' : quote.viewer_role === 'client'))));
+    const matchRequest = typeof query.match_request === 'string' ? query.match_request : null;
+    // Le devis fictif reçu par un porteur de projet n'a pas de demande au départ : il est
+    // rattaché à la première conversation ouverte (celle avec « Compta Claire » en démo).
+    if (matchRequest && !sent && !quotes.some((quote) => quote.match_request === matchRequest)) {
+      const sample = quotes.find((quote) => quote.viewer_role === 'client' && !quote.match_request);
+      if (sample) {
+        sample.match_request = matchRequest;
+        save();
+      }
+    }
+    return done(
+      paginate(
+        quotes.filter(
+          (quote) => (sent ? quote.viewer_role === 'provider' : quote.viewer_role === 'client' && quote.status !== 'draft') && (!matchRequest || quote.match_request === matchRequest),
+        ),
+      ),
+    );
   }
   if (route === 'me/quotes' && method === 'POST') {
     if (!session.isProvider) fail(403, { message: 'Seul un prestataire peut rédiger un devis.' });

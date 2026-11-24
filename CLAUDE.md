@@ -1012,7 +1012,8 @@ durées dans `config/security.php`. Textes destinés aux utilisateurs, sources c
   `marketplace.withdrawal_days` = 14 jours après l'acceptation, une fois ; décision 42).
 - **Visibilité** (`QuotePolicy`) : le prestataire voit son devis à tout statut, le client une
   fois envoyé ; **tout autre utilisateur reçoit 404, admins compris** ; une partie qui tente
-  l'action de l'autre : 403. `GET /me/quotes?box=sent|received`. La réponse
+  l'action de l'autre : 403. `GET /me/quotes?box=sent|received` (filtre `match_request` : devis
+  d'une conversation, liste vide pour qui n'en est pas partie). La réponse
   (`QuoteResource`, `viewer_role`) donne aussi `mentions` (TVA, certifications, droit de
   rétractation, « Loopartner n'est pas partie au contrat »). Aucun id interne ; seules les
   coordonnées professionnelles copiées dans le devis apparaissent.
@@ -1685,7 +1686,10 @@ Dossier `frontend/`, décisions 2 (modifiée), 71 à 74. Maquettes : fichier Fig
   réunit les conversations (`?c=<uuid>`) et les demandes en attente (`?d=<uuid>`, reçues en
   tête : accepter et répondre, refuser, bloquer, signaler ; envoyées : retirer) ; la proposition
   d'origine est la première bulle de la conversation ; nouveaux messages toutes les 10 s avec
-  `after`, marqueur de lecture, blocage, signalement d'un message. `/demandes` redirige vers
+  `after`, marqueur de lecture, blocage, signalement d'un message ; panneau de la conversation
+  (`ConversationPanel` : interlocuteur, en relation depuis, dernier message reçu, projet, devis
+  de la conversation ; replié sous 1280 px, bouton « Infos ») et devis envoyés montrés dans le
+  fil à leur date d'envoi. Pas de présence en ligne (l'API n'en garde pas). `/demandes` redirige vers
   `/messages`. `/prestataires/[slug]/contacter`. Signalement public (DSA) : `ReportButton` sur
   les projets, articles, événements, offres et profils prestataires
   (`POST /moderation/notices`, jeton de suivi montré une fois sans compte).

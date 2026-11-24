@@ -8,8 +8,10 @@ import { PrivateReportDialog } from '@/components/PrivateReportDialog';
 import { api, ApiError } from '@/lib/api';
 import { counterpartDetail, counterpartName } from '@/lib/counterpart';
 import { formatDate, formatTime } from '@/lib/format';
+import { formatCents, type Quote, STATUS_CLASS, STATUS_LABELS } from '@/lib/quotes';
 import type { ChatMessage, Conversation, MatchRequest, Paginated } from '@/lib/types';
 import { ChatAvatar } from './ChatAvatar';
+import { ConversationPanel } from './ConversationPanel';
 
 const POLL_MS = 10_000;
 const MAX_LENGTH = 5000;
@@ -29,6 +31,8 @@ export function Thread({ conversation, onChanged }: { conversation: Conversation
   const [reporting, setReporting] = useState<ChatMessage | null>(null);
   const [blockDialog, setBlockDialog] = useState(false);
   const [origin, setOrigin] = useState<MatchRequest | null>(null);
+  const [quotes, setQuotes] = useState<Quote[] | null>(null);
+  const [panelOpen, setPanelOpen] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
   const lastUuid = useRef<string | null>(null);
   const stickToBottom = useRef(true);
@@ -130,14 +134,35 @@ export function Thread({ conversation, onChanged }: { conversation: Conversation
     }
   }
 
+  const matchRequestUuid = conversation.match_request?.uuid ?? null;
+  const quotesBox = !conversation.counterpart.deleted && conversation.counterpart.provider === null ? 'sent' : 'received';
+  useEffect(() => {
+    if (!matchRequestUuid) return;
+    let active = true;
+    api<Paginated<Quote>>('me/quotes', { query: { box: quotesBox, match_request: matchRequestUuid, per_page: 50 } })
+      .then((response) => active && setQuotes(response.data))
+      .catch(() => active && setQuotes([]));
+    return () => {
+      active = false;
+    };
+  }, [matchRequestUuid, quotesBox]);
+
   const name = counterpartName(conversation.counterpart);
   // L'interlocuteur est un porteur de projet : je suis le prestataire de cette mise en relation.
   const iAmProvider = !conversation.counterpart.deleted && conversation.counterpart.provider === null;
   const detail = counterpartDetail(conversation.counterpart);
+  const newQuoteHref =
+    iAmProvider && conversation.match_request && conversation.can_send
+      ? `/devis/nouveau?demande=${conversation.match_request.uuid}${conversation.counterpart.name ? `&nom=${encodeURIComponent(conversation.counterpart.name)}` : ''}`
+      : null;
+  // Devis envoyés (ou reçus) dans cette conversation, montrés dans le fil à leur date d'envoi.
+  const conversationQuotes = matchRequestUuid ? quotes : [];
+  const sentQuotes = (conversationQuotes ?? []).filter((quote) => quote.sent_at).sort((a, b) => (a.sent_at as string).localeCompare(b.sent_at as string));
   const slug = conversation.counterpart.provider?.slug;
   const logo = conversation.counterpart.provider?.logo_url;
 
   return (
+    <div className={`thread-layout${panelOpen ? ' thread-layout--panel' : ''}`}>
     <section className="card thread" aria-label={`Conversation avec ${name}`}>
       <div className="thread__head">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
@@ -157,14 +182,14 @@ export function Thread({ conversation, onChanged }: { conversation: Conversation
         </div>
         <div className="thread__actions">
         {/* Le prestataire rédige un devis dans la mise en relation acceptée (décision 36). */}
-        {iAmProvider && conversation.match_request && conversation.can_send ? (
-          <Link
-            href={`/devis/nouveau?demande=${conversation.match_request.uuid}${conversation.counterpart.name ? `&nom=${encodeURIComponent(conversation.counterpart.name)}` : ''}`}
-            className="btn btn--lime btn--sm"
-          >
+        {newQuoteHref ? (
+          <Link href={newQuoteHref} className="btn btn--lime btn--sm thread__quote-btn">
             <Icon name="file" size={16} /> Faire un devis
           </Link>
         ) : null}
+        <button type="button" className="btn btn--outline btn--sm thread__panel-toggle" aria-expanded={panelOpen} onClick={() => setPanelOpen(!panelOpen)}>
+          <Icon name="info" size={16} /> Infos
+        </button>
         {!conversation.counterpart.deleted ? (
           conversation.blocked_by_me ? (
             <button
@@ -215,12 +240,19 @@ export function Thread({ conversation, onChanged }: { conversation: Conversation
           <p style={{ color: 'var(--muted)', textAlign: 'center', margin: 'auto' }}>La demande a été acceptée : écrivez votre premier message.</p>
         ) : null}
         {messages?.map((message, index) => {
+          // Devis envoyés avant ce message (et après le précédent) : montrés juste avant lui.
+          const quotesBefore = sentQuotes.filter(
+            (quote) => (quote.sent_at as string) <= message.sent_at && (index === 0 || (quote.sent_at as string) > messages[index - 1].sent_at),
+          );
           const previous = messages[index - 1];
           const next = messages[index + 1];
           const newDay = !previous || new Date(previous.sent_at).toDateString() !== new Date(message.sent_at).toDateString();
           const lastOfGroup = !next || next.mine !== message.mine || new Date(next.sent_at).toDateString() !== new Date(message.sent_at).toDateString();
           return (
             <div key={message.uuid} style={{ display: 'contents' }}>
+              {quotesBefore.map((quote) => (
+                <QuoteBubble key={quote.uuid} quote={quote} />
+              ))}
               {newDay ? <span className="day-sep">{formatDate(message.sent_at, { weekday: 'long', day: 'numeric', month: 'long' })}</span> : null}
               <div className={`bubble-row${message.mine ? ' bubble-row--mine' : ''}`}>
               {!message.mine ? (lastOfGroup ? <ChatAvatar name={name} logo={logo} size="sm" /> : <span className="chat-avatar chat-avatar--sm chat-avatar--spacer" />) : null}
@@ -243,6 +275,11 @@ export function Thread({ conversation, onChanged }: { conversation: Conversation
             </div>
           );
         })}
+        {messages
+          ? sentQuotes
+              .filter((quote) => messages.length === 0 || (quote.sent_at as string) > messages[messages.length - 1].sent_at)
+              .map((quote) => <QuoteBubble key={quote.uuid} quote={quote} />)
+          : null}
       </div>
 
       {conversation.can_send ? (
@@ -312,5 +349,33 @@ export function Thread({ conversation, onChanged }: { conversation: Conversation
         </ConfirmDialog>
       ) : null}
     </section>
+    <ConversationPanel conversation={conversation} messages={messages} quotes={conversationQuotes} newQuoteHref={newQuoteHref} />
+    </div>
+  );
+}
+
+/** Devis montré dans le fil de la conversation, à sa date d'envoi. */
+function QuoteBubble({ quote }: { quote: Quote }) {
+  const mine = quote.viewer_role === 'provider';
+  return (
+    <div className={`bubble-row${mine ? ' bubble-row--mine' : ''}`}>
+      <Link href={`/devis/${quote.uuid}`} className={`quote-bubble${mine ? ' quote-bubble--mine' : ''}`}>
+        <span className="quote-bubble__label">
+          <Icon name="file" size={14} /> {mine ? 'Vous avez envoyé un devis' : 'Devis reçu'}
+        </span>
+        <strong className="quote-bubble__title">{quote.title}</strong>
+        <span className="quote-bubble__row">
+          <span>{quote.number}</span>
+          <strong>{formatCents(quote.totals?.ttc_cents, quote.currency)} TTC</strong>
+        </span>
+        <span className="quote-bubble__row">
+          <span className={`status ${STATUS_CLASS[quote.status]}`}>{STATUS_LABELS[quote.status]}</span>
+          <span className="quote-bubble__open">
+            {mine ? 'Voir le devis' : quote.status === 'sent' ? 'Consulter et répondre' : 'Voir le devis'} <Icon name="arrowRight" size={14} />
+          </span>
+        </span>
+        <span className="bubble__meta">{quote.sent_at ? formatTime(quote.sent_at) : ''}</span>
+      </Link>
+    </div>
   );
 }
