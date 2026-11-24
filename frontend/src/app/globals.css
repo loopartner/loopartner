@@ -2478,10 +2478,10 @@ textarea {
 .provider-card{display:flex;flex-direction:column;gap:12px;padding-top:0;overflow:hidden}
 .provider-card__banner{margin:0 -32px;aspect-ratio:4/1;background:linear-gradient(120deg,var(--blue),var(--blue-light) 60%,var(--lime))}
 .provider-card__banner img{width:100%;height:100%;object-fit:cover;display:block}
-.provider-card__author{align-items:flex-start;gap:14px}
-/* Seule la photo chevauche la bannière ; le nom commence sous la bannière, avec de l'air. */
-.provider-card__author .avatar{margin-top:-36px;flex-shrink:0}
-.provider-card__author>div{padding-top:12px;min-width:0}
+/* La photo chevauche la bannière ; le nom et la ville passent dessous, avec de l'air. */
+.provider-card__author{flex-direction:column;align-items:flex-start;gap:12px}
+.provider-card__author .avatar{margin-top:-40px;flex-shrink:0}
+.provider-card__author>div{min-width:0;display:flex;flex-direction:column;gap:4px}
 .provider-card__author .avatar{border:3px solid var(--surface);box-shadow:0 4px 12px rgba(0,0,0,.08)}
 .provider-cover__body{margin-top:0;padding-top:14px;align-items:flex-start}
 .provider-cover__logo{margin-top:-64px}
