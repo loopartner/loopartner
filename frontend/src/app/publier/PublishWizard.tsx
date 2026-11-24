@@ -149,6 +149,41 @@ export function PublishWizard() {
   const totalSteps = user || loading ? 4 : 5;
   const progress = Math.round((Math.min(step, totalSteps) / totalSteps) * 100);
 
+  // Un prestataire (ou l'équipe) ne publie pas de projet : on le lui dit tout de suite, au lieu
+  // de le laisser remplir quatre étapes pour un refus à la fin.
+  if (user && !hasRole('particulier', 'entrepreneur')) {
+    return (
+      <div className="wizard">
+        <header className="wizard__header">
+          <Link href="/" aria-label="Loopartner, accueil">
+            <Image src="/images/logo-blue.png" alt="" width={640} height={204} priority />
+          </Link>
+          <Link href="/" className="wizard__close" aria-label="Quitter la publication">
+            <Icon name="close" size={18} />
+          </Link>
+        </header>
+        <main className="wizard__main">
+          <h1 className="wizard__title">Les projets sont publiés par les porteurs de projet</h1>
+          <p style={{ fontFamily: 'var(--font-text)', color: 'var(--muted)', textAlign: 'center', maxWidth: 520, margin: '0 auto 24px' }}>
+            {hasRole('prestataire')
+              ? 'Votre compte est un compte prestataire : vous répondez aux projets publiés par les particuliers et les entrepreneurs.'
+              : 'Votre type de compte ne permet pas de publier un projet.'}
+          </p>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+            {hasRole('prestataire') ? (
+              <Link href="/projets" className="btn btn--lime btn--lg">
+                Voir les projets <Icon name="arrowRight" size={16} />
+              </Link>
+            ) : null}
+            <Link href="/espace" className="btn btn--outline btn--lg">
+              Mon espace
+            </Link>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="wizard">
       <header className="wizard__header">

@@ -48,7 +48,7 @@ export function AccountSettings() {
         <a href="#informations">Informations</a>
         <a href="#securite">Sécurité</a>
         <a href="#notifications">Notifications</a>
-        <a href="#abonnement">Abonnement</a>
+        {user.roles.includes('prestataire') ? <a href="#abonnement">Abonnement</a> : null}
         <a href="#documents">Documents acceptés</a>
         <a href="#suppression">Supprimer le compte</a>
       </nav>
@@ -57,7 +57,7 @@ export function AccountSettings() {
         <PasswordSection />
         <TwoFactorSection user={user} />
         <NotificationsSection />
-        <SubscriptionSection user={user} />
+        {user.roles.includes('prestataire') ? <SubscriptionSection user={user} /> : null}
         <LegalSection />
         <DeleteSection />
       </div>

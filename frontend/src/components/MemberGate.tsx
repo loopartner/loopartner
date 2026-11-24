@@ -28,7 +28,14 @@ export function MemberGate({ children, verified = false, roles }: { children: Re
   }
 
   if (roles && !hasRole(...roles)) {
-    return <div className="card empty">Cette page n&apos;est pas disponible pour votre type de compte.</div>;
+    return (
+      <div className="card empty">
+        <p>Cette page n&apos;est pas disponible pour votre type de compte.</p>
+        <Link href="/espace" className="btn btn--lime">
+          Retour à mon espace
+        </Link>
+      </div>
+    );
   }
 
   if (verified && !user.email_verified) {

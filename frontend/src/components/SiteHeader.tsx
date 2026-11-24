@@ -76,7 +76,8 @@ export function SiteHeader() {
       <div className="site-header__actions">
         {isProvider ? (
           <Link className="btn btn--lime site-header__cta" href="/projets">
-            Voir<span className="site-header__cta-more">{'\u00a0'}les projets</span>
+            <span className="site-header__cta-more">Voir les{'\u00a0'}</span>
+            <span className="site-header__cta-first">projets</span>
           </Link>
         ) : (
           <Link className="btn btn--lime site-header__cta" href="/publier">
@@ -146,7 +147,8 @@ export function SiteHeader() {
                       </Link>
                     </>
                   ) : null}
-                  {!user.premium?.active && hasRole('particulier', 'prestataire', 'entrepreneur') ? (
+                  {/* Premium ne s'adresse qu'aux prestataires (page /premium). */}
+                  {!user.premium?.active && hasRole('prestataire') ? (
                     <Link role="menuitem" href="/premium" className="profile-menu__premium">
                       <Icon name="gift" size={16} /> Passer Premium
                     </Link>

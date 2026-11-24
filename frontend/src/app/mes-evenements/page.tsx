@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
+import { MemberGate } from '@/components/MemberGate';
 import { Highlight, PageShell } from '@/components/PageShell';
 import { MyEvents } from './MyEvents';
 
@@ -14,9 +15,12 @@ export default function MyEventsPage() {
         </>
       }
     >
-      <Suspense>
-        <MyEvents />
-      </Suspense>
+      {/* Organisateurs seulement (EventPolicy) : prestataires, entrepreneurs et équipe. */}
+      <MemberGate roles={['prestataire', 'entrepreneur', 'redacteur', 'admin']}>
+        <Suspense>
+          <MyEvents />
+        </Suspense>
+      </MemberGate>
     </PageShell>
   );
 }

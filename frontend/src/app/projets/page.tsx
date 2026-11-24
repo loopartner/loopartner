@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Icon } from '@/components/Icon';
+import { ProjectsAsideCtas, ProviderSignupBanner } from './RoleCtas';
 import { Highlight, PageShell } from '@/components/PageShell';
 import { Pagination } from '@/components/Pagination';
 import { ProjectCard } from '@/components/ProjectCard';
@@ -32,20 +32,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
     >
       <div className="with-aside">
         <aside className="aside-stack" aria-label="Raccourcis">
-          <div className="card aside-card">
-            <h3>Trouvez un expert rapidement</h3>
-            <p>Postez votre projet gratuitement pour être mis en relation avec des prestataires disponibles.</p>
-            <Link href="/publier" className="btn btn--lime btn--block">
-              Publier un projet
-            </Link>
-          </div>
-          <div className="card aside-card">
-            <h3>Vous êtes prestataire ?</h3>
-            <p>Rejoignez notre communauté et répondez aux opportunités qui vous correspondent.</p>
-            <Link href="/inscription?profil=prestataire" className="link-arrow">
-              Inscription gratuite <Icon name="arrowRight" size={16} />
-            </Link>
-          </div>
+          <ProjectsAsideCtas />
           {categories && categories.data.length > 0 ? (
             <nav className="card aside-card" aria-label="Filtrer par catégorie">
               <h3>Catégories</h3>
@@ -78,14 +65,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
             projects.data.map((project, index) => (
               <div key={project.uuid} style={{ display: 'contents' }}>
                 <ProjectCard project={project} showOfferHint={index === 1} />
-                {index === 1 ? (
-                  <div className="cta-banner">
-                    <span>Vous êtes prestataire ? Inscrivez-vous gratuitement pour répondre aux projets.</span>
-                    <Link href="/inscription?profil=prestataire" className="btn btn--dark">
-                      Créer mon compte
-                    </Link>
-                  </div>
-                ) : null}
+                {index === 1 ? <ProviderSignupBanner /> : null}
               </div>
             ))
           )}
