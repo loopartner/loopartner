@@ -18,7 +18,9 @@ use Illuminate\Validation\ValidationException;
  *
  * - Le slug est calculé à partir de display_name à la création uniquement, puis ne change
  *   plus : les URL publiques restent stables.
- * - La publication exige un email vérifié et au moins une catégorie de services.
+ * - La publication exige un email vérifié et au moins une catégorie de services ; avec
+ *   accounts.provider_profile.require_complete_profile (décision 82), aussi une photo (logo), une
+ *   bannière et une description d'au moins min_bio_length caractères (422 sur chaque champ).
  * - categories absent : les catégories restent inchangées ; sinon elles sont remplacées.
  * - published_at est fixé au passage en "published" et remis à null au retour en brouillon.
  */
@@ -31,7 +33,7 @@ class UpsertProviderProfile
     public function __construct(private MediaLibrary $library) {}
 
     /**
-     * @param  array{display_name: string, headline?: string|null, bio?: string|null, city?: string|null, country?: string|null, website?: string|null, status?: string, logo?: string|null, categories?: list<string>}  $data
+     * @param  array{display_name: string, headline?: string|null, bio?: string|null, city?: string|null, country?: string|null, website?: string|null, status?: string, logo?: string|null, banner?: string|null, categories?: list<string>}  $data
      *
      * @throws ValidationException
      */
@@ -48,7 +50,7 @@ class UpsertProviderProfile
     }
 
     /**
-     * @param  array{display_name: string, headline?: string|null, bio?: string|null, city?: string|null, country?: string|null, website?: string|null, status?: string, logo?: string|null, categories?: list<string>}  $data
+     * @param  array{display_name: string, headline?: string|null, bio?: string|null, city?: string|null, country?: string|null, website?: string|null, status?: string, logo?: string|null, banner?: string|null, categories?: list<string>}  $data
      */
     private function save(User $user, array $data): ProviderProfile
     {
@@ -77,6 +79,10 @@ class UpsertProviderProfile
                     'categories' => 'Choisissez au moins une catégorie de services avant de publier votre profil.',
                 ]);
             }
+
+            if (config('accounts.provider_profile.require_complete_profile')) {
+                $this->assertComplete($profile, $data);
+            }
         }
 
         $attributes = [
@@ -104,6 +110,18 @@ class UpsertProviderProfile
             $profile->fill($attributes);
         }
 
+        if (array_key_exists('banner', $data)) {
+            $profile->forceFill([
+                'banner_media_id' => $this->library->replace(
+                    $user,
+                    MediaPurpose::ProviderBanner,
+                    $data['banner'],
+                    $profile->banner_media_id,
+                    'banner',
+                ),
+            ]);
+        }
+
         if (array_key_exists('logo', $data)) {
             $profile->forceFill([
                 'logo_media_id' => $this->library->replace(
@@ -122,7 +140,40 @@ class UpsertProviderProfile
             $profile->categories()->sync($categoryIds);
         }
 
-        return $profile->load(['logo', 'categories']);
+        return $profile->load(['logo', 'banner', 'categories']);
+    }
+
+    /**
+     * Profil complet exigé pour être publié (décision 82). Un média absent de la requête garde
+     * sa valeur actuelle ; null le retire. Le média envoyé est vérifié ensuite par
+     * MediaLibrary::replace() (422 s'il n'est pas rattachable).
+     *
+     * @param  array<string, mixed>  $data
+     *
+     * @throws ValidationException
+     */
+    private function assertComplete(?ProviderProfile $profile, array $data): void
+    {
+        $errors = [];
+
+        $logo = array_key_exists('logo', $data) ? $data['logo'] : $profile?->logo_media_id;
+        if ($logo === null) {
+            $errors['logo'] = 'Ajoutez une photo de profil avant de publier votre profil.';
+        }
+
+        $banner = array_key_exists('banner', $data) ? $data['banner'] : $profile?->banner_media_id;
+        if ($banner === null) {
+            $errors['banner'] = 'Ajoutez une bannière avant de publier votre profil.';
+        }
+
+        $minimum = (int) config('accounts.provider_profile.min_bio_length');
+        if (mb_strlen(trim((string) ($data['bio'] ?? ''))) < $minimum) {
+            $errors['bio'] = "Décrivez votre activité en {$minimum} caractères au moins avant de publier votre profil.";
+        }
+
+        if ($errors !== []) {
+            throw ValidationException::withMessages($errors);
+        }
     }
 
     private function uniqueSlug(string $displayName): string

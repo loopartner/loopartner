@@ -30,6 +30,7 @@ class ProviderProfileResource extends JsonResource
             'country' => $this->country,
             'website' => $this->website,
             'logo_url' => $this->logo?->url(),
+            'banner_url' => $this->banner?->url(),
             'categories' => ServiceCategoryResource::collection($this->whenLoaded('categories')),
             'status' => $this->status->value,
             'published_at' => $this->published_at?->toIso8601ZuluString(),

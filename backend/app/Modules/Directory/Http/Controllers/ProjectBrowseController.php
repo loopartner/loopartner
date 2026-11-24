@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ServiceCategory;
 use App\Models\User;
 use App\Modules\Directory\Actions\RecordProjectConsultation;
+use App\Modules\Directory\Exceptions\PremiumFeatureRequired;
 use App\Modules\Directory\Http\Requests\BrowseProjectsRequest;
 use App\Modules\Directory\Http\Resources\PublishedProjectResource;
 use App\Modules\Directory\Models\Project;
@@ -75,7 +76,9 @@ class ProjectBrowseController extends Controller
 
     public function show(Request $request, string $uuid, RecordProjectConsultation $recordConsultation, EarlyAccess $earlyAccess): PublishedProjectResource
     {
-        Gate::authorize('browse', Project::class);
+        $access = Gate::inspect('browse', Project::class);
+        PremiumFeatureRequired::throwIfDenied($access);
+        $access->authorize();
 
         // Projet encore dans sa fenêtre d'accès anticipé : 404 pour un prestataire sans ce droit.
         $project = $earlyAccess->constrain(Project::query()->browsable(), $this->user($request))

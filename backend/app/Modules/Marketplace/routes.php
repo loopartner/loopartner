@@ -48,6 +48,7 @@ Route::middleware(['auth:sanctum', 'verified'])
     ->name('marketplace.quotes.')
     ->group(function (): void {
         Route::get('/', [QuoteController::class, 'index'])->name('index');
+        Route::get('vat-rates', [QuoteController::class, 'vatRates'])->name('vat-rates');
         Route::get('{uuid}', [QuoteController::class, 'show'])->whereUuid('uuid')->name('show');
 
         Route::middleware(['throttle:quote-writes', LimitRequestBody::class.':131072'])->group(function (): void {

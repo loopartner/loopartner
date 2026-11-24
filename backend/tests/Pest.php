@@ -45,6 +45,7 @@ use Illuminate\Support\Facades\Event as EventFacade;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger;
@@ -285,6 +286,8 @@ function allowDemoSeeding(): void
         'app.debug' => true,
         'app.url' => 'http://localhost:8000',
     ]);
+    // Le seeder crée la photo et la bannière du prestataire de démonstration (décision 82).
+    Storage::fake('public');
 }
 
 /*

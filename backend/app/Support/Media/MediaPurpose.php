@@ -12,6 +12,8 @@ enum MediaPurpose: string
     case EventCover = 'event_cover';
     case ArticleCover = 'article_cover';
     case ArticleImage = 'article_image';
+    case ProviderBanner = 'provider_banner';
+    case OfferImage = 'offer_image';
 
     /**
      * Rôles qui peuvent écrire un article (module Blog) : l'équipe et les auteurs extérieurs.
@@ -66,6 +68,24 @@ enum MediaPurpose: string
                 maxWidth: 1600,
                 maxHeight: 1600,
                 allowedRoles: self::ARTICLE_AUTHOR_ROLES,
+            ),
+            // Bannière du profil public d'un prestataire (décision 82), format large 4:1 conseillé.
+            self::ProviderBanner => new PurposeLimits(
+                maxKilobytes: 5 * 1024,
+                minWidth: 1200,
+                minHeight: 300,
+                maxWidth: 2400,
+                maxHeight: 800,
+                allowedRoles: ['prestataire'],
+            ),
+            // Image de couverture d'une offre (module Marketplace, décision 83), 4:3 ou 16:9.
+            self::OfferImage => new PurposeLimits(
+                maxKilobytes: 5 * 1024,
+                minWidth: 800,
+                minHeight: 450,
+                maxWidth: 1600,
+                maxHeight: 1200,
+                allowedRoles: ['prestataire'],
             ),
         };
     }

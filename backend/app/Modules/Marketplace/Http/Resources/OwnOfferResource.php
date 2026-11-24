@@ -33,6 +33,7 @@ class OwnOfferResource extends JsonResource
             'delivery_mode' => $this->delivery_mode->value,
             'country' => $this->country,
             'city' => $this->city,
+            'image_url' => $this->image?->url(),
             'status' => $this->status->value,
             'version' => $this->version,
             // Masquée par la modération : invisible du public jusqu'à la levée.

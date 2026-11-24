@@ -18,4 +18,12 @@ return [
     */
     'early_access_hours' => (int) env('DIRECTORY_EARLY_ACCESS_HOURS', 24),
 
+    /*
+    | Détail des projets et propositions pour un prestataire SANS Premium (décision 81) : false,
+    | seuls les prestataires Premium consultent GET /projects et proposent leurs services ; les
+    | autres voient la vitrine publique. phpunit.xml le met à true pour le reste de la suite ;
+    | tests/Feature/Directory/ProjectAccessPremiumTest.php le remet à false.
+    */
+    'free_project_access' => filter_var(env('DIRECTORY_FREE_PROJECT_ACCESS', false), FILTER_VALIDATE_BOOL),
+
 ];

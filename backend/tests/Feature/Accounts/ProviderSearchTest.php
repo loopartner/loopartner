@@ -163,7 +163,7 @@ describe('GET /providers', function (): void {
         $response = $this->getJson('/api/v1/providers')->assertOk();
 
         expect(array_keys($response->json('data.0')))->toEqualCanonicalizing([
-            'display_name', 'slug', 'headline', 'bio', 'city', 'country', 'website', 'logo_url', 'categories', 'published_at',
+            'display_name', 'slug', 'headline', 'bio', 'city', 'country', 'website', 'logo_url', 'banner_url', 'categories', 'published_at',
         ]);
         expect($response->getContent())
             ->not->toContain('secret@example.com')

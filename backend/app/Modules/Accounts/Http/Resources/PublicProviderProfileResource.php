@@ -31,6 +31,7 @@ class PublicProviderProfileResource extends JsonResource
             'country' => $this->country,
             'website' => $this->website,
             'logo_url' => $this->logo?->url(),
+            'banner_url' => $this->banner?->url(),
             'categories' => ServiceCategoryResource::collection($this->whenLoaded('categories')),
             'published_at' => $this->published_at?->toIso8601ZuluString(),
         ];

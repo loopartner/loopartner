@@ -23,7 +23,7 @@ class PublicProviderController extends Controller
      */
     public function index(SearchProvidersRequest $request): AnonymousResourceCollection
     {
-        $query = ProviderProfile::query()->published()->with(['logo', 'categories']);
+        $query = ProviderProfile::query()->published()->with(['logo', 'banner', 'categories']);
 
         if ($request->filled('category')) {
             $categoryIds = ServiceCategory::idsWithDescendants($request->string('category')->toString());
@@ -54,7 +54,7 @@ class PublicProviderController extends Controller
 
     public function show(string $slug): PublicProviderProfileResource
     {
-        $profile = ProviderProfile::query()->published()->with(['logo', 'categories'])->where('slug', $slug)->first();
+        $profile = ProviderProfile::query()->published()->with(['logo', 'banner', 'categories'])->where('slug', $slug)->first();
 
         // abort() plutôt que firstOrFail() : le message 404 ne révèle pas le nom du modèle.
         abort_if($profile === null, 404, 'Prestataire introuvable.');

@@ -6,6 +6,8 @@ use App\Models\ServiceCategory;
 use App\Models\User;
 use App\Modules\Marketplace\Enums\PricingMode;
 use App\Modules\Marketplace\Models\Offer;
+use App\Support\Media\MediaLibrary;
+use App\Support\Media\MediaPurpose;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
@@ -15,10 +17,13 @@ use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
  * publiée est modifiée directement (décision 39) : sa version augmente.
  *
  * Plafond : marketplace.offers.max_total offres par prestataire (409), compté sous verrou de
- * la ligne users.
+ * la ligne users. L'image de couverture (« image », décision 83) est rattachée par
+ * MediaLibrary::replace(), qui supprime l'ancienne avec son fichier.
  */
 class SaveOffer
 {
+    public function __construct(private MediaLibrary $library) {}
+
     /**
      * @param  array<string, mixed>  $data  données validées
      */
@@ -36,7 +41,13 @@ class SaveOffer
                 'uuid' => (string) Str::uuid(),
                 'user_id' => $user->id,
                 'service_category_id' => self::categoryId((string) $data['category']),
-            ])->save();
+            ]);
+
+            if (array_key_exists('image', $data)) {
+                $offer->image_media_id = $this->library->replace($user, MediaPurpose::OfferImage, $data['image'], null, 'image');
+            }
+
+            $offer->save();
 
             return $offer;
         });
@@ -53,6 +64,12 @@ class SaveOffer
 
             if (array_key_exists('category', $data)) {
                 $offer->service_category_id = self::categoryId((string) $data['category']);
+            }
+
+            if (array_key_exists('image', $data)) {
+                /** @var User $owner */
+                $owner = $offer->user()->firstOrFail();
+                $offer->image_media_id = $this->library->replace($owner, MediaPurpose::OfferImage, $data['image'], $offer->image_media_id, 'image');
             }
 
             // Une offre passée « sur devis » perd son prix indicatif.

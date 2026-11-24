@@ -42,7 +42,7 @@ class PublicOfferController extends Controller
 
     public function show(string $slug): PublicOfferResource
     {
-        $offer = Offer::query()->visible()->with('category')->where('slug', $slug)->first();
+        $offer = Offer::query()->visible()->with(['category', 'image'])->where('slug', $slug)->first();
 
         // abort() plutôt que firstOrFail() : le message 404 ne révèle pas le nom du modèle.
         abort_if($offer === null, 404, 'Offre introuvable.');
@@ -77,7 +77,7 @@ class PublicOfferController extends Controller
         }
 
         $offers = $query
-            ->with('category')
+            ->with(['category', 'image'])
             ->orderByDesc('published_at')
             ->orderByDesc('id')
             ->paginate(Pagination::perPage($request))

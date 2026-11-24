@@ -17,9 +17,9 @@ Lots de développement de la V1 commercialisable, issus de l'audit du 2026-11-16
   n'est présenté comme terminé s'il ne l'est pas.
 - Commits séparés et lisibles ; jamais de commit sur `main`, jamais de push sans demande.
 
-**Frontend** : Next.js et TypeScript dans `frontend/`, **démarré une fois tous les lots backend
-terminés, Billing compris** (décision 2 modifiée le 2026-11-16), puis accessibilité RGAA et
-parcours de bout en bout.
+**Frontend** : Next.js et TypeScript dans `frontend/`, **démarré le 2026-11-20 à partir des
+maquettes Figma, en parallèle des lots 6 à 11** (décisions 2 modifiée et 71 à 74), puis
+accessibilité RGAA et parcours de bout en bout.
 
 **Plans de lot** : un plan est toujours présenté avant de coder. Les décisions purement techniques
 y sont tranchées et notées ; seules les questions d'argent, de droit, de durées de conservation,
@@ -33,8 +33,10 @@ de nouveaux paquets et ce que les utilisateurs voient ou subissent attendent une
 | 2. Signalements et modération (DSA) | **terminé et fusionné dans `main`** le 2026-11-16 (décisions 21 à 31) |
 | 3. Marketplace | **terminé et fusionné dans `main`** le 2026-11-17 (décisions 36 à 51) ; reste hors du code : validations du juriste et de l'expert-comptable |
 | 4. Rendez-vous et agenda | **terminé et fusionné dans `main`** le 2026-11-18 (décisions 52 à 59) ; reste hors du code : points R1 à R11 du juriste |
-| 5. Workspaces et onboarding | **codé sur `feature/workspaces`** le 2026-11-18 (décisions 60 à 70) ; reste la validation du juriste (J1 à J11), puis la fusion dans `main` |
-| 6 à 9 | à planifier |
+| 5. Workspaces et onboarding | **terminé et fusionné dans `main`** le 2026-11-18 (décisions 60 à 70) ; reste hors du code : J1 à J11, AIPD, politique de confidentialité, activation de l'IA après le VPS |
+| Frontend (premier passage) | **codé sur `feature/frontend`** le 2026-11-20 (décisions 71 à 74) : écrans des maquettes branchés sur l'API, vitrine publique des projets côté backend ; deuxième passage en 6 étapes validé le 2026-11-20 : étape 1 (demandes, messagerie, signalement) codée le 2026-11-20, étapes 2 à 6 à venir |
+| 6. Avis, ressources et coffre-fort | **plan validé le 2026-11-22** (décisions 75 à 79) ; développement en cours |
+| 7 à 9 | à planifier |
 | 10. Billing | plan validé dans son principe le 2026-11-16 ; développé à la fin du backend, juste avant le durcissement |
 | 11. Durcissement avant la bêta | à planifier |
 

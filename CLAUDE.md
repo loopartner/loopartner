@@ -9,25 +9,30 @@ entrepreneurs.
 
 ## V1 2027 : feuille de route et décisions (à lire au début de chaque session)
 
-- **`docs/v1/ROADMAP.md`** : lots 0 à 11 de la V1 commercialisable (Billing est le lot 10 ; le lot 3 Marketplace est fusionné, validations externes en attente ; le lot 4 Rendez-vous et agenda est fusionné, validation du juriste en attente ; le lot 5 Workspaces et onboarding est codé sur `feature/workspaces`, validation du juriste en attente ; le prochain est le lot 6), avec leurs critères
+- **`docs/v1/ROADMAP.md`** : lots 0 à 11 de la V1 commercialisable (Billing est le lot 10 ; le lot 3 Marketplace est fusionné, validations externes en attente ; le lot 4 Rendez-vous et agenda est fusionné, validation du juriste en attente ; le lot 5 Workspaces et onboarding est fusionné, validation du juriste en attente ; le prochain est le lot 6 ; le frontend est démarré en parallèle, décisions 71 à 74), avec leurs critères
   d'acceptation et leur état. Ne commence jamais un lot sans validation explicite de son plan
   détaillé par l'utilisateur.
 - **`docs/v1/DECISIONS.md`** : décisions produit et techniques validées, datées. Ne les remets pas
   en cause sans le demander ; une nouvelle décision s'y ajoute avec sa date.
 - Rappels : pas de refonte ; aucun taux, seuil ou montant réglementaire dans le code ; aucun
   module ni parcours incomplet présenté comme terminé ; base MySQL/MariaDB (jamais PostgreSQL) ;
-  le frontend démarre une fois tous les lots backend terminés, Billing compris ; un plan est
+  le frontend est développé en parallèle des lots 6 à 11 (décision 2 modifiée le 2026-11-20) ; un plan est
   toujours présenté avant de coder, les décisions purement techniques y sont tranchées (décision 20).
 
 ## Dépôt
 
 - `backend/` : API Laravel 13, PHP 8.4. Elle ne sert aucune vue : elle renvoie uniquement du JSON.
-- `frontend/` (à venir, après tous les lots backend) : Next.js et TypeScript, servi sur un autre sous-domaine.
-  Il consomme l'API avec des cookies de session.
+- `frontend/` : Next.js 16 et TypeScript (voir « Frontend »), déployé sur Vercel (dossier racine
+  `frontend`), servi sur un autre sous-domaine du même domaine que l'API. Il consomme l'API avec
+  des cookies de session.
 - `docs/v1/` : feuille de route et décisions de la V1 (voir ci-dessus), règles de la modération
   (`moderation-rules.md`), de la facturation (`billing-rules.md`), de la Marketplace
   (`marketplace-rules.md`), des rendez-vous (`appointments-rules.md`) et des workspaces et de
   l'IA (`workspaces-rules.md`), à faire valider.
+- `docs/legal/` : projets de CGU, politique de confidentialité, CGV Premium, cookies, mentions légales
+  et registre des traitements (**à faire valider par le juriste**, points L1 à L16 du README ;
+  `node scripts/build-legal.mjs` depuis `frontend/` régénère `src/content/legal.ts`, pages
+  `/legal/{terms,privacy,sales,cookies,notice}`, bandeau « projet » tant que non validés).
 - `.github/workflows/ci.yml` : intégration continue (voir « Qualité »).
 - `SECURITY.md` : signalement des vulnérabilités, principes de sécurité, journal de sécurité et
   vérifications avant chaque mise en production. La liste de contrôle de chaque tâche est la section
@@ -226,6 +231,12 @@ utilitaires du module), `Console/Commands/` (commandes Artisan du module), `Noti
   champ `logo`) : uuid d'un média envoyé par `POST /media`, ou `null` pour le retirer. Dans le PUT,
   un `logo` absent laisse le logo inchangé (même exception que `status`). Les réponses exposent
   `avatar_url` et `logo_url` (null si absent).
+- Bannière du profil prestataire (`PUT /me/provider-profile`, champ `banner`, média
+  `provider_banner`, même règle que `logo`, exposée en `banner_url` ; décision 82). **Profil
+  complet à la publication** (`accounts.provider_profile.require_complete_profile`,
+  `PROVIDER_PROFILE_REQUIRE_COMPLETE`, true ; false dans `phpunit.xml`, réactivé par
+  `ProviderProfileCompletenessTest`) : logo, bannière, `bio` d'au moins 80 caractères
+  (`min_bio_length`) et une catégorie, sinon 422 sur le champ ; un brouillon reste libre.
 - Catégories du profil prestataire (`PUT /me/provider-profile`, champ `categories`) : liste de 1 à 5
   slugs de catégories actives, qui remplace la précédente. Absent : inchangé (comme `logo`). Un
   brouillon peut n'avoir aucune catégorie, mais **la publication exige au moins une catégorie** (422
@@ -264,7 +275,7 @@ utilitaires du module), `Console/Commands/` (commandes Artisan du module), `Noti
   `config/blog.php` ou `config/compliance.php` ; une clé inconnue lève une exception, jamais
   « illimité »). Une fonctionnalité absente est fermée. Les noms contiennent un point : ne pas
   utiliser la notation pointée de `config()` pour une fonctionnalité. Blog (`blog.article_quota`),
-  Compliance (`compliance.*`), Directory (`directory.project_early_access`), Marketplace
+  Compliance (`compliance.*`), Directory (`directory.project_early_access`, `directory.project_access`), Marketplace
   (`marketplace.quote_branding`, `marketplace.quote_comparison`,
   `marketplace.quote_comparison_export`), Appointments (`appointments.*`) et Workspaces
   (`workspaces.active`, `workspaces.templates`, `copilot.roadmap_generations`,
@@ -343,6 +354,8 @@ Usages (`App\Support\Media\MediaPurpose`, limites définies dans l'enum) :
 | `event_cover` | 5 Mo | 960×540 | 1920×1080 | prestataire, entrepreneur, rédacteur, admin |
 | `article_cover` | 5 Mo | 1200×630 | 2400×1260 | prestataire, entrepreneur, rédacteur, admin |
 | `article_image` | 5 Mo | 320×200 | 1600×1600 | prestataire, entrepreneur, rédacteur, admin |
+| `provider_banner` | 5 Mo | 1200×300 | 2400×800 | prestataire |
+| `offer_image` | 5 Mo | 800×450 | 1600×1200 | prestataire |
 
 Plusieurs médias d'un même usage (images du corps d'un article) se rattachent avec
 `MediaLibrary::attachMany()` (revérifiés sous verrou) ; le module supprime ensuite avec `delete()`
@@ -428,7 +441,11 @@ ceux qu'il ne garde plus.
 - `GET /projects` et `GET /projects/{uuid}` : prestataires connectés avec un email vérifié **et un
   profil prestataire publié avec au moins une catégorie** (`auth:sanctum`, `verified`,
   `ProjectPolicy::browse`, qui appelle l'Action publique `Accounts\Actions\HasPublishedProviderProfile` ;
-  403 avec un message explicite sinon). Limiteur dédié `projects-browse` (30/min et 500/jour par
+  403 avec un message explicite sinon) **et Premium** (décision 81 : droit `directory.project_access`,
+  réglage `directory.free_project_access`, false en production ; sinon **403
+  `{"code": "premium_required", "feature": "project_access"}`**, `Exceptions/PremiumFeatureRequired`,
+  aussi pour les propositions ; `phpunit.xml` l'ouvre pour le reste de la suite,
+  `tests/Feature/Directory/ProjectAccessPremiumTest.php` le referme). Limiteur dédié `projects-browse` (30/min et 500/jour par
   prestataire, liste et détail confondus). Chaque consultation est journalisée dans le canal
   `security` (`RecordProjectConsultation` : utilisateur, IP, route, page, filtres ou uuid) et un
   avertissement `projects.scraping_suspected` est écrit une fois par jour au-delà de
@@ -436,6 +453,14 @@ ceux qu'il ne garde plus.
   `country`, `remote_ok` (`true`/`false`/`1`/`0`), `budget_min`, `budget_max` (fourchettes qui se
   recouvrent ; projets sans budget exclus) et `currency` (EUR par défaut dès qu'un filtre de budget est
   présent). Tri par `published_at` décroissant. Brouillon, clos, expiré ou inconnu : 404.
+- **Vitrine publique** (décisions 71 et 80) : `GET /public/projects` (filtres `category` avec
+  sous-catégories, `country` ; tri par `published_at`) et `GET /public/projects/{uuid}`, sans
+  compte, limiteur par IP `public-projects` (30/min, 1 000/j). `PublicProjectResource` :
+  `uuid`, `title`, `description` (publique depuis la décision 80 ; le porteur est averti de ne
+  pas y écrire ses coordonnées), `category`, `budget_min`, `budget_max`, `currency`, `country`,
+  `remote_ok`, `published_at` seulement (jamais la ville, la date de début ni rien du
+  porteur). Projets `browsable()` sortis de la fenêtre d'accès anticipé. Testé par
+  `tests/Feature/Directory/PublicProjectShowcaseTest.php`.
 - **Confidentialité** : `PublishedProjectResource` n'expose ni l'email, ni le nom, ni l'identifiant du
   porteur de projet, seulement `owner.account_type` (particulier ou entrepreneur) et `owner.country`
   (`users.country`). Le contact passera par la mise en relation (à venir).
@@ -829,8 +854,8 @@ art. 18 : `docs/v1/moderation-rules.md` (**à faire valider par le juriste**). R
 `config/moderation.php`, limites et durées dans `config/security.php`.
 
 - **Contenus signalables** (contrat du noyau `ModerationTarget`, `config/moderation.php`,
-  `targets`) : `provider_profile` (slug), `project` (uuid, visible des seuls prestataires qui
-  consultent les projets), `event` (slug), `event_announcement` (uuid, visible des inscrits),
+  `targets`) : `provider_profile` (slug), `project` (uuid, signalable par tout visiteur de la vitrine
+  publique, décision 71), `event` (slug), `event_announcement` (uuid, visible des inscrits),
   `article` (slug), `offer` (slug), `message`, `match_request` et `quote` (privés : messagerie et
   page du devis seulement). Chaque adaptateur vit dans
   son module (`Support/…ModerationTarget`) : `findVisible()` (404 si le visiteur ne le voit pas),
@@ -938,6 +963,8 @@ durées dans `config/security.php`. Textes destinés aux utilisateurs, sources c
   prix ; décision 40). Lecture publique : `GET /offers` (filtres `category` avec sous-catégories,
   `country`, `city`, `pricing_mode`, `q` ; tri par `published_at`, le même pour tous),
   `GET /offers/{slug}`, `GET /providers/{slug}/offers` (404 si le profil n'est pas publié).
+  Image de couverture facultative (champ `image`, média `offer_image`, `image_url` ; décision 83),
+  supprimée avec l'offre par `DeleteOffer` (`MediaLibrary`).
   Visible si l'offre est publiée et non masquée **et** si le profil est publié et non masqué
   (scope `visible()`, Action publique `Accounts\Actions\PublishedProviderConstraint`). Auteur
   présenté par son profil public et sa **qualité déclarée** (`seller` : `declared_status`
@@ -963,6 +990,9 @@ durées dans `config/security.php`. Textes destinés aux utilisateurs, sources c
   422 sur la ligne ; un taux `exclusive` (franchise, autoliquidation) s'applique seul (422).
   **Sans aucun taux vérifié : 409 `{"code": "vat_rates_unavailable"}`** : aucun devis possible
   en production avant la vérification des taux par l'expert-comptable (décision 49).
+  `GET /me/quotes/vat-rates` (prestataire) : taux vérifiés en vigueur du pays de son identité
+  (`code`, `basis_points`, `label`, `scope`, `exclusive`, `requires_certification` ;
+  `meta.available` false sans taux), lus par le formulaire de devis du frontend.
   `tests/Arch/MarketplaceNoFiscalValuesTest.php` refuse tout décimal ou grand nombre hors
   plafonds techniques dans le module.
 - **Envoi** (`POST …/send`, `SendQuote`) : conditions revérifiées ; taux du jour copiés dans
@@ -982,7 +1012,8 @@ durées dans `config/security.php`. Textes destinés aux utilisateurs, sources c
   `marketplace.withdrawal_days` = 14 jours après l'acceptation, une fois ; décision 42).
 - **Visibilité** (`QuotePolicy`) : le prestataire voit son devis à tout statut, le client une
   fois envoyé ; **tout autre utilisateur reçoit 404, admins compris** ; une partie qui tente
-  l'action de l'autre : 403. `GET /me/quotes?box=sent|received`. La réponse
+  l'action de l'autre : 403. `GET /me/quotes?box=sent|received` (filtre `match_request` : devis
+  d'une conversation, liste vide pour qui n'en est pas partie). La réponse
   (`QuoteResource`, `viewer_role`) donne aussi `mentions` (TVA, certifications, droit de
   rétractation, « Loopartner n'est pas partie au contrat »). Aucun id interne ; seules les
   coordonnées professionnelles copiées dans le devis apparaissent.
@@ -1383,7 +1414,7 @@ Obligatoire pour `admin` et `redacteur` (décision 17, `App\Support\TeamTwoFacto
   connexion en cours), `register` (30/h par IP), `forgot-password` (5/h par email, 20/h par IP),
   `reset-password` (10/h par IP), `password-update` et `password-confirm` (5/min par utilisateur),
   `verification` (3/min, 10/h), `api` (60/min), `media-uploads` (20/min), `account-deletion` (6/min), `legal-acceptances` (20/h),
-  `projects-browse` (30/min, 500/j), `match-requests` (10/h, 20/j, propositions et contacts confondus),
+  `projects-browse` (30/min, 500/j), `public-projects` (30/min et 1 000/j par IP), `match-requests` (10/h, 20/j, propositions et contacts confondus),
   `messages` (10/min, 300/j), `reports` (10/j), `blocks` (20/j), `event-writes` (60/h, 300/j),
   `event-submissions` (5/h, 15/j), `event_revisions` (10/h, 30/j, compté par `SubmitRevision`),
   `event-registrations` (20/h, 60/j), `event-registrant-removals` (20/j), `event-announcements`
@@ -1607,3 +1638,102 @@ composer security            # composer audit : vulnérabilités connues des dé
 - Les tests simulent l'API Have I Been Pwned avec `Http::fake` (voir `tests/Pest.php`).
 - Fais des commits séparés et lisibles. Ne travaille pas directement sur `main` et ne pousse rien sans
   demande explicite.
+
+## Frontend (Next.js)
+
+Dossier `frontend/`, décisions 2 (modifiée), 71 à 74. Maquettes : fichier Figma « Crevia ».
+
+- **Pile** : Next.js 16 (App Router), React 19, TypeScript strict, ESLint (`eslint-config-next`).
+  Aucun framework CSS : `src/app/globals.css` porte le système de design (fond `#f3f3ed`,
+  bandeau bleu `#6aa6da` → `#99cefb`, vert-anis `#e1e4ab`, cartes arrondies de 33 px, police
+  Outfit pour l'interface, Inter pour les textes ; polices auto-hébergées par
+  `@fontsource-variable/*`). Logos dans `public/images`. Aucun paquet sans accord de
+  l'utilisateur (comme le backend).
+- **Variables** : `NEXT_PUBLIC_API_URL` (adresse de l'API, sans slash final ; `frontend/.env.example`),
+  `NEXT_PUBLIC_SITE_URL` (adresse publique du site : `metadataBase`, `robots.txt` qui exclut les
+  pages privées et tout le site en démonstration, `sitemap.xml` des pages publiques).
+  Côté API : `FRONTEND_URL` (CORS et liens des emails), `SANCTUM_STATEFUL_DOMAINS` et
+  `SESSION_DOMAIN` (domaine parent commun, par exemple `.loopartner.com`). Les aperçus Vercel en
+  `*.vercel.app` n'ont pas de session (autre domaine) : seules les pages publiques y fonctionnent.
+- **Client de l'API** (`src/lib/api.ts`) : `credentials: 'include'`, `GET /sanctum/csrf-cookie`
+  avant toute écriture, en-tête `X-XSRF-TOKEN`, un nouvel essai après un 419 ; `ApiError` garde
+  `status`, `code` (`consent_required`, `premium_required`, `email_not_verified`…) et les erreurs
+  de champ. Un 403 `consent_required` ouvre `ConsentGate` (acceptation des CGU en vigueur).
+  `apiOrNull` pour les pages publiques rendues côté serveur (API injoignable : état vide).
+- **Mode démonstration** (`src/lib/demo.ts`, `NEXT_PUBLIC_DEMO_MODE=true`, **aperçus Vercel
+  seulement, jamais en production**) : le client de l'API répond avec des données fictives
+  (projets, articles, événements, prestataires, demandes, conversations, offres, profil et identité ;
+  `demo-matching.ts`, `demo-offers.ts`) sans appel réseau, bandeau permanent, comptes de
+  test `client@`, `entrepreneur@`, `prestataire@`, `comptable@` et `marques@demo.loopartner.fr` (mot de passe
+  `DEMO_PASSWORD`, sans existence côté API) ; session et créations dans le `localStorage`.
+- **Session** (`src/lib/session.tsx`) : `GET /me` au chargement, `useSession()` (`user`,
+  `hasRole`, `refresh`, `logout`).
+- **Pages** : `/` (accueil), `/projets` et `/projets/[uuid]` (vitrine publique ; description et
+  proposition pour les prestataires connectés), `/publier` (4 étapes, brouillon gardé dans
+  l'onglet le temps de se connecter, boutons de navigation toujours visibles, avertissement sur
+  la description publique) et `/publier/confirmation`, `/connexion` (2FA comprise),
+  `/inscription` (choix du profil puis compte), `/mot-de-passe-oublie`, `/nouveau-mot-de-passe`,
+  `/legal/[type]`, `/espace` (profil comme le voient les autres : photo, nom, rôle, pays,
+  modification par `PATCH /me` ; agenda des 30 prochains jours `GET /me/agenda` ; projets du
+  porteur ; mes événements : inscriptions à venir `GET /me/event-registrations` et, pour un
+  organisateur, ses webinars `GET /me/events` ; messages et raccourcis ; renvoi du lien de
+  vérification), `/agenda` (vue du mois et de la journée de `GET /me/agenda`, filtres par source,
+  avertissements `disclaimers` ; l'abonnement `/me/agenda/feed` n'est pas encore proposé dans
+  l'interface ; `src/lib/agenda.ts`),
+  `/prestataires`, `/articles`, `/articles/[slug]`, `/articles/rediger`, `/evenements`,
+  `/evenements/[slug]` (inscription), `/evenements/proposer`, `/mes-evenements`.
+  Messagerie (étape 1 du deuxième passage, présentation inspirée de codeur.com) : `/messages`
+  réunit les conversations (`?c=<uuid>`) et les demandes en attente (`?d=<uuid>`, reçues en
+  tête : accepter et répondre, refuser, bloquer, signaler ; envoyées : retirer) ; la proposition
+  d'origine est la première bulle de la conversation ; nouveaux messages toutes les 10 s avec
+  `after`, marqueur de lecture, blocage, signalement d'un message ; panneau de la conversation
+  (`ConversationPanel` : interlocuteur, en relation depuis, dernier message reçu, projet, devis
+  de la conversation ; replié sous 1280 px, bouton « Infos ») et devis envoyés montrés dans le
+  fil à leur date d'envoi. Pas de présence en ligne (l'API n'en garde pas). `/demandes` redirige vers
+  `/messages`. `/prestataires/[slug]/contacter`. Signalement public (DSA) : `ReportButton` sur
+  les projets, articles, événements, offres et profils prestataires
+  (`POST /moderation/notices`, jeton de suivi montré une fois sans compte).
+  **En-tête** (`SiteHeader`) : Projets, Prestataires et Offres à gauche (dans le menu du compte
+  sous 900 px), logo au centre, « Publier un projet » (« Voir les projets » pour un
+  prestataire), icône des messages avec pastille (`useUnreadCount` : messages non lus et demandes
+  reçues en attente, chaque minute), avatar ouvrant le menu du compte (dont la déconnexion).
+  Articles et événements : pied de page seulement.
+  Prestataires et offres (étape 2) : `/prestataires/[slug]` (profil public, offres, articles),
+  `/offres` et `/offres/[slug]` (prix indicatif TTC, qualité déclarée du vendeur, jamais ses
+  coordonnées), `/espace/profil` (PUT `/me/provider-profile` ; parcours en quatre étapes : photo et bannière,
+  présentation de 80 caractères, domaines, publication, avec aperçu `ProviderCover` ; décision 82),
+  `/espace/identite` (PUT `/me/seller-profile` ; texte et version de la déclaration sur l'honneur
+  recopiés de `config/marketplace.php` : à changer ensemble), `/espace/offres` (créer, modifier,
+  publier, retirer, supprimer ; 409 `seller_profile_incomplete` renvoie vers l'identité ; image
+  de couverture facultative, décision 83). `MediaUpload` (formes `round`, `banner`, `cover`) ;
+  en démonstration, les images envoyées sont gardées en data URL (`demo-media.ts`).
+  Accueil : photos d'experts et pointillés de la maquette Figma (`public/images/hero`, masqués
+  sous 1280 px) et mot du titre qui défile (`RotatingWord`, sans dépendance).
+  Premium (décision 81) : `/premium` (offre des prestataires seulement, bascule mensuel / annuel, `src/lib/premium.ts` recopié
+  des décisions 32, 35 et 81 ; souscription désactivée jusqu'au lot 10), `/devenir-prestataire`
+  (étapes, gratuit ou Premium) ; un prestataire sans Premium voit sur `/projets/[uuid]`
+  l'invitation à passer Premium au lieu du formulaire (403 `premium_required`) ; « Passer
+  Premium » dans le menu du compte ; démonstration : `comptable@` est Premium, `prestataire@` et
+  `marques@` ne le sont pas.
+  Devis (`/devis`, `src/lib/quotes.ts`) : liste (envoyés pour un prestataire, reçus pour un
+  porteur de projet), `/devis/nouveau?demande=<uuid>` ouvert par « Faire un devis » dans une
+  conversation (prestataire), `/devis/[uuid]` (brouillon modifiable, puis envoi ; lecture, PDF,
+  retrait, nouvelle version ; acceptation avec `content_hash`, refus motivé, rétractation).
+  Les totaux affichés pendant la saisie reprennent la méthode de `QuoteCalculator` ; ceux de
+  l'API font foi. Démonstration : `demo-quotes.ts` (taux fictif « [Démo] »).
+  Mon compte (`/compte`) : informations et préférences (`PATCH /me` : nom, pays, langue, fuseau),
+  mot de passe (`PUT /auth/user/password`), double authentification Fortify (mot de passe
+  confirmé sur 423, QR code affiché comme image `data:`, clé, code, codes de secours montrés une
+  fois ; désactivation impossible pour l'équipe), notifications (`GET|PUT
+  /me/notification-preferences`), abonnement, documents acceptés (`GET /me/legal`), suppression
+  du compte (`DELETE /me` avec le mot de passe et « SUPPRIMER »).
+  `/login`, `/forgot-password` et `/reset-password` (liens des emails de l'API) redirigent vers
+  les pages françaises.
+- **Règles d'affichage** : dates de l'API en UTC, affichées dans `Europe/Paris` (ou le fuseau de
+  l'événement) ; jamais de HTML venu de l'API (`dangerouslySetInnerHTML` interdit) : le corps des
+  articles est rendu bloc par bloc (`ArticleBody`) avec le `rel` fourni ; une URL écrite dans un
+  texte libre n'est jamais rendue cliquable ; avertissements affichés (ni conseil juridique, IA,
+  données sensibles près des champs libres) ; aucun chiffre ni label inventé (décision 74).
+- **Contrôles** (depuis `frontend/`) : `npm run lint`, `npm run typecheck`, `npm run build`,
+  `npm audit --omit=dev`. Job « Frontend (Next.js) » de la CI : 5 jobs doivent être verts avant
+  une fusion.

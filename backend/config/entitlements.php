@@ -57,6 +57,10 @@ $provider = [
         // Projets visibles seulement après la fenêtre d'accès anticipé
         // (config/directory.php, early_access_hours ; décision 44).
         'directory.project_early_access' => false,
+        // Consulter le détail des projets (GET /projects) et faire des propositions : Premium
+        // seulement (décision 81). Sans Premium, le prestataire voit la vitrine publique.
+        // config/directory.php, free_project_access (false en production).
+        'directory.project_access' => ['config' => 'directory.free_project_access'],
         // Devis PDF personnalisés (logo et mentions, décisions 35 et 43) ; le PDF standard
         // reste gratuit.
         'marketplace.quote_branding' => false,
@@ -73,6 +77,7 @@ $provider = [
     ],
     'premium' => [
         'directory.project_early_access' => true,
+        'directory.project_access' => true,
         'marketplace.quote_branding' => true,
         'appointments.public_booking_page' => true,
         'appointments.active_types' => ['config' => 'appointments.plans.premium.active_types'],

@@ -82,6 +82,7 @@ describe('GET /me/entitlements', function (): void {
                 'compliance.calendar_feed' => true,
                 'compliance.export' => true,
                 'directory.project_early_access' => true,
+                'directory.project_access' => true,
                 'marketplace.quote_branding' => true,
                 'appointments.public_booking_page' => true,
                 'appointments.active_types' => 10,

@@ -4,6 +4,8 @@ namespace App\Modules\Marketplace\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Modules\Compliance\Actions\GetVatRates;
+use App\Modules\Directory\Actions\GetMatchRequestContext;
 use App\Modules\Marketplace\Actions\AcceptQuote;
 use App\Modules\Marketplace\Actions\DeclineQuote;
 use App\Modules\Marketplace\Actions\ExerciseQuoteWithdrawal;
@@ -21,6 +23,7 @@ use App\Modules\Marketplace\Http\Requests\StoreQuoteRequest;
 use App\Modules\Marketplace\Http\Requests\UpdateQuoteRequest;
 use App\Modules\Marketplace\Http\Resources\QuoteResource;
 use App\Modules\Marketplace\Models\Quote;
+use App\Modules\Marketplace\Models\SellerProfile;
 use App\Modules\Marketplace\Support\QuotePdf;
 use App\Support\Locale;
 use App\Support\Pagination;
@@ -38,15 +41,22 @@ use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
  */
 class QuoteController extends Controller
 {
-    public function index(ListQuotesRequest $request): AnonymousResourceCollection
+    public function index(ListQuotesRequest $request, GetMatchRequestContext $matchRequests): AnonymousResourceCollection
     {
         $user = $this->user($request);
         $sent = $request->string('box')->toString() === 'sent';
+        // Filtre par mise en relation : résolue pour l'utilisateur seulement (null s'il n'y
+        // participe pas, et la liste reste vide sans rien révéler).
+        $matchRequestId = null;
+        if ($request->filled('match_request')) {
+            $matchRequestId = $matchRequests->handle($request->string('match_request')->toString(), $user)['match_request_id'] ?? 0;
+        }
 
         $quotes = Quote::query()
             ->when($sent, fn ($query) => $query->where('provider_id', $user->id))
             ->when(! $sent, fn ($query) => $query->where('client_id', $user->id)->where('status', '!=', QuoteStatus::Draft->value))
             ->when($request->filled('status'), fn ($query) => $query->where('status', $request->string('status')->toString()))
+            ->when($matchRequestId !== null, fn ($query) => $query->where('match_request_id', $matchRequestId))
             ->with('lines')
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
@@ -54,6 +64,33 @@ class QuoteController extends Controller
             ->withQueryString();
 
         return QuoteResource::collection($quotes);
+    }
+
+    /**
+     * Taux de TVA utilisables dans un devis (prestataire) : règles vérifiées en vigueur dans le
+     * pays de son identité professionnelle (le premier pays de marketplace.countries sans
+     * identité). Liste vide sans aucun taux vérifié : l'envoi d'un devis répondrait 409
+     * vat_rates_unavailable. Données de référence, sans rien de personnel.
+     */
+    public function vatRates(Request $request, GetVatRates $getVatRates): JsonResponse
+    {
+        Gate::authorize('create', Quote::class);
+
+        $countries = array_keys((array) config('marketplace.countries'));
+        $seller = SellerProfile::query()->where('user_id', $this->user($request)->id)->first();
+        $country = $seller !== null && in_array($seller->country, $countries, true) ? $seller->country : (string) ($countries[0] ?? 'FR');
+        $locale = Locale::fromRequest($request);
+
+        $rates = array_map(fn (array $rate): array => [
+            'code' => $rate['code'],
+            'basis_points' => $rate['basis_points'],
+            'label' => $rate['label'][$locale] ?? $rate['label']['fr'],
+            'scope' => $rate['scope'][$locale] ?? $rate['scope']['fr'],
+            'exclusive' => $rate['exclusive'],
+            'requires_certification' => $rate['client_certification'] !== null,
+        ], $getVatRates->handle($country, now()));
+
+        return response()->json(['data' => $rates, 'meta' => ['country' => $country, 'available' => $rates !== []]]);
     }
 
     public function store(StoreQuoteRequest $request, SaveQuoteDraft $saveDraft): JsonResponse

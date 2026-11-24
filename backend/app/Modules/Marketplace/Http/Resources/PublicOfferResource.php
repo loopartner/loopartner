@@ -43,6 +43,7 @@ class PublicOfferResource extends JsonResource
             'delivery_mode' => $this->delivery_mode->value,
             'country' => $this->country,
             'city' => $this->city,
+            'image_url' => $this->image?->url(),
             'provider' => $author['provider'],
             'seller' => $author['seller'],
             'published_at' => $this->published_at?->toIso8601ZuluString(),

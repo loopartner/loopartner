@@ -24,7 +24,7 @@ datée, avec sa justification ; une décision modifiée garde sa trace (date et 
 | # | Sujet | Décision |
 |---|---|---|
 | 1 | Travail Compliance non commité | Commité comme commit 7 après revue du diff (fait le 2026-11-16, `c19b068`). |
-| 2 | Frontend | Next.js et TypeScript dans `frontend/`, **démarré une fois tous les lots backend terminés, Billing compris**. *Modifiée le 2026-11-16 (raison : terminer le backend avant de commencer l'interface). Ancienne version : « démarré après le lot 1, puis développé en parallèle des lots suivants ».* |
+| 2 | Frontend | Next.js et TypeScript dans `frontend/`, **démarré le 2026-11-20 à partir des maquettes Figma, en parallèle des lots 6 à 11** (décision 71). *Modifiée le 2026-11-20 (raison : décision de l'utilisateur de construire et brancher l'interface sans attendre). Version du 2026-11-16 : « démarré une fois tous les lots backend terminés, Billing compris » ; version initiale : « démarré après le lot 1, puis développé en parallèle des lots suivants ».* |
 | 3 | Projets | Nouveau module **Workspaces** (pilotage : objectifs, étapes, tâches), **privé par défaut**, relié facultativement à une annonce Directory. Aucune donnée d'un workspace ne devient publique sans action explicite de l'utilisateur. |
 | 4 | Paiement | **Remplacée le 2026-11-16** : **Stripe retenu**, voir « Décision 4 révisée » ci-dessous. |
 | 5 | Offres | **Remplacée le 2026-11-16** : voir « Décision 5 révisée » ci-dessous. |
@@ -406,3 +406,64 @@ réponse gardée comme **suggestion** que l'utilisateur applique ; brique du noy
 `DescribeOwnProject` ; adaptateur d'agenda `WorkspacesAgendaSource` ; classes internes
 `WorkspacesPersonalData` et `AiUsagePersonalData` pour l'export du lot 11 ; aucun texte d'un
 workspace n'est visible d'autrui, donc aucun nouvel adaptateur de modération.
+
+## Décisions du frontend (validées le 2026-11-20)
+
+L'utilisateur a fourni les maquettes Figma (fichier « Crevia ») : accueil, tous les projets, détail
+d'un projet, connexion, choix du profil, inscription, publication d'un projet en 4 étapes et
+confirmation, articles (catalogue, détail, rédaction), événements (catalogue, détail, proposer un
+webinar, tableau de bord). Les écarts entre les maquettes et le backend sont tranchés ainsi.
+
+| # | Sujet | Décision |
+|---|---|---|
+| 71 | Démarrage et vitrine publique des projets | Frontend démarré maintenant (décision 2 modifiée), hébergé sur **Vercel** (dossier racine `frontend`), API sur Hostinger puis le VPS. Les maquettes montrent les projets aux visiteurs : **vitrine publique limitée** `GET /public/projects` et `GET /public/projects/{uuid}` (titre, catégorie, budget, pays, travail à distance, date de publication) ; **jamais la description, la ville, la date de début ni rien du porteur**. Accès anticipé Premium respecté (un projet n'entre dans la vitrine qu'après sa fenêtre de 24 h), projets masqués exclus, limite par IP `public-projects` (30/min, 1 000/j). La description complète et la proposition restent réservées aux prestataires connectés (`GET /projects`, inchangé). Le porteur est prévenu à la publication que titre, catégorie et budget sont publics. À reporter dans les CGU et la politique de confidentialité (juriste). |
+| 72 | Contact | **Messagerie Loopartner seulement** : le choix « Adresse e-mail visible par les prestataires » de l'étape 4 est retiré ; l'email d'un utilisateur n'est jamais montré (règle inchangée). |
+| 73 | Inscription | Adaptée au backend : « Client » ouvre le choix **Particulier / Entrepreneur** ; « Pseudo » devient **Nom affiché** ; **pas de connexion Google** pour l'instant (nouveau paquet et nouveau service : à présenter plus tard) ; acceptation des versions en vigueur des CGU et de la politique (décision 14) ; pays demandé. Connexion par email seulement (pas de pseudo). |
+| 74 | Contenus des maquettes non conformes à la réalité | Retirés ou reformulés tant qu'ils ne sont pas vrais : « 500+ prestataires vérifiés », « Prestataires vérifiés » (devient « Professionnels déclarés »), « Messages traduits » (devient « Messagerie sécurisée »), carte « réseau mondial » (plateforme France et UE, décision 12), « +1500 experts », badge « Profil vérifié » (le badge « Entreprise immatriculée vérifiée » arrive au lot 6), nombres d'offres, de vues et d'interactions et avatars des proposants (non exposés par l'API), « profil du client réservé aux prestataires abonnés » (le nom est révélé à l'acceptation, décision 53), lien de visio « communiqué 15 minutes avant » (il est visible des inscrits dans leur espace). Les **photos de personnes** des maquettes (banques d'images, dont une marquée shutterstock) ne sont pas reprises : licence commerciale et accord des personnes à vérifier, et elles laisseraient croire à de vrais experts. |
+
+Décisions techniques (décision 20) : Next.js 16 (App Router) et TypeScript, **sans framework CSS**
+(feuille `globals.css` tirée des maquettes) ; polices Outfit et Inter auto-hébergées
+(`@fontsource-variable/*`, aucun appel à Google Fonts) ; pages publiques rendues côté serveur
+(`force-dynamic`, aucune donnée figée au build), pages connectées côté navigateur ; client
+`src/lib/api.ts` (cookie CSRF de Sanctum, `X-XSRF-TOKEN`, erreurs à code stable, 403
+`consent_required` ouvrant la fenêtre d'acceptation des CGU) ; redirections `/login`,
+`/forgot-password`, `/reset-password` (liens des emails de l'API) vers les pages françaises ;
+nouveau job « Frontend (Next.js) » dans la CI (ESLint, TypeScript, `npm audit`, build).
+Paquets npm installés : `next`, `react`, `react-dom`, `@fontsource-variable/outfit`,
+`@fontsource-variable/inter` et, en développement, `typescript`, `eslint`, `eslint-config-next`,
+`@types/*`.
+
+## Décisions du lot 6 : avis, ressources et coffre-fort (validées le 2026-11-22)
+
+Plan présenté puis validé par l'utilisateur le 2026-11-22 (décision 20). Les textes destinés aux
+utilisateurs (information sur les avis, libellé et explication du badge, partage de documents) et
+la durée de conservation des avis restent **à faire valider par le juriste**.
+
+| # | Sujet | Décision |
+|---|---|---|
+| 75 | Avis : preuve de l'interaction | Un client (particulier ou entrepreneur) ne note un prestataire qu'après une **interaction professionnelle vérifiable** (décision 6) : un **devis accepté** (Marketplace) **ou un rendez-vous confirmé et terminé** (Appointments) dans leur mise en relation. Un seul avis par mise en relation. La méthode de vérification et sa date sont affichées près de l'avis (« après un devis accepté le… »). |
+| 76 | Avis : contenu et publication | Note de 1 à 5, texte de 50 à 2 000 caractères (texte brut), date de la prestation. **Publié tout de suite**, signalable et modéré ensuite (adaptateurs `review` et `review_response`, module Moderation). Le prestataire peut publier **une réponse publique**. Affichage du plus récent au plus ancien, moyenne et nombre d'avis, **aucun classement payant ni masquage** des avis négatifs (décision 18). Informations du Code de la consommation (article L111-7-2 et articles réglementaires D111-16 et suivants, numérotation à vérifier sur Légifrance) près des avis et dans une rubrique dédiée. Suppression du compte du client : ses avis sont supprimés. Durée de conservation en configuration, à faire fixer par le juriste. |
+| 77 | Ressources | Guides et modèles (PDF, Word, Excel) **déposés seulement par l'équipe** (admin ou rédacteur avec 2FA de session), publics ou réservés au Premium (décision 33) ; téléchargement par un lien signé de 5 minutes, depuis un disque privé. |
+| 78 | Coffre-fort documentaire | Disque **privé**, fichier **chiffré avant le stockage**, rattaché à une entreprise du suivi administratif (et facultativement à une échéance) ; PDF, JPEG et PNG vérifiés sur leur contenu, **10 Mo** par fichier ; place **100 Mo en gratuit, 1 Go en Premium** (`config/entitlements.php`) ; date d'expiration facultative avec rappel par email (Premium) ; document d'autrui : 404, admins compris ; supprimé avec le compte et inclus dans l'export. Hébergement : envois de 12 Mo au moins (`upload_max_filesize`, `post_max_size`). |
+| 79 | Dossier partageable et badge | **Dossier entreprise partageable** (Premium) : documents choisis, lien temporaire (30 jours au plus) et révocable, seule l'empreinte du jeton est stockée (comme `FeedToken`) ; lien expiré ou révoqué : 404. **Badge « Entreprise immatriculée vérifiée »** : SIREN de l'identité professionnelle contrôlé par l'**API publique de recherche d'entreprises de l'État** (`recherche-entreprises.api.gouv.fr`, sans clé), en file d'attente, jamais pendant la requête de l'utilisateur ; revérification tous les 90 jours ; une panne de l'API ne retire jamais un badge ; l'explication affichée dit qu'il atteste **seulement l'immatriculation, jamais la qualité du travail**. Colonnes `registration_*` créées au lot 3. |
+
+## Décision du 2026-11-22 (retours de l'utilisateur sur le frontend)
+
+| # | Sujet | Décision |
+|---|---|---|
+| 80 | Description des projets publique, catégorie « Autres » | La **description** d'un projet publié devient **visible de tous** dans la vitrine (`GET /public/projects` et `GET /public/projects/{uuid}`) ; elle modifie la décision 71. Restent privés : la ville, la date de début et tout ce qui concerne le porteur (nom, type de compte, pays du compte). En contrepartie, le parcours de publication avertit le porteur que sa description est publique et qu'il ne doit y écrire ni téléphone, ni email, ni adresse, ni nom complet ; le frontend signale un téléphone, un email ou un lien repéré dans le texte (avertissement, sans blocage). La proposition reste réservée aux prestataires connectés. Nouvelle catégorie de premier niveau **« Autres »** (`autres`), affichée en dernier, créée par `ServiceCategorySeeder` (base existante : relancer `ReferenceDataSeeder`). À reporter dans les CGU et la politique de confidentialité (juriste). |
+
+## Décision du 2026-11-22 : accès des prestataires aux projets
+
+| # | Sujet | Décision |
+|---|---|---|
+| 81 | Projets réservés aux prestataires Premium | Le **détail des projets** (`GET /projects`, `GET /projects/{uuid}` : ville, date de début, type de compte et pays du porteur) et les **propositions** (`POST /projects/{uuid}/proposals`) sont **réservés aux prestataires Premium** (droit `directory.project_access`, `config/entitlements.php`). Sans Premium : **403 `{"code": "premium_required", "feature": "project_access"}`**, vérifié après le rôle et le profil publié ; le prestataire garde la **vitrine publique** (titre, description, catégorie, budget, pays ; décisions 71 et 80) et peut signaler un projet comme tout visiteur. **Modifie les décisions 33 et 35** pour les prestataires : la version gratuite n'est plus « projets visibles 24 heures après leur publication » ; l'accès anticipé de 24 heures reste en place (vitrine publique, et prestataires Premium qui voient les nouveaux projets tout de suite). Réglage `directory.free_project_access` (`DIRECTORY_FREE_PROJECT_ACCESS`, **false** en production ; `phpunit.xml` le met à true pour le reste de la suite, `ProjectAccessPremiumTest` le remet à false). Le frontend propose de passer Premium à la place du détail et du formulaire de proposition. Le paiement reste au lot 10 (Billing) : d'ici là, le Premium s'attribue manuellement (`/admin/premium-grants`). À reporter dans les CGU (traitement différencié) et la page Premium (juriste). |
+
+## Décisions du 2026-11-23 : profil prestataire complet et images des offres
+
+Choix de l'utilisateur du 2026-11-23 (options recommandées retenues).
+
+| # | Sujet | Décision |
+|---|---|---|
+| 82 | Profil prestataire complet | Le profil public d'un prestataire reçoit une **bannière** (média `provider_banner`, 1200 × 300 à 2400 × 800, prestataires seulement, champ `banner` de `PUT /me/provider-profile` comme `logo`, exposée en `banner_url`, colonne `provider_profiles.banner_media_id`). La bannière n'existe que sur le profil prestataire public, pas sur les autres comptes. Un profil ne se **publie** (et ne reste publié lors d'une modification) qu'avec la **photo du profil public (logo)**, la **bannière**, une **description** (`bio`) d'au moins `accounts.provider_profile.min_bio_length` (80) caractères et **au moins une catégorie** : 422 sur chaque champ manquant. Un brouillon reste enregistrable incomplet. L'avatar du compte reste facultatif. Réglage `accounts.provider_profile.require_complete_profile` (`PROVIDER_PROFILE_REQUIRE_COMPLETE`, **true** ; `phpunit.xml` le met à false pour le reste de la suite, `ProviderProfileCompletenessTest` le remet à true). Le frontend guide le prestataire en étapes (photo, bannière, description, domaines, publication). Les profils déjà publiés restent publiés jusqu'à leur prochaine modification. |
+| 83 | Image des offres | Une **image de couverture facultative** par offre (média `offer_image`, 800 × 450 à 1600 × 1200, prestataires seulement, champ `image` de `POST`/`PATCH /me/offers` : uuid ou null, absent = inchangé ; `image_media_id` est `prohibited`), exposée en `image_url` (offre du prestataire et pages publiques), supprimée avec son fichier quand l'offre est supprimée ou l'image remplacée (`MediaLibrary`). |
