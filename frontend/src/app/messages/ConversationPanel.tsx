@@ -77,7 +77,7 @@ export function ConversationPanel({
           <ul className="conv-panel__list">
             {quotes.map((quote) => (
               <li key={quote.uuid}>
-                <Link href={`/devis/${quote.uuid}`} className="conv-doc">
+                <Link href={`/devis/${quote.uuid}?conv=${conversation.uuid}`} className="conv-doc">
                   <span className="conv-doc__icon" aria-hidden="true">
                     <Icon name="file" size={18} />
                   </span>

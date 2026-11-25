@@ -21,6 +21,7 @@ import {
   STATUS_LABELS,
   translated,
   unitLabel,
+  withConversation,
 } from '@/lib/quotes';
 
 /**
@@ -28,7 +29,7 @@ import {
  * faire une nouvelle version. Client : accepter (empreinte `content_hash` lue, attestations,
  * exécution immédiate pour un consommateur), refuser avec un motif, se rétracter dans le délai.
  */
-export function QuoteView({ quote, onChanged }: { quote: Quote; onChanged: (quote: Quote) => void }) {
+export function QuoteView({ quote, onChanged, conversation = null }: { quote: Quote; onChanged: (quote: Quote) => void; conversation?: string | null }) {
   const router = useRouter();
   const [dialog, setDialog] = useState<'accept' | 'decline' | 'withdraw' | 'withdrawal' | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +61,7 @@ export function QuoteView({ quote, onChanged }: { quote: Quote; onChanged: (quot
     setError(null);
     try {
       const response = await api<{ data: Quote }>(`me/quotes/${quote.uuid}/revise`, { method: 'POST' });
-      router.push(`/devis/${response.data.uuid}`);
+      router.push(withConversation(`/devis/${response.data.uuid}`, conversation));
     } catch (exception) {
       setError(exception instanceof ApiError ? exception.message : 'Action impossible.');
     }
@@ -69,8 +70,8 @@ export function QuoteView({ quote, onChanged }: { quote: Quote; onChanged: (quot
   return (
     <div className="quote-view">
       <div className="quote-view__bar">
-        <Link href="/devis" className="link-arrow">
-          <Icon name="arrowLeft" size={16} /> Mes devis
+        <Link href={conversation ? `/messages?c=${conversation}` : '/devis'} className="link-arrow">
+          <Icon name="arrowLeft" size={16} /> {conversation ? 'Retour à la conversation' : 'Mes devis'}
         </Link>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           {quote.status !== 'draft' && !hidden ? (

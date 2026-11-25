@@ -26,6 +26,7 @@ import {
   type QuoteUnit,
   UNIT_LABELS,
   type VatRateOption,
+  withConversation,
 } from '@/lib/quotes';
 
 interface LineRow {
@@ -96,7 +97,18 @@ function formFromDraft(draft: QuoteDraftInput): Form {
  * envoi (`POST …/send`). Les taux de TVA viennent de l'API (règles vérifiées) ; les totaux
  * affichés sont un aperçu, ceux du serveur font foi.
  */
-export function QuoteEditor({ matchRequest, quote, clientName }: { matchRequest?: string; quote?: Quote; clientName?: string }) {
+export function QuoteEditor({
+  matchRequest,
+  quote,
+  clientName,
+  conversation = null,
+}: {
+  matchRequest?: string;
+  quote?: Quote;
+  clientName?: string;
+  /** Conversation d'origine : après l'envoi, on y revient. */
+  conversation?: string | null;
+}) {
   const router = useRouter();
   const [rates, setRates] = useState<VatRateOption[] | null>(null);
   const [form, setForm] = useState<Form | null>(quote ? formFromDraft(draftFromQuote(quote)) : null);
@@ -228,7 +240,8 @@ export function QuoteEditor({ matchRequest, quote, clientName }: { matchRequest?
         ? await api<{ data: Quote }>(`me/quotes/${quote.uuid}`, { method: 'PUT', body })
         : await api<{ data: Quote }>('me/quotes', { method: 'POST', body });
       if (andSend) await api(`me/quotes/${saved.data.uuid}/send`, { method: 'POST' });
-      router.push(`/devis/${saved.data.uuid}${andSend ? '?envoye=1' : ''}`);
+      // Envoyé depuis une conversation : retour à la conversation, où le devis apparaît dans le fil.
+      router.push(andSend && conversation ? `/messages?c=${conversation}` : withConversation(`/devis/${saved.data.uuid}${andSend ? '?envoye=1' : ''}`, conversation));
       router.refresh();
     } catch (exception) {
       if (exception instanceof ApiError && exception.code === 'seller_profile_incomplete') {
@@ -249,6 +262,11 @@ export function QuoteEditor({ matchRequest, quote, clientName }: { matchRequest?
         void save(false);
       }}
     >
+      {conversation ? (
+        <Link href={`/messages?c=${conversation}`} className="link-arrow">
+          <Icon name="arrowLeft" size={16} /> Retour à la conversation
+        </Link>
+      ) : null}
       {missing ? (
         <div className="alert alert--error">
           <p style={{ margin: 0 }}>Complétez d&apos;abord votre identité professionnelle, qui figure sur chaque devis :</p>
@@ -454,7 +472,7 @@ export function QuoteEditor({ matchRequest, quote, clientName }: { matchRequest?
           confirmLabel="Supprimer"
           onConfirm={async () => {
             await api(`me/quotes/${quote.uuid}`, { method: 'DELETE' });
-            router.push('/devis');
+            router.push(conversation ? `/messages?c=${conversation}` : '/devis');
           }}
           onClose={() => setConfirmDelete(false)}
         >

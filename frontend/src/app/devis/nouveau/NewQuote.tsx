@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { conversationParam } from '@/lib/quotes';
 import { QuoteEditor } from '../QuoteEditor';
 
 /** Nouveau devis dans une demande de mise en relation acceptée (`?demande=<uuid>`, `nom` facultatif). */
@@ -20,5 +21,5 @@ export function NewQuote() {
     );
   }
 
-  return <QuoteEditor matchRequest={matchRequest} clientName={params.get('nom')?.slice(0, 160) ?? undefined} />;
+  return <QuoteEditor matchRequest={matchRequest} clientName={params.get('nom')?.slice(0, 160) ?? undefined} conversation={conversationParam(params.get('conv'))} />;
 }

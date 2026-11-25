@@ -153,7 +153,7 @@ export function Thread({ conversation, onChanged }: { conversation: Conversation
   const detail = counterpartDetail(conversation.counterpart);
   const newQuoteHref =
     iAmProvider && conversation.match_request && conversation.can_send
-      ? `/devis/nouveau?demande=${conversation.match_request.uuid}${conversation.counterpart.name ? `&nom=${encodeURIComponent(conversation.counterpart.name)}` : ''}`
+      ? `/devis/nouveau?demande=${conversation.match_request.uuid}${conversation.counterpart.name ? `&nom=${encodeURIComponent(conversation.counterpart.name)}` : ''}&conv=${conversation.uuid}`
       : null;
   // Devis envoyés (ou reçus) dans cette conversation, montrés dans le fil à leur date d'envoi.
   const conversationQuotes = matchRequestUuid ? quotes : [];
@@ -251,7 +251,7 @@ export function Thread({ conversation, onChanged }: { conversation: Conversation
           return (
             <div key={message.uuid} style={{ display: 'contents' }}>
               {quotesBefore.map((quote) => (
-                <QuoteBubble key={quote.uuid} quote={quote} />
+                <QuoteBubble key={quote.uuid} quote={quote} conversation={conversation.uuid} />
               ))}
               {newDay ? <span className="day-sep">{formatDate(message.sent_at, { weekday: 'long', day: 'numeric', month: 'long' })}</span> : null}
               <div className={`bubble-row${message.mine ? ' bubble-row--mine' : ''}`}>
@@ -278,7 +278,7 @@ export function Thread({ conversation, onChanged }: { conversation: Conversation
         {messages
           ? sentQuotes
               .filter((quote) => messages.length === 0 || (quote.sent_at as string) > messages[messages.length - 1].sent_at)
-              .map((quote) => <QuoteBubble key={quote.uuid} quote={quote} />)
+              .map((quote) => <QuoteBubble key={quote.uuid} quote={quote} conversation={conversation.uuid} />)
           : null}
       </div>
 
@@ -355,11 +355,11 @@ export function Thread({ conversation, onChanged }: { conversation: Conversation
 }
 
 /** Devis montré dans le fil de la conversation, à sa date d'envoi. */
-function QuoteBubble({ quote }: { quote: Quote }) {
+function QuoteBubble({ quote, conversation }: { quote: Quote; conversation: string }) {
   const mine = quote.viewer_role === 'provider';
   return (
     <div className={`bubble-row${mine ? ' bubble-row--mine' : ''}`}>
-      <Link href={`/devis/${quote.uuid}`} className={`quote-bubble${mine ? ' quote-bubble--mine' : ''}`}>
+      <Link href={`/devis/${quote.uuid}?conv=${conversation}`} className={`quote-bubble${mine ? ' quote-bubble--mine' : ''}`}>
         <span className="quote-bubble__label">
           <Icon name="file" size={14} /> {mine ? 'Vous avez envoyé un devis' : 'Devis reçu'}
         </span>

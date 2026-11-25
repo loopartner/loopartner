@@ -387,7 +387,7 @@ export function demoApi(path: string, method: string, query: Record<string, unkn
     method,
     query,
     input,
-    session ? { email: session.email, isProvider: session.roles.includes('prestataire') } : null,
+    session ? { email: session.email, isProvider: session.roles.includes('prestataire'), name: session.name, role: session.roles[0] } : null,
     (status, payload) => {
       throw new DemoError(status, payload);
     },

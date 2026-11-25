@@ -277,3 +277,14 @@ export function draftFromQuote(quote: Quote): QuoteDraftInput {
     })),
   };
 }
+
+/** Uuid de la conversation d'origine (`?conv=`), pour revenir à la conversation après un devis. */
+export function conversationParam(value: string | null | undefined): string | null {
+  return value && /^[0-9a-f-]{36}$/i.test(value) ? value : null;
+}
+
+/** Ajoute `conv` à un lien de devis, s'il est connu. */
+export function withConversation(href: string, conversation: string | null | undefined): string {
+  if (!conversation) return href;
+  return `${href}${href.includes('?') ? '&' : '?'}conv=${conversation}`;
+}

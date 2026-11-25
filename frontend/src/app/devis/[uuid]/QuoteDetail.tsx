@@ -3,7 +3,7 @@
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { api, ApiError } from '@/lib/api';
-import type { Quote } from '@/lib/quotes';
+import { conversationParam, type Quote } from '@/lib/quotes';
 import { QuoteEditor } from '../QuoteEditor';
 import { QuoteView } from '../QuoteView';
 
@@ -11,6 +11,7 @@ import { QuoteView } from '../QuoteView';
 export function QuoteDetail({ uuid }: { uuid: string }) {
   const params = useSearchParams();
   const sentFlag = params.get('envoye');
+  const conversation = conversationParam(params.get('conv'));
   const [quote, setQuote] = useState<Quote | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,7 +29,7 @@ export function QuoteDetail({ uuid }: { uuid: string }) {
   if (error) return <p className="alert alert--error">{error}</p>;
   if (!quote) return <div className="skeleton" style={{ height: 480 }} />;
 
-  if (quote.status === 'draft' && quote.viewer_role === 'provider') return <QuoteEditor key={quote.uuid} quote={quote} />;
+  if (quote.status === 'draft' && quote.viewer_role === 'provider') return <QuoteEditor key={quote.uuid} quote={quote} conversation={conversation} />;
 
   return (
     <>
@@ -37,7 +38,7 @@ export function QuoteDetail({ uuid }: { uuid: string }) {
           Devis envoyé : le client le trouve dans Loopartner et reçoit un email.
         </p>
       ) : null}
-      <QuoteView quote={quote} onChanged={setQuote} />
+      <QuoteView quote={quote} onChanged={setQuote} conversation={conversation} />
     </>
   );
 }
