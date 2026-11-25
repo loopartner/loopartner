@@ -40,16 +40,34 @@ class ServiceCategorySeeder extends Seeder
             'referencement-seo' => ['Référencement (SEO)', 'SEO'],
             'relations-presse' => ['Relations presse', 'Press relations'],
             'photo-video' => ['Photo et vidéo', 'Photo & video'],
+            'publicite-en-ligne' => ['Publicité en ligne', 'Online advertising'],
+            'influence' => ['Marketing d\'influence', 'Influencer marketing'],
         ]],
         'design' => ['Design', 'Design', [
             'identite-visuelle' => ['Identité visuelle et logo', 'Brand identity & logo'],
             'design-ui-ux' => ['Design UI/UX', 'UI/UX design'],
             'supports-imprimes' => ['Supports imprimés', 'Print design'],
+            'packaging' => ['Packaging', 'Packaging design'],
+            'motion-design-3d' => ['Motion design et 3D', 'Motion design & 3D'],
         ]],
         'developpement-web' => ['Développement web', 'Web development', [
             'site-vitrine' => ['Site vitrine', 'Showcase website'],
             'e-commerce' => ['E-commerce', 'E-commerce'],
             'applications-web-mobiles' => ['Applications web et mobiles', 'Web & mobile apps'],
+            'logiciel-sur-mesure' => ['Logiciel sur mesure', 'Custom software'],
+            'automatisation-no-code' => ['Automatisation et no-code', 'Automation & no-code'],
+            'data-ia' => ['Data et intelligence artificielle', 'Data & AI'],
+            'cybersecurite' => ['Cybersécurité', 'Cybersecurity'],
+            'maintenance-hebergement' => ['Maintenance et hébergement', 'Maintenance & hosting'],
+        ]],
+        // Ajoutée le 2026-11-25 (décision 84) : position fixée dans INSERTED_POSITIONS.
+        'arts-contenus' => ['Arts et contenus', 'Arts & content', [
+            'illustration' => ['Illustration', 'Illustration'],
+            'photographie' => ['Photographie', 'Photography'],
+            'video-montage' => ['Vidéo et montage', 'Video & editing'],
+            'musique-sound-design' => ['Musique et sound design', 'Music & sound design'],
+            'redaction-copywriting' => ['Rédaction et copywriting', 'Writing & copywriting'],
+            'voix-off' => ['Voix off', 'Voice-over'],
         ]],
         'conseil-strategie' => ['Conseil en stratégie', 'Strategy consulting', [
             'etude-de-marche' => ['Étude de marché', 'Market research'],
@@ -67,6 +85,17 @@ class ServiceCategorySeeder extends Seeder
         'autres' => ['Autres', 'Other', []],
     ];
 
+    /**
+     * Catégories parentes ajoutées après la première mise en production : position fixe, entre
+     * deux catégories existantes, pour ne pas décaler les positions déjà enregistrées en base.
+     * Les sous-catégories ajoutées le sont toujours en fin de liste de leur parent.
+     *
+     * @var array<string, int>
+     */
+    public const INSERTED_POSITIONS = [
+        'arts-contenus' => 65,
+    ];
+
     public function run(): void
     {
         $position = 0;
@@ -74,7 +103,7 @@ class ServiceCategorySeeder extends Seeder
         foreach (self::CATEGORIES as $slug => [$fr, $en, $children]) {
             $parent = ServiceCategory::query()->firstOrCreate(
                 ['slug' => $slug],
-                ['name' => ['fr' => $fr, 'en' => $en], 'position' => ($position += 10)],
+                ['name' => ['fr' => $fr, 'en' => $en], 'position' => self::INSERTED_POSITIONS[$slug] ?? ($position += 10)],
             );
 
             $childPosition = 0;

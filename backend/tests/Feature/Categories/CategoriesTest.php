@@ -137,4 +137,22 @@ describe('ServiceCategorySeeder', function (): void {
         $legal = ServiceCategory::query()->where('slug', 'juridique')->sole();
         expect($legal->is_active)->toBeFalse()->and($legal->name['fr'])->toBe('Droit');
     });
+
+    it('ajoute les nouveaux métiers sans décaler les catégories existantes (décision 84)', function (): void {
+        // Base créée avant la décision 84 : sans « Arts et contenus » ni les nouvelles sous-catégories.
+        $this->seed(ServiceCategorySeeder::class);
+        ServiceCategory::query()->whereIn('slug', ['illustration', 'photographie', 'video-montage', 'musique-sound-design', 'redaction-copywriting', 'voix-off', 'logiciel-sur-mesure'])->delete();
+        ServiceCategory::query()->where('slug', 'arts-contenus')->delete();
+        $before = ServiceCategory::query()->pluck('position', 'slug')->all();
+
+        $this->seed(ServiceCategorySeeder::class);
+
+        expect(ServiceCategory::query()->whereIn('slug', array_keys($before))->pluck('position', 'slug')->all())->toEqual($before)
+            ->and(ServiceCategory::query()->where('slug', 'illustration')->sole()->parent?->slug)->toBe('arts-contenus')
+            ->and(ServiceCategory::query()->where('slug', 'logiciel-sur-mesure')->sole()->parent?->slug)->toBe('developpement-web');
+
+        $order = collect($this->getJson('/api/v1/categories')->assertOk()->json('data'))->pluck('slug')->all();
+        expect(array_search('arts-contenus', $order, true))->toBe(array_search('developpement-web', $order, true) + 1)
+            ->and(end($order))->toBe('autres');
+    });
 });

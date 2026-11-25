@@ -1272,6 +1272,12 @@ modules comme `User` et `Media`.
 - `GET /api/v1/categories` (public) : arbre des catégories actives, en-tête `Vary: Accept-Language`.
 - `ServiceCategorySeeder` tourne dans **tous** les environnements (données de référence). Il crée les
   catégories manquantes avec `firstOrCreate` et ne modifie jamais une catégorie existante.
+  Familles : juridique, comptabilité et fiscalité, financement, marketing, design, développement
+  web, arts et contenus, conseil, RH, assurances, traduction, « Autres » en dernier (décision 84 :
+  tous les métiers au service des entreprises). Une famille ajoutée après coup reçoit une position
+  fixe (`INSERTED_POSITIONS`), une sous-catégorie ajoutée va en fin de liste : aucune position déjà
+  en base ne bouge. L'arbre est recopié pour la démonstration du frontend dans
+  `src/lib/demo-categories.ts` (à changer ensemble).
 - Pas encore d'endpoint d'écriture : la gestion se fera dans le back-office.
 
 ## API et authentification
@@ -1707,6 +1713,9 @@ Dossier `frontend/`, décisions 2 (modifiée), 71 à 74. Maquettes : fichier Fig
   publier, retirer, supprimer ; 409 `seller_profile_incomplete` renvoie vers l'identité ; image
   de couverture facultative, décision 83). `MediaUpload` (formes `round`, `banner`, `cover`) ;
   en démonstration, les images envoyées sont gardées en data URL (`demo-media.ts`).
+  Métiers (décision 84) : familles de `src/lib/trades.ts` (accueil, `/devenir-prestataire`),
+  `CategoryPicker` par famille dépliable avec recherche (profil), sous-catégorie facultative dans
+  `/publier`.
   Accueil : photos d'experts et pointillés de la maquette Figma (`public/images/hero`, masqués
   sous 1280 px) et mot du titre qui défile (`RotatingWord`, sans dépendance).
   Premium (décision 81) : `/premium` (offre des prestataires seulement, bascule mensuel / annuel, `src/lib/premium.ts` recopié
