@@ -2627,3 +2627,32 @@ button.link-arrow{background:none;border:0;padding:0;cursor:pointer;font:inherit
 @media (max-width:640px){.site-header__cta-first{text-transform:capitalize}}
 /* Page Projets sur petit écran : la liste d'abord, les encarts ensuite. */
 @media (max-width:1100px){.with-aside:not(.with-aside--right)>.aside-stack{order:2}}
+
+/* Choix des domaines (CategoryPicker) : familles dépliables et recherche, décision 84. */
+.input-with-icon{position:relative;display:block}
+.input-with-icon>svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+.input-with-icon .input{padding-left:40px}
+.category-picker__families{display:flex;flex-direction:column;border:1px solid var(--border-strong);border-radius:16px;overflow:hidden;background:#fff}
+.category-picker__family+.category-picker__family{border-top:1px solid var(--border-strong)}
+.category-picker__family--single{padding:14px 16px}
+.category-picker__toggle{display:flex;align-items:center;gap:10px;width:100%;padding:14px 16px;background:none;border:0;font:inherit;font-weight:600;color:var(--ink);cursor:pointer;text-align:left}
+.category-picker__toggle>span:first-child{flex:1}
+.category-picker__toggle:hover{background:var(--bg)}
+.category-picker__toggle svg{transition:transform .2s}
+.category-picker__chevron--open{transform:rotate(180deg)}
+.category-picker__count{min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:var(--lime);font-size:12px;display:inline-flex;align-items:center;justify-content:center}
+.category-picker__chips{padding:0 16px 16px}
+.chip svg{margin-left:6px;vertical-align:-1px}
+
+/* Familles de métiers (accueil, devenir prestataire), décision 84. */
+.home-chips a{display:inline-flex;align-items:center;gap:6px}
+.trades{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}
+.trade-card{display:flex;flex-direction:column;gap:8px;padding:24px;color:var(--ink);text-decoration:none;transition:transform .2s,box-shadow .2s}
+a.trade-card:hover{transform:translateY(-3px);box-shadow:0 12px 30px rgba(20,40,70,.08)}
+.trade-card strong{font-size:17px}
+.trade-card>span:last-child{font-family:var(--font-text);font-size:14px;color:var(--muted);line-height:1.5}
+.trade-card__icon{width:44px;height:44px;border-radius:14px;background:var(--lime);display:inline-flex;align-items:center;justify-content:center;margin-bottom:6px}
+.pill--trade{background:var(--lime);color:var(--ink);font-weight:600;padding:6px 16px}
+@media (max-width:1100px){.trades{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.trades{grid-template-columns:1fr}}
+.publish-subcategories{display:flex;flex-direction:column;gap:10px;margin-top:20px;padding-top:16px;border-top:1px dashed var(--border-strong)}

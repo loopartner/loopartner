@@ -3,10 +3,11 @@ import Link from 'next/link';
 import { Icon } from '@/components/Icon';
 import { PageShell } from '@/components/PageShell';
 import { PREMIUM_FEATURES, PREMIUM_PRICES } from '@/lib/premium';
+import { TRADE_FAMILIES } from '@/lib/trades';
 
 export const metadata: Metadata = {
   title: 'Devenir prestataire',
-  description: 'Rejoignez Loopartner : créez votre profil, publiez vos offres et répondez aux projets des porteurs.',
+  description: 'Développeurs, designers, artistes, juristes, comptables : rejoignez Loopartner, créez votre profil, publiez vos offres et répondez aux projets des porteurs.',
 };
 
 const STEPS = [
@@ -33,7 +34,7 @@ export default function BecomeProviderPage() {
   return (
     <PageShell
       title="Devenir prestataire"
-      subtitle="Faites-vous connaître des porteurs de projet et des entrepreneurs qui se lancent."
+      subtitle="Développeur, designer, artiste, rédacteur, juriste, comptable… faites-vous connaître des porteurs de projet et des entrepreneurs qui se lancent."
       bandExtra={
         <div style={{ display: 'flex', gap: 12, marginTop: 24, flexWrap: 'wrap' }}>
           <Link href="/inscription?profil=prestataire" className="btn btn--lime btn--lg">
@@ -59,6 +60,26 @@ export default function BecomeProviderPage() {
               </li>
             ))}
           </ol>
+        </section>
+
+        <section aria-labelledby="become-trades-title">
+          <h2 id="become-trades-title" className="section-title">
+            Tous les métiers sont les bienvenus
+          </h2>
+          <div className="trades">
+            {TRADE_FAMILIES.map((family) => (
+              <div key={family.slug} className="card trade-card">
+                <span className="trade-card__icon">
+                  <Icon name={family.icon} size={22} />
+                </span>
+                <strong>{family.label}</strong>
+                <span>{family.examples}</span>
+              </div>
+            ))}
+          </div>
+          <p className="disclaimer" style={{ marginTop: 16 }}>
+            Votre métier n&apos;y figure pas ? Choisissez la famille la plus proche ou « Autres » : vous décrivez votre activité avec vos mots dans votre profil.
+          </p>
         </section>
 
         <section aria-labelledby="free-premium-title" className="with-aside with-aside--right">

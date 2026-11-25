@@ -6,12 +6,11 @@ import { SiteFooter } from '@/components/SiteFooter';
 import { SiteHeader } from '@/components/SiteHeader';
 import { apiOrNull } from '@/lib/api';
 import { dateBadge } from '@/lib/format';
+import { HERO_TRADES, TRADE_FAMILIES } from '@/lib/trades';
 import type { Category, Paginated, PublicEvent, PublicProject } from '@/lib/types';
 import { HomeSearch } from './HomeSearch';
 import { RotatingWord } from './RotatingWord';
 
-/** Métiers qui défilent dans le titre (« avec les bons … »). */
-const HERO_WORDS = ['experts', 'juristes', 'avocats', 'comptables', 'fiscalistes', 'conseillers'];
 
 export const dynamic = 'force-dynamic';
 
@@ -45,7 +44,9 @@ export default async function HomePage() {
     apiOrNull<{ data: Category[] }>('categories', { revalidate: 600 }),
   ]);
 
-  const chips = (categories?.data ?? []).slice(0, 6);
+  // Grandes familles de métiers (décision 84), dans l'ordre de TRADE_FAMILIES, si l'API les connaît.
+  const known = new Map((categories?.data ?? []).map((category) => [category.slug, category]));
+  const chips = TRADE_FAMILIES.filter((family) => known.has(family.slug)).slice(0, 5);
 
   return (
     <>
@@ -66,14 +67,14 @@ export default async function HomePage() {
           </span>
           <h1 id="hero-title" className="home-hero__title">
             Lancez votre entreprise <br />
-            avec les bons <RotatingWord words={HERO_WORDS} />
+            avec les bons <RotatingWord words={HERO_TRADES} />
           </h1>
           <HomeSearch />
           {chips.length > 0 ? (
             <nav className="home-chips" aria-label="Catégories">
               {chips.map((category) => (
                 <Link key={category.slug} href={`/publier?categorie=${category.slug}`}>
-                  {category.name}
+                  <Icon name={category.icon} size={16} /> {category.label}
                 </Link>
               ))}
             </nav>
@@ -105,6 +106,26 @@ export default async function HomePage() {
               <Link href="/projets" className="btn btn--dark">
                 Voir tous les projets
               </Link>
+            </div>
+          </section>
+
+          <section aria-labelledby="trades-title">
+            <h2 id="trades-title" className="section-title">
+              Tous les métiers qui font avancer une entreprise
+              <Link href="/prestataires" style={{ fontSize: 14, fontWeight: 600 }}>
+                Tous les prestataires
+              </Link>
+            </h2>
+            <div className="trades">
+              {TRADE_FAMILIES.filter((family) => known.size === 0 || known.has(family.slug)).map((family) => (
+                <Link key={family.slug} href={`/prestataires?categorie=${family.slug}`} className="card trade-card">
+                  <span className="trade-card__icon">
+                    <Icon name={family.icon} size={22} />
+                  </span>
+                  <strong>{family.label}</strong>
+                  <span>{family.examples}</span>
+                </Link>
+              ))}
             </div>
           </section>
 
@@ -203,14 +224,14 @@ export default async function HomePage() {
   );
 }
 
-/** Photos d'experts et pointillés autour du titre (maquette Figma, page d'accueil), décoratifs. */
+/** Photos de prestataires et pointillés autour du titre (maquette Figma, page d'accueil), décoratifs. */
 function HeroDecorations() {
   const experts: { index: number; left: number; top: number; tag?: string; tagLeft?: number; tagTop?: number; tagStyle?: 'lime' | 'white' }[] = [
-    { index: 5, left: 70, top: 0, tag: 'Avocate', tagLeft: 138, tagTop: 24, tagStyle: 'lime' },
+    { index: 5, left: 70, top: 0, tag: 'Designer', tagLeft: 138, tagTop: 24, tagStyle: 'lime' },
     { index: 2, left: 178, top: 196 },
-    { index: 3, left: 45, top: 461, tag: 'Comptable', tagLeft: 118, tagTop: 509, tagStyle: 'white' },
+    { index: 3, left: 45, top: 461, tag: 'Développeur', tagLeft: 118, tagTop: 509, tagStyle: 'white' },
     { index: 1, left: 1184, top: 8 },
-    { index: 4, left: 1267, top: 352, tag: 'Juriste', tagLeft: 1227, tagTop: 396, tagStyle: 'lime' },
+    { index: 4, left: 1267, top: 352, tag: 'Comptable', tagLeft: 1227, tagTop: 396, tagStyle: 'lime' },
   ];
   return (
     <div className="hero-deco" aria-hidden="true">

@@ -63,6 +63,8 @@ export function PublishWizard() {
   // Connecté entre-temps : l'étape d'inscription n'a plus lieu d'être.
   const step = user && rawStep === 5 ? 4 : rawStep;
   const [categories, setCategories] = useState<Category[]>([]);
+  // Famille choisie : la catégorie elle-même, ou le parent de la sous-catégorie choisie.
+  const selectedFamily = categories.find((category) => category.slug === draft.category || (category.children ?? []).some((child) => child.slug === draft.category)) ?? null;
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
@@ -221,7 +223,7 @@ export function PublishWizard() {
                   id="project-title"
                   className="input"
                   style={{ borderRadius: 9999, padding: '24px 32px', background: '#fff' }}
-                  placeholder="Ex : création d'une SAS, dépôt de marque, audit RGPD…"
+                  placeholder="Ex : site vitrine, logo, vidéo de présentation, création d'une SAS…"
                   value={draft.title}
                   maxLength={150}
                   onChange={(event) => update({ title: event.target.value })}
@@ -240,13 +242,33 @@ export function PublishWizard() {
                       key={category.slug}
                       type="button"
                       className="chip"
-                      aria-pressed={draft.category === category.slug}
+                      aria-pressed={selectedFamily?.slug === category.slug}
                       onClick={() => update({ category: category.slug })}
                     >
                       {category.name}
                     </button>
                   ))}
                 </div>
+                {selectedFamily && (selectedFamily.children ?? []).length > 0 ? (
+                  <div className="publish-subcategories">
+                    <span className="field__label" style={{ fontSize: 14 }}>
+                      Préciser le métier <small style={{ color: 'var(--muted)', fontWeight: 400 }}>(facultatif)</small>
+                    </span>
+                    <div className="chips">
+                      {(selectedFamily.children ?? []).map((child) => (
+                        <button
+                          key={child.slug}
+                          type="button"
+                          className="chip"
+                          aria-pressed={draft.category === child.slug}
+                          onClick={() => update({ category: draft.category === child.slug ? selectedFamily.slug : child.slug })}
+                        >
+                          {child.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
                 {fieldErrors.category ? <span className="field__error">{fieldErrors.category}</span> : null}
               </fieldset>
               <p className="note">

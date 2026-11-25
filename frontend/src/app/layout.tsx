@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     template: '%s · Loopartner',
   },
   description:
-    "Publiez votre projet gratuitement et échangez avec des prestataires indépendants : création de société, juridique, comptabilité, fiscalité, propriété intellectuelle.",
+    "Publiez votre projet gratuitement et échangez avec des prestataires indépendants : développeurs, designers, artistes, rédacteurs, juristes, comptables et tous les métiers qui font avancer une entreprise.",
 };
 
 export const viewport: Viewport = {

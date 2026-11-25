@@ -32,14 +32,14 @@ export default async function ProvidersPage({ searchParams }: { searchParams: Pr
           Nos <Highlight>prestataires</Highlight>
         </>
       }
-      subtitle="Des professionnels indépendants pour vous accompagner dans votre projet."
+      subtitle="Développeurs, designers, artistes, juristes, comptables… des professionnels indépendants pour faire avancer votre projet."
     >
       <form className="toolbar" style={{ marginBottom: 24 }} role="search">
         <div className="search">
           <label htmlFor="provider-q" className="visually-hidden">
             Rechercher un prestataire
           </label>
-          <input id="provider-q" name="q" className="input" placeholder="Rechercher un prestataire" defaultValue={query} minLength={2} maxLength={100} />
+          <input id="provider-q" name="q" className="input" placeholder="Un métier ou un nom : développeur, illustration…" defaultValue={query} minLength={2} maxLength={100} />
         </div>
         <label htmlFor="provider-category" className="visually-hidden">
           Catégorie
@@ -87,8 +87,8 @@ export default async function ProvidersPage({ searchParams }: { searchParams: Pr
               </div>
               {provider.headline ? <p style={{ margin: 0, fontFamily: 'var(--font-text)', fontSize: 14, color: 'var(--muted)' }}>{provider.headline}</p> : null}
               <div className="project-card__pills">
-                {(provider.categories ?? []).slice(0, 3).map((category) => (
-                  <span key={category.slug} className="pill pill--tag">
+                {(provider.categories ?? []).slice(0, 3).map((category, index) => (
+                  <span key={category.slug} className={`pill ${index === 0 ? 'pill--trade' : 'pill--tag'}`}>
                     {category.name}
                   </span>
                 ))}

@@ -4,6 +4,7 @@
  */
 
 import type { Category, OwnOffer, OwnProviderProfile, Paginated, PublicOffer, SellerProfile } from './types';
+import { demoCategory, inDemoCategory } from './demo-categories';
 import { demoMediaUrl } from './demo-media';
 import type { DemoFail } from './demo-matching';
 
@@ -17,18 +18,28 @@ const SELLERS: Record<string, { legal_name: string; registration_number: string 
   'compta-claire': { legal_name: 'Claire Martin EI', registration_number: '000000000' },
   'marques-et-co': { legal_name: 'Marques et Compagnie SARL', registration_number: '000000000' },
   'domicile-pro': { legal_name: 'Domicile Pro SAS', registration_number: '000000000' },
+  'studio-pixel-nord': { legal_name: 'Pixel Nord SAS', registration_number: '000000000' },
+  'lina-roche-design': { legal_name: 'Lina Roche EI', registration_number: '000000000' },
+  'atelier-encre': { legal_name: 'Atelier Encre SARL', registration_number: '000000000' },
+  'plan-large-video': { legal_name: 'Plan Large SAS', registration_number: '000000000' },
 };
 
 const RAW: Array<[string, string, string, PublicOffer['pricing']['mode'], number | null, PublicOffer['delivery_mode'], string]> = [
-  ['cabinet-morel-conseil', 'Création de SAS clés en main', 'creation-societe', 'fixed', 89000, 'remote', 'Statuts sur mesure, formalités d’immatriculation et accompagnement jusqu’au Kbis, pour une SAS ou une SASU.'],
-  ['cabinet-morel-conseil', "Pacte d'associés pour start-up", 'creation-societe', 'from', 120000, 'both', 'Rédaction d’un pacte d’associés adapté à votre future levée : sortie, vesting, gouvernance, non-concurrence.'],
-  ['cabinet-morel-conseil', 'CGV et CGU pour site e-commerce', 'juridique', 'fixed', 65000, 'remote', 'Conditions générales de vente et d’utilisation conformes au droit de la consommation, adaptées à votre activité.'],
-  ['compta-claire', 'Tenue comptable micro-entreprise', 'comptabilite', 'from', 4900, 'remote', 'Suivi mensuel de vos recettes et dépenses, déclarations et conseils pour rester serein toute l’année.'],
-  ['compta-claire', 'Bilan et liasse fiscale', 'comptabilite', 'on_quote', null, 'remote', 'Établissement des comptes annuels et de la liasse fiscale de votre société, avec un rendez-vous de restitution.'],
-  ['compta-claire', 'Choix du statut : simulation', 'fiscalite', 'fixed', 25000, 'remote', 'Comparaison chiffrée micro-entreprise, EURL et SASU selon votre chiffre d’affaires prévu, présentée en visio.'],
+  ['cabinet-morel-conseil', 'Création de SAS clés en main', 'creation-statuts', 'fixed', 89000, 'remote', 'Statuts sur mesure, formalités d’immatriculation et accompagnement jusqu’au Kbis, pour une SAS ou une SASU.'],
+  ['cabinet-morel-conseil', "Pacte d'associés pour start-up", 'creation-statuts', 'from', 120000, 'both', 'Rédaction d’un pacte d’associés adapté à votre future levée : sortie, vesting, gouvernance, non-concurrence.'],
+  ['cabinet-morel-conseil', 'CGV et CGU pour site e-commerce', 'contrats-cgv', 'fixed', 65000, 'remote', 'Conditions générales de vente et d’utilisation conformes au droit de la consommation, adaptées à votre activité.'],
+  ['compta-claire', 'Tenue comptable micro-entreprise', 'tenue-comptable', 'from', 4900, 'remote', 'Suivi mensuel de vos recettes et dépenses, déclarations et conseils pour rester serein toute l’année.'],
+  ['compta-claire', 'Bilan et liasse fiscale', 'tenue-comptable', 'on_quote', null, 'remote', 'Établissement des comptes annuels et de la liasse fiscale de votre société, avec un rendez-vous de restitution.'],
+  ['compta-claire', 'Choix du statut : simulation', 'conseil-fiscal', 'fixed', 25000, 'remote', 'Comparaison chiffrée micro-entreprise, EURL et SASU selon votre chiffre d’affaires prévu, présentée en visio.'],
   ['marques-et-co', 'Recherche d’antériorité de marque', 'propriete-intellectuelle', 'fixed', 29000, 'remote', 'Recherche des marques identiques et similaires avant votre dépôt, avec un rapport et une recommandation.'],
   ['marques-et-co', 'Dépôt de marque INPI', 'propriete-intellectuelle', 'from', 45000, 'remote', 'Préparation et dépôt de votre marque auprès de l’INPI, choix des classes et suivi de la procédure.'],
-  ['domicile-pro', 'Domiciliation à Bordeaux', 'domiciliation', 'from', 1900, 'on_site', 'Adresse de siège au centre de Bordeaux, réception et numérisation du courrier, contrat sans engagement de durée.'],
+  ['domicile-pro', 'Domiciliation à Bordeaux', 'autres', 'from', 1900, 'on_site', 'Adresse de siège au centre de Bordeaux, réception et numérisation du courrier, contrat sans engagement de durée.'],
+  ['studio-pixel-nord', 'Site vitrine sur mesure', 'site-vitrine', 'from', 180000, 'remote', 'Site de 5 à 8 pages, adapté au mobile, rapide et facile à mettre à jour, avec la mise en ligne et une formation.'],
+  ['studio-pixel-nord', 'Application mobile : prototype en 4 semaines', 'applications-web-mobiles', 'on_quote', null, 'remote', 'Ateliers de cadrage, maquettes et prototype fonctionnel iPhone et Android pour tester votre idée auprès de vrais utilisateurs.'],
+  ['lina-roche-design', 'Identité visuelle complète', 'identite-visuelle', 'fixed', 150000, 'remote', 'Logo, palette, typographies et guide d’utilisation, avec trois pistes créatives et deux allers-retours.'],
+  ['lina-roche-design', 'Maquettes UI/UX d’une application', 'design-ui-ux', 'daily', 50000, 'remote', 'Parcours utilisateur, maquettes et prototype cliquable sur Figma, prêts à être remis aux développeurs.'],
+  ['atelier-encre', 'Illustration sur commande', 'illustration', 'from', 25000, 'remote', 'Illustration pour une affiche, un livre, un site ou un packaging, avec cession des droits adaptée à votre usage.'],
+  ['plan-large-video', 'Vidéo de présentation d’entreprise', 'video-montage', 'from', 120000, 'on_site', 'Une demi-journée de tournage, interview, montage, musique sous licence et sous-titres, livrée en formats site et réseaux.'],
 ];
 
 function offersFor(providers: Card[]): PublicOffer[] {
@@ -44,7 +55,7 @@ function offersFor(providers: Card[]): PublicOffer[] {
       title,
       summary,
       description: `${summary}\n\nCe qui est inclus :\n- un premier échange pour comprendre votre besoin ;\n- la réalisation de la prestation ;\n- un suivi par la messagerie Loopartner.\n\nOffre de démonstration : les informations sont fictives.`,
-      category: provider.categories.find((item) => item.slug === category) ?? { slug: category, name: category },
+      category: demoCategory(category),
       pricing: { mode, price_cents: cents, currency: 'EUR', tax_basis: 'ttc', indicative: true },
       delivery_mode: delivery,
       country: 'FR',
@@ -185,7 +196,7 @@ export function demoOffers(
       paginate(
         offers.filter(
           (offer) =>
-            (!query.category || offer.category?.slug === query.category) &&
+            inDemoCategory(offer.category?.slug, query.category) &&
             (!query.pricing_mode || offer.pricing.mode === query.pricing_mode) &&
             (!q || `${offer.title} ${offer.summary}`.toLowerCase().includes(q)),
         ),

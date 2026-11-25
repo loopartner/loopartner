@@ -129,7 +129,7 @@ function seed(): World {
     }
   };
 
-  const sas = project("Création d'une SAS pour une application mobile", 'creation-societe', 'Création de société', 500, 1000);
+  const sas = project("Création d'une SAS pour une application mobile", 'creation-statuts', 'Création et statuts', 500, 1000);
 
   // Compta Claire ↔ Camille Durand : proposition acceptée, conversation en cours (devis reçu en démo).
   const claire = newRequest(

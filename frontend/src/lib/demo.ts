@@ -10,6 +10,7 @@
 
 import { LEGAL_TEXTS } from '@/content/legal';
 import { demoMediaUrl, storeDemoMedia } from './demo-media';
+import { DEMO_CATEGORIES, demoCategory, inDemoCategory } from './demo-categories';
 import { demoMatching } from './demo-matching';
 import { demoOffers } from './demo-offers';
 import { demoQuotes } from './demo-quotes';
@@ -46,16 +47,15 @@ const ahead = (days: number, hour: number, minute = 0) => {
   return date.toISOString().replace(/\.\d{3}Z$/, 'Z');
 };
 
-const CATEGORIES: Category[] = [
-  { slug: 'creation-societe', name: 'Création de société' },
-  { slug: 'juridique', name: 'Juridique' },
-  { slug: 'comptabilite', name: 'Comptabilité' },
-  { slug: 'fiscalite', name: 'Fiscalité' },
-  { slug: 'propriete-intellectuelle', name: 'Propriété intellectuelle' },
-  { slug: 'domiciliation', name: 'Domiciliation' },
-  { slug: 'autres', name: 'Autres' },
-];
-const cat = (slug: string) => CATEGORIES.find((category) => category.slug === slug) as Category;
+const CATEGORIES: Category[] = DEMO_CATEGORIES;
+/** Anciens slugs de la démonstration, ramenés à l'arbre de l'API. */
+const LEGACY_SLUGS: Record<string, string> = {
+  'creation-societe': 'creation-statuts',
+  comptabilite: 'tenue-comptable',
+  fiscalite: 'conseil-fiscal',
+  domiciliation: 'autres',
+};
+const cat = (slug: string) => demoCategory(LEGACY_SLUGS[slug] ?? slug);
 
 const PROJECTS: BrowsableProject[] = [
   {
@@ -138,9 +138,69 @@ const PROJECTS: BrowsableProject[] = [
     description:
       "Trois associés, une SAS déjà créée. Nous voulons un pacte d'associés complet : clauses de sortie, vesting, non-concurrence et gouvernance avant une première levée de fonds.",
   },
+  {
+    title: 'Développer une application de réservation pour un salon de coiffure',
+    category: cat('applications-web-mobiles'),
+    budget_min: 5000,
+    budget_max: 10000,
+    remote_ok: true,
+    published_at: ago(45),
+    description:
+      "Nous avons deux salons et voulons une application (iPhone et Android) pour que nos clients réservent, paient un acompte et reçoivent des rappels. Un espace simple pour l'équipe doit permettre de gérer les plannings.",
+  },
+  {
+    title: 'Logo et identité visuelle pour une marque de thé bio',
+    category: cat('identite-visuelle'),
+    budget_min: 1000,
+    budget_max: 2500,
+    remote_ok: true,
+    published_at: ago(5 * 60),
+    description:
+      'Lancement au printemps de notre marque de thés bio vendus en ligne et en épicerie fine. Nous cherchons un logo, une palette, une typographie et une première déclinaison sur les étiquettes et les réseaux sociaux.',
+  },
+  {
+    title: 'Illustrations pour un livre jeunesse et ses produits dérivés',
+    category: cat('illustration'),
+    budget_min: 2500,
+    budget_max: 5000,
+    remote_ok: true,
+    published_at: ago(20 * 60),
+    description:
+      "Petite maison d'édition indépendante : 24 illustrations pleine page pour un album de 32 pages, puis des déclinaisons pour des affiches et des cartes postales. Style doux et coloré, aquarelle ou numérique.",
+  },
+  {
+    title: 'Vidéo de présentation de 90 secondes pour une start-up',
+    category: cat('video-montage'),
+    budget_min: 1000,
+    budget_max: 2500,
+    remote_ok: false,
+    published_at: ago(2 * 24 * 60),
+    description:
+      'Tournage d’une demi-journée dans nos locaux à Nantes, interview des fondateurs, plans de l’équipe au travail, montage et sous-titres. La vidéo servira sur notre site, LinkedIn et pour une levée de fonds.',
+  },
+  {
+    title: 'Automatiser la facturation et le suivi client avec des outils no-code',
+    category: cat('automatisation-no-code'),
+    budget_min: 500,
+    budget_max: 1000,
+    remote_ok: true,
+    published_at: ago(3 * 24 * 60),
+    description:
+      "Agence de 4 personnes : nos devis, factures et relances sont faits à la main dans des tableurs. Nous voulons relier notre CRM, notre outil de facturation et nos emails pour gagner du temps chaque semaine.",
+  },
+  {
+    title: 'Textes du site et fiches produits pour une boutique de céramique',
+    category: cat('redaction-copywriting'),
+    budget_min: null,
+    budget_max: 1000,
+    remote_ok: true,
+    published_at: ago(4 * 24 * 60),
+    description:
+      'Refonte de notre boutique en ligne : page d’accueil, page « à propos » et une quarantaine de fiches produits à rédiger, avec un ton chaleureux et un bon référencement.',
+  },
 ].map((project, index) => ({
   ...project,
-  uuid: `d3e0f000-0000-4000-8000-00000000000${index + 1}`,
+  uuid: `d3e0f000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
   currency: 'EUR',
   country: 'FR',
   city: null,
@@ -156,6 +216,8 @@ const ORGANIZERS = [
   { kind: 'named' as const, name: 'Marc L.', slug: null, headline: 'Expert-comptable', logo_url: null },
   { kind: 'named' as const, name: 'Sarah B.', slug: null, headline: 'Comptable', logo_url: null },
   { kind: 'named' as const, name: 'Antoine D.', slug: null, headline: 'Conseil en propriété industrielle', logo_url: null },
+  { kind: 'provider' as const, name: 'Studio Pixel Nord', slug: 'studio-pixel-nord', headline: 'Développement d’applications web et mobiles', logo_url: null },
+  { kind: 'provider' as const, name: 'Lina Roche Design', slug: 'lina-roche-design', headline: 'Designer UI/UX et identité visuelle', logo_url: null },
 ];
 
 const EVENTS: PublicEvent[] = [
@@ -171,6 +233,9 @@ const EVENTS: PublicEvent[] = [
   ['CGV et CGU : ce qu’il faut prévoir', 'juridique', 0, 11, 60, 2],
   ['Charges sociales de l’indépendant', 'fiscalite', 0, 15, 60, 22],
   ['Ouvrir un compte bancaire professionnel', 'domiciliation', 0, 10, 30, 30],
+  ['Bien briefer un développeur pour son application', 'applications-web-mobiles', 0, 18, 60, 16],
+  ['Créer une identité visuelle qui dure', 'identite-visuelle', 0, 12, 45, 9],
+  ['Automatiser ses tâches avec le no-code', 'automatisation-no-code', 0, 14, 60, 11],
 ].map(([title, category, day, hour, minutes, spots], index) => {
   void day;
   const starts = ahead(index * 2 + 3, hour as number);
@@ -223,6 +288,10 @@ const ARTICLES: ArticleSummary[] = [
   ['Associé ou salarié : bien s’entourer', 'creation-societe', 'entrepreneur'],
   ['Tenir ses premiers comptes sans stress', 'comptabilite', 'editorial'],
   ['Adresse de domiciliation ou bureau : comparer', 'domiciliation', 'provider'],
+  ['Rédiger le cahier des charges de son site', 'site-vitrine', 'editorial'],
+  ['Logo, charte, identité : de quoi a-t-on besoin ?', 'identite-visuelle', 'editorial'],
+  ['Commander des illustrations : droits et usages', 'illustration', 'editorial'],
+  ['Une vidéo de présentation efficace en 90 secondes', 'video-montage', 'entrepreneur'],
 ].map(([title, category, kind], index) => ({
   slug: `article-demo-${index + 1}`,
   title,
@@ -270,6 +339,12 @@ const PROVIDERS = [
   { slug: 'cabinet-morel-conseil', display_name: 'Cabinet Morel Conseil', headline: 'Juristes en droit des sociétés', city: 'Lyon', country: 'FR', logo_url: '/images/hero/expert-1.webp', banner_url: '/images/demo/banner-1.webp', categories: [cat('juridique'), cat('creation-societe')] },
   { slug: 'compta-claire', display_name: 'Compta Claire', headline: 'Expertise comptable pour indépendants', city: 'Nantes', country: 'FR', logo_url: '/images/hero/expert-2.webp', banner_url: '/images/demo/banner-2.webp', categories: [cat('comptabilite'), cat('fiscalite')] },
   { slug: 'marques-et-co', display_name: 'Marques & Co', headline: 'Conseil en propriété industrielle', city: 'Paris', country: 'FR', logo_url: '/images/hero/expert-3.webp', banner_url: '/images/demo/banner-3.webp', categories: [cat('propriete-intellectuelle')] },
+  { slug: 'studio-pixel-nord', display_name: 'Studio Pixel Nord', headline: 'Développement d’applications web et mobiles', city: 'Lille', country: 'FR', logo_url: null, banner_url: '/images/demo/banner-2.webp', categories: [cat('applications-web-mobiles'), cat('site-vitrine'), cat('logiciel-sur-mesure')] },
+  { slug: 'lina-roche-design', display_name: 'Lina Roche Design', headline: 'Designer UI/UX et identité visuelle', city: 'Bordeaux', country: 'FR', logo_url: null, banner_url: '/images/demo/banner-3.webp', categories: [cat('design-ui-ux'), cat('identite-visuelle')] },
+  { slug: 'atelier-encre', display_name: 'Atelier Encre', headline: 'Illustration jeunesse, édition et packaging', city: 'Montpellier', country: 'FR', logo_url: null, banner_url: '/images/demo/banner-4.webp', categories: [cat('illustration'), cat('packaging')] },
+  { slug: 'plan-large-video', display_name: 'Plan Large', headline: 'Vidéaste : films d’entreprise et réseaux sociaux', city: 'Nantes', country: 'FR', logo_url: null, banner_url: '/images/demo/banner-1.webp', categories: [cat('video-montage'), cat('motion-design-3d')] },
+  { slug: 'flux-automatise', display_name: 'Flux Automatisé', headline: 'Automatisation no-code et intégrations', city: 'Toulouse', country: 'FR', logo_url: null, banner_url: '/images/demo/banner-2.webp', categories: [cat('automatisation-no-code'), cat('data-ia')] },
+  { slug: 'plume-et-pixel', display_name: 'Plume & Pixel', headline: 'Rédactrice web et copywriter', city: 'Paris', country: 'FR', logo_url: null, banner_url: '/images/demo/banner-3.webp', categories: [cat('redaction-copywriting'), cat('referencement-seo')] },
   { slug: 'domicile-pro', display_name: 'Domicile Pro', headline: "Domiciliation d'entreprises", city: 'Bordeaux', country: 'FR', logo_url: '/images/hero/expert-4.webp', banner_url: '/images/demo/banner-4.webp', categories: [cat('domiciliation')] },
   { slug: 'avocats-delaunay', display_name: 'Delaunay Avocats', headline: 'Avocats en droit des affaires et des start-up', city: 'Paris', country: 'FR', logo_url: '/images/hero/expert-5.webp', banner_url: '/images/demo/banner-1.webp', categories: [cat('juridique'), cat('creation-societe')] },
   { slug: 'fisca-conseil', display_name: 'Fisca Conseil', headline: 'Optimisation et conformité fiscale', city: 'Toulouse', country: 'FR', logo_url: null, banner_url: '/images/demo/banner-2.webp', categories: [cat('fiscalite')] },
@@ -472,9 +547,9 @@ export function demoApi(path: string, method: string, query: Record<string, unkn
 
   // Projets
   const ownProjects = load<OwnProject[]>(PROJECTS_KEY, []);
-  const published = [...ownProjects.filter((project) => project.status === 'published'), ...PROJECTS];
+  const published = [...ownProjects.filter((project) => project.status === 'published'), ...PROJECTS].sort((a, b) => (b.published_at ?? '').localeCompare(a.published_at ?? ''));
   if (route === 'public/projects') {
-    const list = published.filter((project) => !query.category || project.category?.slug === query.category);
+    const list = published.filter((project) => inDemoCategory(project.category?.slug, query.category));
     return paginate(list.map(toPublic), query);
   }
   if (route.startsWith('public/projects/')) {
@@ -495,7 +570,7 @@ export function demoApi(path: string, method: string, query: Record<string, unkn
   }
   if (route === 'me/projects' && method === 'POST') {
     const user = requireUser();
-    const category = CATEGORIES.find((item) => item.slug === input.category) ?? null;
+    const category = typeof input.category === 'string' && input.category ? demoCategory(input.category) : null;
     const project: OwnProject = {
       uuid: crypto.randomUUID(),
       title: String(input.title ?? ''),
@@ -532,7 +607,7 @@ export function demoApi(path: string, method: string, query: Record<string, unkn
   if (route === 'providers') {
     const q = String(query.q ?? '').toLowerCase();
     return paginate(
-      PROVIDERS.filter((provider) => (!query.category || provider.categories.some((item) => item.slug === query.category)) && (!q || provider.display_name.toLowerCase().includes(q))),
+      PROVIDERS.filter((provider) => (!query.category || provider.categories.some((item) => inDemoCategory(item.slug, query.category))) && (!q || `${provider.display_name} ${provider.headline}`.toLowerCase().includes(q))),
       query,
     );
   }
@@ -552,7 +627,7 @@ export function demoApi(path: string, method: string, query: Record<string, unkn
   }
 
   // Articles
-  if (route === 'articles') return paginate(ARTICLES.filter((article) => !query.category || article.categories[0].slug === query.category), query);
+  if (route === 'articles') return paginate(ARTICLES.filter((article) => inDemoCategory(article.categories[0].slug, query.category)), query);
   if (route.startsWith('articles/')) {
     const article = ARTICLES.find((item) => item.slug === route.split('/')[1]);
     if (!article) throw new DemoError(404, { message: 'Article introuvable.' });
@@ -568,7 +643,7 @@ export function demoApi(path: string, method: string, query: Record<string, unkn
   if (route === 'events') {
     const q = String(query.q ?? '').toLowerCase();
     return paginate(
-      EVENTS.filter((event) => (!query.category || event.categories[0].slug === query.category) && (!q || event.title.toLowerCase().includes(q))),
+      EVENTS.filter((event) => inDemoCategory(event.categories[0].slug, query.category) && (!q || event.title.toLowerCase().includes(q))),
       query,
     );
   }
