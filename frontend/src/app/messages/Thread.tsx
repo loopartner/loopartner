@@ -14,6 +14,7 @@ import { ChatAvatar } from './ChatAvatar';
 import { ConversationPanel } from './ConversationPanel';
 
 const POLL_MS = 10_000;
+const QUOTES_POLL_MS = 30_000;
 const MAX_LENGTH = 5000;
 
 /**
@@ -33,6 +34,7 @@ export function Thread({ conversation, onChanged }: { conversation: Conversation
   const [origin, setOrigin] = useState<MatchRequest | null>(null);
   const [quotes, setQuotes] = useState<Quote[] | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const lastUuid = useRef<string | null>(null);
   const stickToBottom = useRef(true);
@@ -135,21 +137,32 @@ export function Thread({ conversation, onChanged }: { conversation: Conversation
   }
 
   const matchRequestUuid = conversation.match_request?.uuid ?? null;
-  const quotesBox = !conversation.counterpart.deleted && conversation.counterpart.provider === null ? 'sent' : 'received';
+  // Suis-je le prestataire de cette mise en relation ? Une proposition vient du prestataire, une
+  // demande de contact lui est adressée. Avant de connaître la demande (ou si elle n'est plus
+  // lisible), l'interlocuteur sans profil prestataire est le porteur de projet.
+  const iAmProvider = origin
+    ? origin.type === 'proposal'
+      ? origin.role === 'author'
+      : origin.role === 'recipient'
+    : !conversation.counterpart.deleted && conversation.counterpart.provider === null;
+  const quotesBox = iAmProvider ? 'sent' : 'received';
   useEffect(() => {
     if (!matchRequestUuid) return;
     let active = true;
-    api<Paginated<Quote>>('me/quotes', { query: { box: quotesBox, match_request: matchRequestUuid, per_page: 50 } })
-      .then((response) => active && setQuotes(response.data))
-      .catch(() => active && setQuotes([]));
+    const load = () =>
+      api<Paginated<Quote>>('me/quotes', { query: { box: quotesBox, match_request: matchRequestUuid, per_page: 50 } })
+        .then((response) => active && setQuotes(response.data))
+        .catch(() => active && setQuotes((current) => current ?? []));
+    void load();
+    // Un devis envoyé pendant que la conversation est ouverte apparaît sans recharger la page.
+    const timer = window.setInterval(() => document.visibilityState === 'visible' && void load(), QUOTES_POLL_MS);
     return () => {
       active = false;
+      window.clearInterval(timer);
     };
   }, [matchRequestUuid, quotesBox]);
 
   const name = counterpartName(conversation.counterpart);
-  // L'interlocuteur est un porteur de projet : je suis le prestataire de cette mise en relation.
-  const iAmProvider = !conversation.counterpart.deleted && conversation.counterpart.provider === null;
   const detail = counterpartDetail(conversation.counterpart);
   const newQuoteHref =
     iAmProvider && conversation.match_request && conversation.can_send
@@ -158,6 +171,17 @@ export function Thread({ conversation, onChanged }: { conversation: Conversation
   // Devis envoyés (ou reçus) dans cette conversation, montrés dans le fil à leur date d'envoi.
   const conversationQuotes = matchRequestUuid ? quotes : [];
   const sentQuotes = (conversationQuotes ?? []).filter((quote) => quote.sent_at).sort((a, b) => (a.sent_at as string).localeCompare(b.sent_at as string));
+  // Fil unique : messages et devis envoyés, dans l'ordre chronologique. Tant que des messages plus
+  // anciens restent à charger, les devis plus anciens que le premier message affiché attendent.
+  const firstShown = messages?.[0]?.sent_at ?? null;
+  const timeline: Array<{ kind: 'message'; at: string; message: ChatMessage } | { kind: 'quote'; at: string; quote: Quote }> = messages
+    ? [
+        ...messages.map((message) => ({ kind: 'message' as const, at: message.sent_at, message })),
+        ...sentQuotes
+          .filter((quote) => !olderPage || !firstShown || (quote.sent_at as string) >= firstShown)
+          .map((quote) => ({ kind: 'quote' as const, at: quote.sent_at as string, quote })),
+      ].sort((a, b) => a.at.localeCompare(b.at))
+    : [];
   const slug = conversation.counterpart.provider?.slug;
   const logo = conversation.counterpart.provider?.logo_url;
 
@@ -196,8 +220,13 @@ export function Thread({ conversation, onChanged }: { conversation: Conversation
               type="button"
               className="report-link"
               onClick={async () => {
-                await api(`me/conversations/${conversation.uuid}/block`, { method: 'DELETE' });
-                onChanged();
+                setActionError(null);
+                try {
+                  await api(`me/conversations/${conversation.uuid}/block`, { method: 'DELETE' });
+                  onChanged();
+                } catch (exception) {
+                  setActionError(exception instanceof ApiError ? exception.message : 'Déblocage impossible.');
+                }
               }}
             >
               Débloquer
@@ -221,6 +250,7 @@ export function Thread({ conversation, onChanged }: { conversation: Conversation
         aria-live="polite"
       >
         {error ? <p className="alert alert--error">{error}</p> : null}
+        {actionError ? <p className="alert alert--error">{actionError}</p> : null}
         {messages === null && !error ? <div className="skeleton" style={{ height: 120 }} /> : null}
         {olderPage ? (
           <button type="button" className="btn btn--outline" style={{ alignSelf: 'center' }} onClick={() => void loadOlder()}>
@@ -239,47 +269,47 @@ export function Thread({ conversation, onChanged }: { conversation: Conversation
         {messages?.length === 0 ? (
           <p style={{ color: 'var(--muted)', textAlign: 'center', margin: 'auto' }}>La demande a été acceptée : écrivez votre premier message.</p>
         ) : null}
-        {messages?.map((message, index) => {
-          // Devis envoyés avant ce message (et après le précédent) : montrés juste avant lui.
-          const quotesBefore = sentQuotes.filter(
-            (quote) => (quote.sent_at as string) <= message.sent_at && (index === 0 || (quote.sent_at as string) > messages[index - 1].sent_at),
-          );
-          const previous = messages[index - 1];
-          const next = messages[index + 1];
-          const newDay = !previous || new Date(previous.sent_at).toDateString() !== new Date(message.sent_at).toDateString();
-          const lastOfGroup = !next || next.mine !== message.mine || new Date(next.sent_at).toDateString() !== new Date(message.sent_at).toDateString();
+        {timeline.map((item, index) => {
+          const previous = timeline[index - 1];
+          const next = timeline[index + 1];
+          const newDay = !previous || new Date(previous.at).toDateString() !== new Date(item.at).toDateString();
+          const separator = newDay ? <span className="day-sep">{formatDate(item.at, { weekday: 'long', day: 'numeric', month: 'long' })}</span> : null;
+          if (item.kind === 'quote') {
+            return (
+              <div key={item.quote.uuid} style={{ display: 'contents' }}>
+                {separator}
+                <QuoteBubble quote={item.quote} conversation={conversation.uuid} />
+              </div>
+            );
+          }
+          const message = item.message;
+          // Avatar sous le dernier message d'une suite de l'interlocuteur (même jour, sans devis entre deux).
+          const lastOfGroup =
+            !next || next.kind !== 'message' || next.message.mine !== message.mine || new Date(next.at).toDateString() !== new Date(item.at).toDateString();
           return (
             <div key={message.uuid} style={{ display: 'contents' }}>
-              {quotesBefore.map((quote) => (
-                <QuoteBubble key={quote.uuid} quote={quote} conversation={conversation.uuid} />
-              ))}
-              {newDay ? <span className="day-sep">{formatDate(message.sent_at, { weekday: 'long', day: 'numeric', month: 'long' })}</span> : null}
+              {separator}
               <div className={`bubble-row${message.mine ? ' bubble-row--mine' : ''}`}>
-              {!message.mine ? (lastOfGroup ? <ChatAvatar name={name} logo={logo} size="sm" /> : <span className="chat-avatar chat-avatar--sm chat-avatar--spacer" />) : null}
-              <div className={`bubble${message.mine ? ' bubble--mine' : ''}`}>
-                {message.body === null ? (
-                  <span className="bubble__text bubble__text--hidden">Message masqué par la modération</span>
-                ) : (
-                  <span className="bubble__text">{message.body}</span>
-                )}
-                <span className="bubble__meta">
-                  {formatTime(message.sent_at)}
-                  {!message.mine && message.body !== null && !conversation.counterpart.deleted ? (
-                    <button type="button" className="report-link" onClick={() => setReporting(message)}>
-                      Signaler
-                    </button>
-                  ) : null}
-                </span>
-              </div>
+                {!message.mine ? lastOfGroup ? <ChatAvatar name={name} logo={logo} size="sm" /> : <span className="chat-avatar chat-avatar--sm chat-avatar--spacer" /> : null}
+                <div className={`bubble${message.mine ? ' bubble--mine' : ''}`}>
+                  {message.body === null ? (
+                    <span className="bubble__text bubble__text--hidden">Message masqué par la modération</span>
+                  ) : (
+                    <span className="bubble__text">{message.body}</span>
+                  )}
+                  <span className="bubble__meta">
+                    {formatTime(message.sent_at)}
+                    {!message.mine && message.body !== null && !conversation.counterpart.deleted ? (
+                      <button type="button" className="report-link" onClick={() => setReporting(message)}>
+                        Signaler
+                      </button>
+                    ) : null}
+                  </span>
+                </div>
               </div>
             </div>
           );
         })}
-        {messages
-          ? sentQuotes
-              .filter((quote) => messages.length === 0 || (quote.sent_at as string) > messages[messages.length - 1].sent_at)
-              .map((quote) => <QuoteBubble key={quote.uuid} quote={quote} conversation={conversation.uuid} />)
-          : null}
       </div>
 
       {conversation.can_send ? (
@@ -299,11 +329,13 @@ export function Thread({ conversation, onChanged }: { conversation: Conversation
               className="textarea"
               rows={2}
               maxLength={MAX_LENGTH}
-              placeholder="Écrivez votre message… (Entrée pour envoyer, Maj+Entrée pour aller à la ligne)"
+              placeholder="Écrivez votre message…"
+              title="Entrée pour envoyer, Maj+Entrée pour aller à la ligne"
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
               onKeyDown={(event) => {
-                if (event.key === 'Enter' && !event.shiftKey) {
+                // Entrée envoie au clavier ; sur un écran tactile, elle va à la ligne (bouton pour envoyer).
+                if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing && !window.matchMedia('(pointer: coarse)').matches) {
                   event.preventDefault();
                   void send();
                 }
@@ -359,6 +391,8 @@ function QuoteBubble({ quote, conversation }: { quote: Quote; conversation: stri
   const mine = quote.viewer_role === 'provider';
   return (
     <div className={`bubble-row${mine ? ' bubble-row--mine' : ''}`}>
+      {/* Aligné sur les messages reçus, qui laissent la place de l'avatar. */}
+      {!mine ? <span className="chat-avatar chat-avatar--sm chat-avatar--spacer" /> : null}
       <Link href={`/devis/${quote.uuid}?conv=${conversation}`} className={`quote-bubble${mine ? ' quote-bubble--mine' : ''}`}>
         <span className="quote-bubble__label">
           <Icon name="file" size={14} /> {mine ? 'Vous avez envoyé un devis' : 'Devis reçu'}

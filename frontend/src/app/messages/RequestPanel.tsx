@@ -109,7 +109,7 @@ export function RequestPanel({ request, onChanged }: { request: MatchRequest; on
           </p>
           <div>
             <button type="button" className="btn btn--outline btn--sm" onClick={() => setDialog('withdraw')}>
-              Retirer ma demande
+              {request.type === 'proposal' ? 'Retirer ma proposition' : 'Retirer ma demande'}
             </button>
           </div>
         </div>
@@ -122,7 +122,17 @@ export function RequestPanel({ request, onChanged }: { request: MatchRequest; on
         <PrivateReportDialog path={`me/match-requests/${request.uuid}/report`} subject="cette demande" onClose={() => setDialog(null)} />
       ) : dialog ? (
         <ConfirmDialog
-          title={dialog === 'decline' ? 'Refuser cette proposition ?' : dialog === 'withdraw' ? 'Retirer votre demande ?' : `Bloquer ${name} ?`}
+          title={
+            dialog === 'decline'
+              ? request.type === 'proposal'
+                ? 'Refuser cette proposition ?'
+                : 'Refuser cette demande ?'
+              : dialog === 'withdraw'
+                ? request.type === 'proposal'
+                  ? 'Retirer votre proposition ?'
+                  : 'Retirer votre demande ?'
+                : `Bloquer ${name} ?`
+          }
           confirmLabel={dialog === 'decline' ? 'Refuser' : dialog === 'withdraw' ? 'Retirer' : 'Bloquer'}
           onClose={() => setDialog(null)}
           onConfirm={async () => {
@@ -132,9 +142,9 @@ export function RequestPanel({ request, onChanged }: { request: MatchRequest; on
         >
           <p>
             {dialog === 'decline'
-              ? `${name} sera prévenu(e) que sa proposition n'a pas été retenue, sans motif.`
+              ? `${name} sera prévenu(e) que ${request.type === 'proposal' ? 'sa proposition' : 'sa demande'} n'a pas été retenue, sans motif.`
               : dialog === 'withdraw'
-                ? 'Votre demande disparaîtra de la messagerie de son destinataire.'
+                ? `Votre ${request.type === 'proposal' ? 'proposition' : 'demande'} disparaîtra de la messagerie de son destinataire.`
                 : 'Cette personne ne pourra plus vous écrire ni vous envoyer de demande, et celle-ci sera refusée.'}
           </p>
         </ConfirmDialog>

@@ -43,11 +43,12 @@ const PARTIES = {
   nora: { email: null, kind: 'particulier', name: 'Nora Petit', card: null },
 } satisfies Record<string, Party>;
 
-/** Prestataire d'un slug : compte de test s'il en existe un, sinon personnage fictif. */
-function providerParty(slug: string): Party {
+/** Prestataire d'un slug : compte de test s'il en existe un, sinon prestataire de l'annuaire de démo (sans compte). */
+function providerParty(slug: string, directory: (slug: string) => ProviderCard | null): Party | null {
   const known = Object.values(PARTIES).find((party) => party.card?.slug === slug);
   if (known) return known;
-  return { email: null, kind: 'provider', name: slug.replaceAll('-', ' '), card: { display_name: slug.replaceAll('-', ' '), slug, headline: null, city: null, country: 'FR', logo_url: null } };
+  const card = directory(slug);
+  return card ? { email: null, kind: 'provider', name: card.display_name, card } : null;
 }
 
 /* ---------------------------------------------------------------- Données */
@@ -379,6 +380,8 @@ export function demoMatching(
   input: Record<string, unknown>,
   user: { email: string; isProvider: boolean; name?: string; role?: string } | null,
   fail: DemoFail,
+  /** Annuaire des prestataires de la démo (slug → résumé public), pour les prestataires sans compte de test. */
+  directory: (slug: string) => ProviderCard | null = () => null,
 ): { handled: true; value: unknown } | undefined {
   const done = (value: unknown) => ({ handled: true as const, value });
 
@@ -405,7 +408,9 @@ export function demoMatching(
   const contact = /^providers\/([^/]+)\/contact$/.exec(route);
   if (contact) {
     if (account.isProvider) fail(403, { message: 'Seuls les particuliers et les entrepreneurs peuvent contacter un prestataire.' });
-    const target = providerParty(contact[1]);
+    const found = providerParty(contact[1], directory);
+    if (!found) fail(404, { message: 'Prestataire introuvable.' });
+    const target = found as Party;
     if (world.requests.some((item) => idOf(item.author) === me && idOf(item.recipient) === idOf(target) && ['pending', 'accepted'].includes(item.status))) {
       fail(409, { message: 'Vous avez déjà une demande en cours avec ce prestataire.' });
     }

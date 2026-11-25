@@ -34,7 +34,10 @@ export function ConversationPanel({
       <div className="conv-panel__who">
         <ChatAvatar name={name} logo={provider?.logo_url ?? null} size="lg" />
         <strong className="conv-panel__name">{name}</strong>
-        <small className="conv-panel__detail">{counterpartDetail(conversation.counterpart)}</small>
+        {/* Prestataire : son accroche est montrée juste dessous, on donne ici sa ville. */}
+        <small className="conv-panel__detail">
+          {provider ? [provider.city, provider.country === 'FR' ? 'France' : provider.country].filter(Boolean).join(', ') : counterpartDetail(conversation.counterpart)}
+        </small>
         {provider?.headline ? <p className="conv-panel__headline">{provider.headline}</p> : null}
         {provider?.slug ? (
           <Link href={`/prestataires/${provider.slug}`} className="btn btn--outline btn--sm">

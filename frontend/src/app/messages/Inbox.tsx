@@ -82,6 +82,16 @@ export function Inbox() {
   const firstHref = first ? (first.kind === 'conversation' ? `/messages?c=${first.conversation.uuid}` : `/messages?d=${first.request.uuid}`) : null;
   const nothingSelected = !selectedConversation && !selectedRequest;
 
+  // Demande ouverte entre-temps acceptée par l'autre partie : on passe à sa conversation.
+  const acceptedConversation =
+    selectedRequest && items && !currentRequest
+      ? items.find((item) => item.kind === 'conversation' && item.conversation.match_request?.uuid === selectedRequest)
+      : undefined;
+  const acceptedHref = acceptedConversation?.kind === 'conversation' ? `/messages?c=${acceptedConversation.conversation.uuid}` : null;
+  useEffect(() => {
+    if (acceptedHref) router.replace(acceptedHref);
+  }, [acceptedHref, router]);
+
   // Sur grand écran, le premier élément s'ouvre de lui-même.
   useEffect(() => {
     if (nothingSelected && firstHref && window.matchMedia('(min-width: 901px)').matches) router.replace(firstHref);
@@ -160,7 +170,13 @@ export function Inbox() {
       ) : (
         <div className="card thread thread--empty">
           <Icon name="message" size={36} />
-          <p>{nothingSelected ? 'Choisissez une discussion pour l’afficher ici.' : 'Cette conversation n’existe plus ou a été fermée.'}</p>
+          <p>
+            {nothingSelected
+              ? 'Choisissez une discussion pour l’afficher ici.'
+              : selectedRequest
+                ? 'Cette demande n’est plus en attente : elle a été refusée, retirée ou elle a expiré.'
+                : 'Cette conversation n’existe plus ou a été fermée.'}
+          </p>
         </div>
       )}
     </div>

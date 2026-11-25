@@ -99,7 +99,8 @@ function build(input: QuoteDraftInput, base: Partial<Quote>, role: 'provider' | 
 }
 
 function receivedSample(): Quote {
-  const sentAt = new Date(Date.now() - 3 * 60 * 60_000);
+  // Juste après le message « Je vous envoie aussi un devis détaillé » de la conversation de démo.
+  const sentAt = new Date(Date.now() - 44 * 60_000);
   const validUntil = new Date(sentAt.getTime() + 30 * 24 * 60 * 60_000);
   const quote = build(
     {

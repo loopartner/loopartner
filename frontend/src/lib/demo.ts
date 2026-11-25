@@ -466,6 +466,10 @@ export function demoApi(path: string, method: string, query: Record<string, unkn
     (status, payload) => {
       throw new DemoError(status, payload);
     },
+    (slug) => {
+      const provider = PROVIDERS.find((item) => item.slug === slug);
+      return provider ? { display_name: provider.display_name, slug: provider.slug, headline: provider.headline, city: provider.city, country: provider.country, logo_url: provider.logo_url } : null;
+    },
   );
   if (matching) return matching.value;
 
